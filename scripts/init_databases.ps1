@@ -94,19 +94,19 @@ function Invoke-SqlFile {
     Write-Host "  File: $FilePath"
     Write-Host "================================================================"
 
-    $args = @("-S", "$Server,$Port", "-i", $FilePath, "-b")
+    $sqlArgs = @("-S", "$Server,$Port", "-i", $FilePath, "-b")
 
     if ($WindowsAuth) {
-        $args += "-E"
+        $sqlArgs += "-E"
     } else {
         if ([string]::IsNullOrEmpty($Password)) {
             Write-Error "Password is required (or use -WindowsAuth)."
             exit 1
         }
-        $args += @("-U", $User, "-P", $Password)
+        $sqlArgs += @("-U", $User, "-P", $Password)
     }
 
-    & sqlcmd @args
+    & sqlcmd @sqlArgs
     if ($LASTEXITCODE -ne 0) {
         Write-Error "  -> FAILED: $Description"
         exit 1
