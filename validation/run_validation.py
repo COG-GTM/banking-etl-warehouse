@@ -328,6 +328,28 @@ def validate_against_expected_balance(tables: dict[str, pd.DataFrame]) -> list[d
 
 
 # ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _collect_statuses(all_results: dict) -> list[str]:
+    """Collect all status values from results, including nested dict-of-lists."""
+    statuses: list[str] = []
+    for section_results in all_results.values():
+        if isinstance(section_results, list):
+            statuses.extend(r.get("status", "UNKNOWN") for r in section_results)
+        elif isinstance(section_results, dict):
+            if "status" in section_results:
+                statuses.append(section_results["status"])
+            # Handle nested dict-of-lists (e.g. representative_records)
+            for v in section_results.values():
+                if isinstance(v, list):
+                    statuses.extend(
+                        r.get("status", "UNKNOWN") for r in v if isinstance(r, dict)
+                    )
+    return statuses
+
+
+# ---------------------------------------------------------------------------
 # Report generation
 # ---------------------------------------------------------------------------
 
@@ -336,12 +358,7 @@ def generate_filled_parity_report(all_results: dict) -> str:
     now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
     # Compute overall status
-    all_statuses = []
-    for section_results in all_results.values():
-        if isinstance(section_results, list):
-            all_statuses.extend(r.get("status", "UNKNOWN") for r in section_results)
-        elif isinstance(section_results, dict):
-            all_statuses.append(section_results.get("status", "UNKNOWN"))
+    all_statuses = _collect_statuses(all_results)
 
     pass_count = sum(1 for s in all_statuses if s == "PASS")
     fail_count = sum(1 for s in all_statuses if s == "FAIL")
@@ -630,7 +647,7 @@ def run_live_validation(args: argparse.Namespace) -> dict:
         all_results["sp_daily_transaction"] = sp_daily
         print(format_sp_results(sp_daily))
 
-    if all(t in legacy_tables for t in TABLE_NAMES[:3]) and all(t in databricks_tables for t in TABLE_NAMES[:3]):
+    if all(t in legacy_tables for t in ["DimCustomer", "DimAccount", "FactTransaction"]) and all(t in databricks_tables for t in ["DimCustomer", "DimAccount", "FactTransaction"]):
         sp_balance = compare_balance_per_customer(
             legacy_tables, databricks_tables, customer_name="John"
         )
@@ -771,12 +788,7 @@ def main() -> None:
     write_outputs(all_results)
 
     # Exit with code 1 if any failures
-    all_statuses = []
-    for section_results in all_results.values():
-        if isinstance(section_results, list):
-            all_statuses.extend(r.get("status", "UNKNOWN") for r in section_results)
-        elif isinstance(section_results, dict):
-            all_statuses.append(section_results.get("status", "UNKNOWN"))
+    all_statuses = _collect_statuses(all_results)
 
     if any(s == "FAIL" for s in all_statuses):
         print("\nValidation completed with FAILURES.")
