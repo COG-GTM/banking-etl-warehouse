@@ -1,0 +1,6 @@
+CustomerID,CustomerName,Address,CityName,StateName,Age,Gender,Email
+1,John Smith,123 Main St,New York,New York,35,Male,john.smith@email.com
+2,Jane Doe,456 Oak Ave,Los Angeles,California,28,Female,jane.doe@email.com
+3,Bob Johnson,789 Pine Rd,Chicago,Illinois,42,Male,bob.johnson@email.com
+4,Alice Williams,321 Elm St,Houston,Texas,31,Female,alice.williams@email.com
+5,Charlie Brown,654 Maple Dr,Phoenix,Arizona,55,Male,charlie.brown@email.com

@@ -1,0 +1,41 @@
+{
+  "description": "Expected output of sp_DailyTransaction for date range 2024-01-18 to 2024-01-22",
+  "parameters": {
+    "start_date": "2024-01-18",
+    "end_date": "2024-01-22"
+  },
+  "expected_output": [
+    {
+      "Date": "2024-01-18",
+      "TotalTransactions": 3,
+      "TotalAmount": 1700.00
+    },
+    {
+      "Date": "2024-01-19",
+      "TotalTransactions": 3,
+      "TotalAmount": 5250.00
+    },
+    {
+      "Date": "2024-01-20",
+      "TotalTransactions": 3,
+      "TotalAmount": 3250.00
+    },
+    {
+      "Date": "2024-01-21",
+      "TotalTransactions": 2,
+      "TotalAmount": 1200.00
+    },
+    {
+      "Date": "2024-01-22",
+      "TotalTransactions": 3,
+      "TotalAmount": 700.00
+    }
+  ],
+  "notes": [
+    "TotalAmount for 2024-01-18: 1000 (Deposit) + 200 (Withdrawal) + 500 (Deposit) = 1700",
+    "TotalAmount for 2024-01-19: 3000 (Deposit) + 1500 (Withdrawal) + 750 (Deposit) = 5250",
+    "TotalAmount for 2024-01-20: 750 (Withdrawal) + 2000 (Deposit) + 500 (Payment) = 3250",
+    "TotalAmount for 2024-01-21: 1200 (Deposit) + 0 (Transfer) = 1200",
+    "TotalAmount for 2024-01-22: 300 (Deposit) + 300 (Withdrawal) + 100 (Payment) = 700"
+  ]
+}
