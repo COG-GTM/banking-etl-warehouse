@@ -155,14 +155,18 @@ if [ "$RESTORE_BAK" = true ]; then
     echo "  Restoring from: $BAK_PATH"
     echo "  NOTE: You may need to adjust the MOVE paths for your SQL Server"
     echo "        data directory. Edit the script if the restore fails."
-    sqlcmd "${SQLCMD_ARGS[@]}" -Q "
+    if sqlcmd "${SQLCMD_ARGS[@]}" -Q "
         RESTORE DATABASE [sample]
         FROM DISK = '$BAK_PATH'
         WITH REPLACE,
         MOVE 'sample' TO '/var/opt/mssql/data/sample.mdf',
         MOVE 'sample_log' TO '/var/opt/mssql/data/sample_log.ldf';
-    " -b
-    echo "  -> Source database restored from .bak"
+    " -b; then
+        echo "  -> Source database restored from .bak"
+    else
+        echo "  WARNING: Restore failed. You may need to adjust the MOVE paths."
+        echo "  Try restoring manually in SSMS instead."
+    fi
 fi
 
 # ----------------------------------------------------------
