@@ -86,23 +86,18 @@ while [[ $# -gt 0 ]]; do
 done
 
 # ----------------------------------------------------------
-# Build sqlcmd connection string
+# Build sqlcmd connection args (array to preserve quoting)
 # ----------------------------------------------------------
-build_sqlcmd_args() {
-    local args=("-S" "${SERVER},${PORT}")
-    if [ "$WINDOWS_AUTH" = true ]; then
-        args+=("-E")
-    else
-        if [ -z "$PASSWORD" ]; then
-            echo "ERROR: --password is required (or use --windows-auth)." >&2
-            exit 1
-        fi
-        args+=("-U" "$USER" "-P" "$PASSWORD")
+SQLCMD_ARGS=("-S" "${SERVER},${PORT}")
+if [ "$WINDOWS_AUTH" = true ]; then
+    SQLCMD_ARGS+=("-E")
+else
+    if [ -z "$PASSWORD" ]; then
+        echo "ERROR: --password is required (or use --windows-auth)." >&2
+        exit 1
     fi
-    echo "${args[@]}"
-}
-
-SQLCMD_ARGS=$(build_sqlcmd_args)
+    SQLCMD_ARGS+=("-U" "$USER" "-P" "$PASSWORD")
+fi
 
 run_sql_file() {
     local file="$1"
@@ -112,8 +107,7 @@ run_sql_file() {
     echo "  $description"
     echo "  File: $file"
     echo "================================================================"
-    # shellcheck disable=SC2086
-    if sqlcmd $SQLCMD_ARGS -i "$file" -b; then
+    if sqlcmd "${SQLCMD_ARGS[@]}" -i "$file" -b; then
         echo "  -> SUCCESS"
     else
         echo "  -> FAILED"
@@ -161,8 +155,7 @@ if [ "$RESTORE_BAK" = true ]; then
     echo "  Restoring from: $BAK_PATH"
     echo "  NOTE: You may need to adjust the MOVE paths for your SQL Server"
     echo "        data directory. Edit the script if the restore fails."
-    # shellcheck disable=SC2086
-    sqlcmd $SQLCMD_ARGS -Q "
+    sqlcmd "${SQLCMD_ARGS[@]}" -Q "
         RESTORE DATABASE [sample]
         FROM DISK = '$BAK_PATH'
         WITH REPLACE,
