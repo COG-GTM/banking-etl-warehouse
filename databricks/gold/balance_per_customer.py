@@ -79,7 +79,7 @@ df_txn_summary = (
     df_fact
     .withColumn(
         "signed_amount",
-        when(col("TransactionType") == "Deposit", col("Amount"))
+        when(lower(col("TransactionType")) == "deposit", col("Amount"))
         .otherwise(-col("Amount"))
     )
     .groupBy("AccountID")
