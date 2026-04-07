@@ -94,7 +94,7 @@ build_sqlcmd_args() {
         args+=("-E")
     else
         if [ -z "$PASSWORD" ]; then
-            echo "ERROR: --password is required (or use --windows-auth)."
+            echo "ERROR: --password is required (or use --windows-auth)." >&2
             exit 1
         fi
         args+=("-U" "$USER" "-P" "$PASSWORD")
@@ -113,8 +113,7 @@ run_sql_file() {
     echo "  File: $file"
     echo "================================================================"
     # shellcheck disable=SC2086
-    sqlcmd $SQLCMD_ARGS -i "$file" -b
-    if [ $? -eq 0 ]; then
+    if sqlcmd $SQLCMD_ARGS -i "$file" -b; then
         echo "  -> SUCCESS"
     else
         echo "  -> FAILED"

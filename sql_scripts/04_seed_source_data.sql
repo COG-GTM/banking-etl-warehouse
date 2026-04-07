@@ -25,8 +25,6 @@ GO
 -- ============================================================================
 PRINT 'Seeding state data...';
 
-SET IDENTITY_INSERT state OFF;
-
 MERGE INTO state AS target
 USING (VALUES
     (1, 'Jawa Barat'),
