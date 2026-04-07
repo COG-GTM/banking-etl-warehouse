@@ -96,10 +96,17 @@ print(f"Total records after union: {df_union.count()}")
 # COMMAND ----------
 
 from pyspark.sql.window import Window
-from pyspark.sql.functions import row_number
+from pyspark.sql.functions import row_number, when
 
 # Use window function to keep first occurrence (deterministic ordering)
-window_spec = Window.partitionBy("transaction_id").orderBy(col("_source_system").desc())
+# Priority matches legacy Talend tUniqRow union order: sql_server > csv_file > excel_file
+source_priority = (
+    when(col("_source_system") == "sql_server", 1)
+    .when(col("_source_system") == "csv_file", 2)
+    .when(col("_source_system") == "excel_file", 3)
+    .otherwise(4)
+)
+window_spec = Window.partitionBy("transaction_id").orderBy(source_priority)
 
 df_dedup = (
     df_union.withColumn("_row_num", row_number().over(window_spec))

@@ -123,8 +123,8 @@ try:
 
     # Convert using pandas
     import pandas as pd
-    pdf = pd.read_excel(excel_path.replace("/Volumes", "/dbfs/Volumes"))
-    pdf.to_csv(csv_fallback_path.replace("/Volumes", "/dbfs/Volumes"), index=False)
+    pdf = pd.read_excel(excel_path)
+    pdf.to_csv(csv_fallback_path, index=False)
     print(f"Excel converted to CSV: {csv_fallback_path}")
 except Exception as e:
     print(f"Excel conversion skipped (file may not be uploaded yet): {e}")
