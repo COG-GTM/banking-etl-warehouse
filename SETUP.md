@@ -205,7 +205,7 @@ This path mirrors the production ETL flow using Talend Open Studio.
 
 Or via automation:
 ```bash
-./scripts/init_databases.sh --password "YourPassword" --skip-source=false
+./scripts/init_databases.sh --password "YourPassword"
 ```
 
 ### Step 2: Create the DWH Database
