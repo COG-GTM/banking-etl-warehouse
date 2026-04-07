@@ -99,7 +99,7 @@ from pyspark.sql.window import Window
 from pyspark.sql.functions import row_number
 
 # Use window function to keep first occurrence (deterministic ordering)
-window_spec = Window.partitionBy("transaction_id").orderBy("_source_system")
+window_spec = Window.partitionBy("transaction_id").orderBy(col("_source_system").desc())
 
 df_dedup = (
     df_union.withColumn("_row_num", row_number().over(window_spec))

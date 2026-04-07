@@ -71,7 +71,7 @@ print(f"Transactions: {df_fact.count()}")
 
 # COMMAND ----------
 
-from pyspark.sql.functions import col, sum as spark_sum, when, coalesce, lit, current_timestamp
+from pyspark.sql.functions import col, sum as spark_sum, when, coalesce, lit, current_timestamp, lower
 
 # Step 1: CTE equivalent — compute net transaction amount per account
 # Deposit adds, everything else subtracts (matches legacy CASE WHEN logic)
@@ -97,7 +97,7 @@ df_balance = (
     df_customer.alias("c")
     .join(df_account.alias("a"), col("c.CustomerID") == col("a.CustomerID"), "inner")
     .join(df_txn_summary.alias("ts"), col("a.AccountID") == col("ts.AccountID"), "left")
-    .filter(col("a.Status") == "active")
+    .filter(lower(col("a.Status")) == "active")
     .select(
         col("c.CustomerID"),
         col("c.CustomerName"),
