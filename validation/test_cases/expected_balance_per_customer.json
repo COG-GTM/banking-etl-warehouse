@@ -1,0 +1,73 @@
+{
+  "description": "Expected output of sp_BalancePerCustomer for various customer names using seed data",
+  "test_cases": [
+    {
+      "customer_name": "John",
+      "notes": "John Smith has two active accounts (101, 102). Account 101: InitialBalance=5000, Deposits=1000, Withdrawals=-200, Payments=-100 => Net=+700, Current=5700. Account 102: InitialBalance=2000, Deposits=500 => Net=+500, Current=2500.",
+      "expected_output": [
+        {
+          "CustomerName": "John Smith",
+          "AccountType": "Savings",
+          "InitialBalance": 5000.00,
+          "CurrentBalance": 5700.00
+        },
+        {
+          "CustomerName": "John Smith",
+          "AccountType": "Checking",
+          "InitialBalance": 2000.00,
+          "CurrentBalance": 2500.00
+        }
+      ]
+    },
+    {
+      "customer_name": "Bob",
+      "notes": "Bob Johnson has AccountID 104 (active, Checking, Balance=0) and 105 (closed, Savings). Only active accounts returned. Account 104: InitialBalance=0, Deposits=750, Withdrawals=-750 => Net=0, Current=0.",
+      "expected_output": [
+        {
+          "CustomerName": "Bob Johnson",
+          "AccountType": "Checking",
+          "InitialBalance": 0.00,
+          "CurrentBalance": 0.00
+        }
+      ]
+    },
+    {
+      "customer_name": "Charlie",
+      "notes": "Charlie Brown has AccountID 107 (active, Savings, Balance=0) and 108 (active, Checking, Balance=1500). Account 107: InitialBalance=0, Deposits=1200, Transfer=0 (treated as -0) => Net=+1200, Current=1200. Account 108: InitialBalance=1500, Deposits=300, Withdrawals=-300 => Net=0, Current=1500.",
+      "expected_output": [
+        {
+          "CustomerName": "Charlie Brown",
+          "AccountType": "Checking",
+          "InitialBalance": 1500.00,
+          "CurrentBalance": 1500.00
+        },
+        {
+          "CustomerName": "Charlie Brown",
+          "AccountType": "Savings",
+          "InitialBalance": 0.00,
+          "CurrentBalance": 1200.00
+        }
+      ]
+    },
+    {
+      "customer_name": "Alice",
+      "notes": "Alice Williams has AccountID 106 (active, Checking, Balance=3000). Account 106: InitialBalance=3000, Deposits=2000, Payments=-500 => Net=+1500, Current=4500.",
+      "expected_output": [
+        {
+          "CustomerName": "Alice Williams",
+          "AccountType": "Checking",
+          "InitialBalance": 3000.00,
+          "CurrentBalance": 4500.00
+        }
+      ]
+    }
+  ],
+  "edge_cases_covered": [
+    "Zero-balance account (Bob Johnson, AccountID 104: starts at 0, net transactions = 0)",
+    "Account with only deposits (Jane Doe, AccountID 103: only deposits and withdrawals but deposits > 0)",
+    "Closed account excluded (Bob Johnson, AccountID 105: Status=closed, not in output)",
+    "Transfer treated as non-deposit (Charlie Brown: Transfer amount subtracted from balance)",
+    "Payment treated as non-deposit (Alice Williams: Payment amount subtracted from balance)",
+    "Multiple active accounts for one customer (John Smith: 2 accounts, Charlie Brown: 2 accounts)"
+  ]
+}

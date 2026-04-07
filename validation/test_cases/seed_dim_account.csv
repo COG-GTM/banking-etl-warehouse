@@ -1,0 +1,9 @@
+AccountID,CustomerID,AccountType,Balance,DateOpened,Status
+101,1,Savings,5000.00,2023-01-15,active
+102,1,Checking,2000.00,2023-02-20,active
+103,2,Savings,10000.00,2023-03-10,active
+104,3,Checking,0.00,2023-04-05,active
+105,3,Savings,7500.00,2023-05-12,closed
+106,4,Checking,3000.00,2023-06-01,active
+107,5,Savings,0.00,2023-07-15,active
+108,5,Checking,1500.00,2023-08-20,active

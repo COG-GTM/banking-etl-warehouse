@@ -1,0 +1,9 @@
+{
+  "description": "Expected row counts for seed data tables",
+  "expected_counts": {
+    "DimCustomer": 5,
+    "DimAccount": 8,
+    "DimBranch": 5,
+    "FactTransaction": 14
+  }
+}
