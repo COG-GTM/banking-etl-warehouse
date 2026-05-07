@@ -1,0 +1,248 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "description": "Azure Monitor Workbook template for ADF ETL pipeline monitoring dashboard."
+  },
+  "parameters": {
+    "workbookName": {
+      "type": "string",
+      "defaultValue": "ADF-ETL-Pipeline-Dashboard"
+    },
+    "dataFactoryResourceId": {
+      "type": "string",
+      "metadata": { "description": "Full resource ID of the Azure Data Factory" }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Insights/workbooks",
+      "apiVersion": "2022-04-01",
+      "name": "[guid(parameters('workbookName'))]",
+      "location": "[parameters('location')]",
+      "kind": "shared",
+      "properties": {
+        "displayName": "[parameters('workbookName')]",
+        "category": "workbook",
+        "version": "Notebook/1.0",
+        "serializedData": {
+          "version": "Notebook/1.0",
+          "items": [
+            {
+              "type": 1,
+              "content": {
+                "json": "# ADF ETL Pipeline Dashboard\n\nMonitoring dashboard for the Banking DWH ETL pipelines migrated from Talend.\n\n---"
+              },
+              "name": "header"
+            },
+            {
+              "type": 9,
+              "content": {
+                "version": "KqlParameterItem/1.0",
+                "parameters": [
+                  {
+                    "id": "time-range",
+                    "name": "TimeRange",
+                    "type": 4,
+                    "isRequired": true,
+                    "value": {
+                      "durationMs": 86400000
+                    },
+                    "typeSettings": {
+                      "selectableValues": [
+                        { "durationMs": 3600000 },
+                        { "durationMs": 14400000 },
+                        { "durationMs": 43200000 },
+                        { "durationMs": 86400000 },
+                        { "durationMs": 172800000 },
+                        { "durationMs": 604800000 }
+                      ]
+                    },
+                    "label": "Time Range"
+                  }
+                ]
+              },
+              "name": "parameters"
+            },
+            {
+              "type": 1,
+              "content": {
+                "json": "## Pipeline Run Overview"
+              },
+              "name": "section-pipeline-overview"
+            },
+            {
+              "type": 10,
+              "content": {
+                "chartType": "bar",
+                "title": "Pipeline Runs by Status",
+                "metrics": [
+                  {
+                    "resourceMetadata": {
+                      "id": "[parameters('dataFactoryResourceId')]"
+                    },
+                    "name": "PipelineSucceededRuns",
+                    "aggregationType": 1,
+                    "namespace": "Microsoft.DataFactory/factories"
+                  },
+                  {
+                    "resourceMetadata": {
+                      "id": "[parameters('dataFactoryResourceId')]"
+                    },
+                    "name": "PipelineFailedRuns",
+                    "aggregationType": 1,
+                    "namespace": "Microsoft.DataFactory/factories"
+                  },
+                  {
+                    "resourceMetadata": {
+                      "id": "[parameters('dataFactoryResourceId')]"
+                    },
+                    "name": "PipelineCancelledRuns",
+                    "aggregationType": 1,
+                    "namespace": "Microsoft.DataFactory/factories"
+                  }
+                ]
+              },
+              "name": "chart-pipeline-status"
+            },
+            {
+              "type": 1,
+              "content": {
+                "json": "## Activity Run Details"
+              },
+              "name": "section-activity-details"
+            },
+            {
+              "type": 10,
+              "content": {
+                "chartType": "line",
+                "title": "Activity Runs Over Time",
+                "metrics": [
+                  {
+                    "resourceMetadata": {
+                      "id": "[parameters('dataFactoryResourceId')]"
+                    },
+                    "name": "ActivitySucceededRuns",
+                    "aggregationType": 1,
+                    "namespace": "Microsoft.DataFactory/factories"
+                  },
+                  {
+                    "resourceMetadata": {
+                      "id": "[parameters('dataFactoryResourceId')]"
+                    },
+                    "name": "ActivityFailedRuns",
+                    "aggregationType": 1,
+                    "namespace": "Microsoft.DataFactory/factories"
+                  }
+                ]
+              },
+              "name": "chart-activity-runs"
+            },
+            {
+              "type": 1,
+              "content": {
+                "json": "## Trigger Status"
+              },
+              "name": "section-trigger-status"
+            },
+            {
+              "type": 10,
+              "content": {
+                "chartType": "bar",
+                "title": "Trigger Runs by Status",
+                "metrics": [
+                  {
+                    "resourceMetadata": {
+                      "id": "[parameters('dataFactoryResourceId')]"
+                    },
+                    "name": "TriggerSucceededRuns",
+                    "aggregationType": 1,
+                    "namespace": "Microsoft.DataFactory/factories"
+                  },
+                  {
+                    "resourceMetadata": {
+                      "id": "[parameters('dataFactoryResourceId')]"
+                    },
+                    "name": "TriggerFailedRuns",
+                    "aggregationType": 1,
+                    "namespace": "Microsoft.DataFactory/factories"
+                  }
+                ]
+              },
+              "name": "chart-trigger-status"
+            },
+            {
+              "type": 1,
+              "content": {
+                "json": "## Data Flow Performance"
+              },
+              "name": "section-dataflow-performance"
+            },
+            {
+              "type": 10,
+              "content": {
+                "chartType": "line",
+                "title": "Pipeline Elapsed Time (ms)",
+                "metrics": [
+                  {
+                    "resourceMetadata": {
+                      "id": "[parameters('dataFactoryResourceId')]"
+                    },
+                    "name": "PipelineElapsedTimeRuns",
+                    "aggregationType": 4,
+                    "namespace": "Microsoft.DataFactory/factories"
+                  }
+                ]
+              },
+              "name": "chart-elapsed-time"
+            },
+            {
+              "type": 1,
+              "content": {
+                "json": "## Integration Runtime Utilization"
+              },
+              "name": "section-ir-utilization"
+            },
+            {
+              "type": 10,
+              "content": {
+                "chartType": "line",
+                "title": "Integration Runtime Available Memory / CPU",
+                "metrics": [
+                  {
+                    "resourceMetadata": {
+                      "id": "[parameters('dataFactoryResourceId')]"
+                    },
+                    "name": "IntegrationRuntimeAvailableMemory",
+                    "aggregationType": 3,
+                    "namespace": "Microsoft.DataFactory/factories"
+                  },
+                  {
+                    "resourceMetadata": {
+                      "id": "[parameters('dataFactoryResourceId')]"
+                    },
+                    "name": "IntegrationRuntimeCpuPercentage",
+                    "aggregationType": 3,
+                    "namespace": "Microsoft.DataFactory/factories"
+                  }
+                ]
+              },
+              "name": "chart-ir-resources"
+            },
+            {
+              "type": 1,
+              "content": {
+                "json": "---\n\n### Pipeline Inventory\n\n| Pipeline | Type | Schedule | Description |\n|----------|------|----------|-------------|\n| pipeline_Master_ETL | Orchestration | Daily 02:00 UTC | Master orchestration pipeline |\n| pipeline_Load_DimBranch | Copy | Via Master | Branch dimension load |\n| pipeline_Load_DimAccount | Copy | Via Master | Account dimension load |\n| pipeline_Load_DimCustomer | Data Flow | Via Master | Customer dimension transform + load |\n| pipeline_Load_FactTransaction | Data Flow | Via Master | Transaction fact union + dedup + load |"
+              },
+              "name": "pipeline-inventory-table"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

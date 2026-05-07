@@ -1,0 +1,34 @@
+{
+  "name": "trigger_Manual_ETL",
+  "properties": {
+    "description": "Manual/on-demand trigger for ad-hoc execution of the Master ETL pipeline. Use for testing, initial loads, or recovery scenarios.",
+    "runtimeState": "Stopped",
+    "pipelines": [
+      {
+        "pipelineReference": {
+          "referenceName": "pipeline_Master_ETL",
+          "type": "PipelineReference"
+        },
+        "parameters": {
+          "Environment": "production"
+        }
+      }
+    ],
+    "type": "BlobEventsTrigger",
+    "typeProperties": {
+      "blobPathBeginsWith": "/etl-trigger/blobs/manual_run_",
+      "blobPathEndsWith": ".trigger",
+      "ignoreEmptyBlobs": true,
+      "scope": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.Storage/storageAccounts/{storage-account}",
+      "events": [
+        "Microsoft.Storage.BlobCreated"
+      ]
+    },
+    "annotations": [
+      "Manual",
+      "OnDemand",
+      "ETL"
+    ]
+  },
+  "type": "Microsoft.DataFactory/factories/triggers"
+}

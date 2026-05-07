@@ -1,0 +1,187 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "description": "Azure Monitor alert rules for ADF ETL pipeline monitoring. Deploy to the same resource group as the Data Factory."
+  },
+  "parameters": {
+    "dataFactoryName": {
+      "type": "string",
+      "metadata": { "description": "Name of the Azure Data Factory instance" }
+    },
+    "dataFactoryResourceId": {
+      "type": "string",
+      "metadata": { "description": "Full resource ID of the Azure Data Factory" }
+    },
+    "actionGroupResourceId": {
+      "type": "string",
+      "metadata": { "description": "Resource ID of the Action Group for notifications" }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Insights/metricAlerts",
+      "apiVersion": "2018-03-01",
+      "name": "alert-adf-pipeline-failure",
+      "location": "global",
+      "properties": {
+        "description": "Fires when any ADF pipeline run fails. Covers all ETL pipelines including Master_ETL, Load_DimBranch, Load_DimAccount, Load_DimCustomer, and Load_FactTransaction.",
+        "severity": 1,
+        "enabled": true,
+        "scopes": [
+          "[parameters('dataFactoryResourceId')]"
+        ],
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "criteria": {
+          "odata.type": "Microsoft.Azure.Monitor.MultipleResourceMultipleMetricCriteria",
+          "allOf": [
+            {
+              "name": "PipelineFailedRuns",
+              "metricName": "PipelineFailedRuns",
+              "metricNamespace": "Microsoft.DataFactory/factories",
+              "operator": "GreaterThan",
+              "threshold": 0,
+              "timeAggregation": "Total",
+              "criterionType": "StaticThresholdCriterion"
+            }
+          ]
+        },
+        "actions": [
+          {
+            "actionGroupId": "[parameters('actionGroupResourceId')]",
+            "webHookProperties": {
+              "alertSource": "ADF-ETL-Pipeline",
+              "severity": "Critical"
+            }
+          }
+        ],
+        "autoMitigate": true
+      }
+    },
+    {
+      "type": "Microsoft.Insights/metricAlerts",
+      "apiVersion": "2018-03-01",
+      "name": "alert-adf-activity-failure",
+      "location": "global",
+      "properties": {
+        "description": "Fires when any individual activity within a pipeline fails. Helps pinpoint which specific Copy or Data Flow activity is causing issues.",
+        "severity": 2,
+        "enabled": true,
+        "scopes": [
+          "[parameters('dataFactoryResourceId')]"
+        ],
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "criteria": {
+          "odata.type": "Microsoft.Azure.Monitor.MultipleResourceMultipleMetricCriteria",
+          "allOf": [
+            {
+              "name": "ActivityFailedRuns",
+              "metricName": "ActivityFailedRuns",
+              "metricNamespace": "Microsoft.DataFactory/factories",
+              "operator": "GreaterThan",
+              "threshold": 0,
+              "timeAggregation": "Total",
+              "criterionType": "StaticThresholdCriterion"
+            }
+          ]
+        },
+        "actions": [
+          {
+            "actionGroupId": "[parameters('actionGroupResourceId')]",
+            "webHookProperties": {
+              "alertSource": "ADF-ETL-Activity",
+              "severity": "High"
+            }
+          }
+        ],
+        "autoMitigate": true
+      }
+    },
+    {
+      "type": "Microsoft.Insights/metricAlerts",
+      "apiVersion": "2018-03-01",
+      "name": "alert-adf-long-running-pipeline",
+      "location": "global",
+      "properties": {
+        "description": "Fires when pipeline execution exceeds the expected duration threshold, indicating potential performance degradation or hung pipelines.",
+        "severity": 3,
+        "enabled": true,
+        "scopes": [
+          "[parameters('dataFactoryResourceId')]"
+        ],
+        "evaluationFrequency": "PT15M",
+        "windowSize": "PT1H",
+        "criteria": {
+          "odata.type": "Microsoft.Azure.Monitor.MultipleResourceMultipleMetricCriteria",
+          "allOf": [
+            {
+              "name": "PipelineElapsedTimeRuns",
+              "metricName": "PipelineElapsedTimeRuns",
+              "metricNamespace": "Microsoft.DataFactory/factories",
+              "operator": "GreaterThan",
+              "threshold": 3600000,
+              "timeAggregation": "Maximum",
+              "criterionType": "StaticThresholdCriterion"
+            }
+          ]
+        },
+        "actions": [
+          {
+            "actionGroupId": "[parameters('actionGroupResourceId')]",
+            "webHookProperties": {
+              "alertSource": "ADF-ETL-Performance",
+              "severity": "Warning"
+            }
+          }
+        ],
+        "autoMitigate": true
+      }
+    },
+    {
+      "type": "Microsoft.Insights/metricAlerts",
+      "apiVersion": "2018-03-01",
+      "name": "alert-adf-trigger-failure",
+      "location": "global",
+      "properties": {
+        "description": "Fires when a trigger (daily schedule or manual) fails to start a pipeline run. Indicates scheduling or connectivity issues.",
+        "severity": 2,
+        "enabled": true,
+        "scopes": [
+          "[parameters('dataFactoryResourceId')]"
+        ],
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "criteria": {
+          "odata.type": "Microsoft.Azure.Monitor.MultipleResourceMultipleMetricCriteria",
+          "allOf": [
+            {
+              "name": "TriggerFailedRuns",
+              "metricName": "TriggerFailedRuns",
+              "metricNamespace": "Microsoft.DataFactory/factories",
+              "operator": "GreaterThan",
+              "threshold": 0,
+              "timeAggregation": "Total",
+              "criterionType": "StaticThresholdCriterion"
+            }
+          ]
+        },
+        "actions": [
+          {
+            "actionGroupId": "[parameters('actionGroupResourceId')]",
+            "webHookProperties": {
+              "alertSource": "ADF-ETL-Trigger",
+              "severity": "High"
+            }
+          }
+        ],
+        "autoMitigate": true
+      }
+    }
+  ]
+}

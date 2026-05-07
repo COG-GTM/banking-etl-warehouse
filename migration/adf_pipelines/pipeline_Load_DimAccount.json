@@ -1,0 +1,100 @@
+{
+  "name": "pipeline_Load_DimAccount",
+  "properties": {
+    "description": "Loads account master data from source SQL Server into DimAccount dimension table. Migrated from Talend job Load_DimAccount.",
+    "activities": [
+      {
+        "name": "Copy_DimAccount",
+        "type": "Copy",
+        "dependsOn": [],
+        "policy": {
+          "timeout": "0.01:00:00",
+          "retry": 2,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "userProperties": [],
+        "typeProperties": {
+          "source": {
+            "type": "SqlServerSource",
+            "sqlReaderQuery": "SELECT AccountID, CustomerID, AccountType, Balance, DateOpened, Status FROM [sample].dbo.account",
+            "queryTimeout": "00:10:00",
+            "isolationLevel": "ReadCommitted",
+            "partitionOption": "None"
+          },
+          "sink": {
+            "type": "AzureSqlSink",
+            "preCopyScript": "TRUNCATE TABLE [DWH].[dbo].[DimAccount]",
+            "writeBehavior": "insert",
+            "sqlWriterUseTableLock": true,
+            "tableOption": "autoCreate",
+            "disableMetricsCollection": false
+          },
+          "enableStaging": false,
+          "translator": {
+            "type": "TabularTranslator",
+            "mappings": [
+              {
+                "source": { "name": "AccountID", "type": "Int32" },
+                "sink": { "name": "AccountID", "type": "Int32" }
+              },
+              {
+                "source": { "name": "CustomerID", "type": "Int32" },
+                "sink": { "name": "CustomerID", "type": "Int32" }
+              },
+              {
+                "source": { "name": "AccountType", "type": "String" },
+                "sink": { "name": "AccountType", "type": "String" }
+              },
+              {
+                "source": { "name": "Balance", "type": "Decimal" },
+                "sink": { "name": "Balance", "type": "Decimal" }
+              },
+              {
+                "source": { "name": "DateOpened", "type": "DateTime" },
+                "sink": { "name": "DateOpened", "type": "DateTime" }
+              },
+              {
+                "source": { "name": "Status", "type": "String" },
+                "sink": { "name": "Status", "type": "String" }
+              }
+            ]
+          }
+        },
+        "inputs": [
+          {
+            "referenceName": "ds_SqlServer_Account",
+            "type": "DatasetReference"
+          }
+        ],
+        "outputs": [
+          {
+            "referenceName": "ds_AzureSql_DimAccount",
+            "type": "DatasetReference"
+          }
+        ]
+      }
+    ],
+    "parameters": {
+      "Environment": {
+        "type": "string",
+        "defaultValue": "production"
+      }
+    },
+    "variables": {
+      "RowsCopied": {
+        "type": "String"
+      }
+    },
+    "folder": {
+      "name": "ETL/Dimensions"
+    },
+    "annotations": [
+      "DimAccount",
+      "Dimension",
+      "Migration:Talend_Load_DimAccount"
+    ]
+  },
+  "type": "Microsoft.DataFactory/factories/pipelines"
+}

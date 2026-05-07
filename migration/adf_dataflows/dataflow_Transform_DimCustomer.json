@@ -1,0 +1,145 @@
+{
+  "name": "dataflow_Transform_DimCustomer",
+  "properties": {
+    "description": "Data flow that replicates the Talend Load_DimCustomer job: joins customer with city and state tables, applies UPPER() transformations on text fields, and maps to DimCustomer schema.",
+    "type": "MappingDataFlow",
+    "typeProperties": {
+      "sources": [
+        {
+          "dataset": {
+            "referenceName": "ds_SqlServer_Customer",
+            "type": "DatasetReference"
+          },
+          "name": "SourceCustomer",
+          "description": "Source customer table from SQL Server (sample database)"
+        },
+        {
+          "dataset": {
+            "referenceName": "ds_SqlServer_City",
+            "type": "DatasetReference"
+          },
+          "name": "SourceCity",
+          "description": "Source city lookup table from SQL Server"
+        },
+        {
+          "dataset": {
+            "referenceName": "ds_SqlServer_State",
+            "type": "DatasetReference"
+          },
+          "name": "SourceState",
+          "description": "Source state lookup table from SQL Server"
+        }
+      ],
+      "sinks": [
+        {
+          "dataset": {
+            "referenceName": "ds_AzureSql_DimCustomer",
+            "type": "DatasetReference"
+          },
+          "name": "SinkDimCustomer",
+          "description": "Target DimCustomer table in DWH Azure SQL Database",
+          "rejectedDataLinkedService": null
+        }
+      ],
+      "transformations": [
+        {
+          "name": "JoinCustomerCity",
+          "description": "Join customer table with city table on city_id (equivalent to Talend tMap join)"
+        },
+        {
+          "name": "JoinWithState",
+          "description": "Join result with state table on state_id (equivalent to Talend tMap second join)"
+        },
+        {
+          "name": "CleanseUpperCase",
+          "description": "Apply UPPER() transformation on text fields for data standardization (equivalent to Talend tMap expression)"
+        },
+        {
+          "name": "SelectDimCustomerColumns",
+          "description": "Map and rename columns to match DimCustomer target schema"
+        }
+      ],
+      "scriptLines": [
+        "source(output(",
+        "     customer_id as integer,",
+        "     customer_name as string,",
+        "     address as string,",
+        "     city_id as integer,",
+        "     age as integer,",
+        "     gender as string,",
+        "     email as string",
+        "   ),",
+        "   allowSchemaDrift: false,",
+        "   validateSchema: true,",
+        "   isolationLevel: 'READ_COMMITTED',",
+        "   format: 'table') ~> SourceCustomer",
+        "",
+        "source(output(",
+        "     city_id as integer,",
+        "     city_name as string,",
+        "     state_id as integer",
+        "   ),",
+        "   allowSchemaDrift: false,",
+        "   validateSchema: true,",
+        "   isolationLevel: 'READ_COMMITTED',",
+        "   format: 'table') ~> SourceCity",
+        "",
+        "source(output(",
+        "     state_id as integer,",
+        "     state_name as string",
+        "   ),",
+        "   allowSchemaDrift: false,",
+        "   validateSchema: true,",
+        "   isolationLevel: 'READ_COMMITTED',",
+        "   format: 'table') ~> SourceState",
+        "",
+        "SourceCustomer, SourceCity join(SourceCustomer@city_id == SourceCity@city_id,",
+        "   joinType: 'left',",
+        "   matchType: 'exact',",
+        "   ignoreSpaces: false,",
+        "   broadcast: 'auto') ~> JoinCustomerCity",
+        "",
+        "JoinCustomerCity, SourceState join(SourceCity@state_id == SourceState@state_id,",
+        "   joinType: 'left',",
+        "   matchType: 'exact',",
+        "   ignoreSpaces: false,",
+        "   broadcast: 'auto') ~> JoinWithState",
+        "",
+        "JoinWithState derive(",
+        "   CustomerName = upper(customer_name),",
+        "   Address = upper(address),",
+        "   CityName = upper(city_name),",
+        "   StateName = upper(state_name),",
+        "   Email = lower(email)",
+        ") ~> CleanseUpperCase",
+        "",
+        "CleanseUpperCase select(mapColumn(",
+        "     CustomerID = customer_id,",
+        "     CustomerName,",
+        "     Address,",
+        "     CityName,",
+        "     StateName,",
+        "     Age = age,",
+        "     Gender = gender,",
+        "     Email",
+        "   ),",
+        "   skipDuplicateMapInputs: true,",
+        "   skipDuplicateMapOutputs: true) ~> SelectDimCustomerColumns",
+        "",
+        "SelectDimCustomerColumns sink(",
+        "   allowSchemaDrift: false,",
+        "   validateSchema: true,",
+        "   deletable: false,",
+        "   insertable: true,",
+        "   updateable: false,",
+        "   upsertable: false,",
+        "   truncate: true,",
+        "   format: 'table',",
+        "   skipDuplicateMapInputs: true,",
+        "   skipDuplicateMapOutputs: true,",
+        "   errorHandlingOption: 'stopOnFirstError') ~> SinkDimCustomer"
+      ]
+    }
+  },
+  "type": "Microsoft.DataFactory/factories/dataflows"
+}

@@ -1,0 +1,61 @@
+{
+  "name": "pipeline_Load_FactTransaction",
+  "properties": {
+    "description": "Unifies transaction data from SQL Server, Excel, and CSV sources, deduplicates on transaction_id, and loads into FactTransaction. Migrated from Talend job Load_FactTransaction (tUnite + tUniqRow).",
+    "activities": [
+      {
+        "name": "DataFlow_Transform_FactTransaction",
+        "type": "ExecuteDataFlow",
+        "dependsOn": [],
+        "policy": {
+          "timeout": "0.02:00:00",
+          "retry": 2,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "userProperties": [],
+        "typeProperties": {
+          "dataFlow": {
+            "referenceName": "dataflow_Transform_FactTransaction",
+            "type": "DataFlowReference",
+            "parameters": {}
+          },
+          "staging": {
+            "linkedService": {
+              "referenceName": "ls_AzureBlobStorage",
+              "type": "LinkedServiceReference"
+            },
+            "folderPath": "staging/facttransaction"
+          },
+          "compute": {
+            "coreCount": 16,
+            "computeType": "General"
+          },
+          "traceLevel": "Fine"
+        }
+      }
+    ],
+    "parameters": {
+      "Environment": {
+        "type": "string",
+        "defaultValue": "production"
+      }
+    },
+    "variables": {
+      "RowsProcessed": {
+        "type": "String"
+      }
+    },
+    "folder": {
+      "name": "ETL/Facts"
+    },
+    "annotations": [
+      "FactTransaction",
+      "Fact",
+      "DataFlow",
+      "Migration:Talend_Load_FactTransaction"
+    ]
+  },
+  "type": "Microsoft.DataFactory/factories/pipelines"
+}
