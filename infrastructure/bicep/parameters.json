@@ -1,0 +1,75 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "eastus2"
+    },
+    "namePrefix": {
+      "value": "bankdwh"
+    },
+    "environment": {
+      "value": "dev"
+    },
+    "sqlAdminLogin": {
+      "value": "sqladmin"
+    },
+    "sqlAdminPassword": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/<KEYVAULT_RG>/providers/Microsoft.KeyVault/vaults/<KEYVAULT_NAME>"
+        },
+        "secretName": "sql-admin-password"
+      }
+    },
+    "sqlSkuName": {
+      "value": "S1"
+    },
+    "ssisNodeSize": {
+      "value": "Standard_D2_v3"
+    },
+    "ssisNodeCount": {
+      "value": 1
+    },
+    "ssisMaxParallelExecutions": {
+      "value": 4
+    },
+    "ssisEdition": {
+      "value": "Standard"
+    },
+    "vnetResourceId": {
+      "value": ""
+    },
+    "subnetName": {
+      "value": "default"
+    },
+    "blobStorageConnectionString": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/<KEYVAULT_RG>/providers/Microsoft.KeyVault/vaults/<KEYVAULT_NAME>"
+        },
+        "secretName": "blob-storage-connection-string"
+      }
+    },
+    "onPremSqlConnectionString": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/<KEYVAULT_RG>/providers/Microsoft.KeyVault/vaults/<KEYVAULT_NAME>"
+        },
+        "secretName": "onprem-sql-connection-string"
+      }
+    },
+    "logAnalyticsWorkspaceId": {
+      "value": ""
+    },
+    "tags": {
+      "value": {
+        "project": "banking-etl-warehouse",
+        "environment": "dev",
+        "managedBy": "bicep",
+        "costCenter": "data-engineering",
+        "owner": "etl-team"
+      }
+    }
+  }
+}

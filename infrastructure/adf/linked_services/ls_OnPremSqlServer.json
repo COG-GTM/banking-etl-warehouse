@@ -1,0 +1,23 @@
+{
+  "name": "ls_OnPremSqlServer",
+  "type": "Microsoft.DataFactory/factories/linkedservices",
+  "properties": {
+    "description": "Linked service for the on-premises SQL Server source database (sample.bak). Uses Self-Hosted Integration Runtime for secure connectivity to the on-premises network.",
+    "type": "SqlServer",
+    "typeProperties": {
+      "connectionString": {
+        "type": "SecureString",
+        "value": "Server=<ON_PREM_SQL_SERVER>;Database=sample;User ID=<SQL_USER>;Password=<SQL_PASSWORD>;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30"
+      }
+    },
+    "connectVia": {
+      "referenceName": "IR-SelfHosted",
+      "type": "IntegrationRuntimeReference"
+    },
+    "annotations": [
+      "on-premises",
+      "source-database",
+      "sample-db"
+    ]
+  }
+}
