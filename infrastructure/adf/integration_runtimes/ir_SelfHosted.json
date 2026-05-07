@@ -1,0 +1,25 @@
+{
+  "name": "IR-SelfHosted",
+  "type": "Microsoft.DataFactory/factories/integrationRuntimes",
+  "properties": {
+    "description": "Self-Hosted Integration Runtime for secure data movement between the on-premises SQL Server (source database with sample.bak) and Azure Data Factory. Must be installed on a machine within the on-premises network that has access to the source SQL Server.",
+    "type": "SelfHosted",
+    "typeProperties": {}
+  },
+  "_deployment_notes": {
+    "installation_steps": [
+      "1. Download the Self-Hosted IR installer from the Azure portal (ADF > Manage > Integration Runtimes > IR-SelfHosted > Option 1: Express setup)",
+      "2. Install on a Windows machine within the on-premises network",
+      "3. Register using the authentication key from the Azure portal",
+      "4. Verify connectivity to the source SQL Server",
+      "5. Verify outbound connectivity to Azure (*.servicebus.windows.net:443)"
+    ],
+    "system_requirements": {
+      "os": "Windows 10 / Windows Server 2016 or later",
+      "cpu": "4 cores minimum",
+      "memory": "8 GB minimum",
+      "disk": "80 GB available space",
+      "network": "Outbound HTTPS (443) to Azure Service Bus"
+    }
+  }
+}

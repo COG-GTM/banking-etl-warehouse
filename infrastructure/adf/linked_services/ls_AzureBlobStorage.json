@@ -1,0 +1,19 @@
+{
+  "name": "ls_AzureBlobStorage",
+  "type": "Microsoft.DataFactory/factories/linkedservices",
+  "properties": {
+    "description": "Linked service for Azure Blob Storage used to stage CSV and Excel source files (transaction_csv.csv, transaction_excel.xlsx) before ETL processing.",
+    "type": "AzureBlobStorage",
+    "typeProperties": {
+      "connectionString": {
+        "type": "SecureString",
+        "value": "DefaultEndpointsProtocol=https;AccountName=<STORAGE_ACCOUNT_NAME>;AccountKey=<STORAGE_ACCOUNT_KEY>;EndpointSuffix=core.windows.net"
+      }
+    },
+    "annotations": [
+      "staging-storage",
+      "csv-source",
+      "excel-source"
+    ]
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "name": "IR-AzureSSIS",
+  "type": "Microsoft.DataFactory/factories/integrationRuntimes",
+  "properties": {
+    "description": "Azure-SSIS Integration Runtime for executing migrated SSIS packages from the legacy Talend ETL pipelines. Connects to the SSISDB catalog hosted on Azure SQL Database.",
+    "type": "Managed",
+    "typeProperties": {
+      "computeProperties": {
+        "location": "<AZURE_REGION>",
+        "nodeSize": "Standard_D2_v3",
+        "numberOfNodes": 1,
+        "maxParallelExecutionsPerNode": 4,
+        "vNetProperties": {
+          "vNetId": "<VNET_RESOURCE_ID>",
+          "subnet": "<SUBNET_NAME>",
+          "_comment": "Remove vNetProperties block if VNet integration is not required"
+        }
+      },
+      "ssisProperties": {
+        "catalogInfo": {
+          "catalogServerEndpoint": "<SQL_SERVER_FQDN>",
+          "catalogDatabaseName": "SSISDB",
+          "catalogAdminUserName": "<SQL_ADMIN_LOGIN>",
+          "catalogAdminPassword": {
+            "type": "SecureString",
+            "value": "<SQL_ADMIN_PASSWORD>"
+          },
+          "catalogPricingTier": "S1"
+        },
+        "edition": "Standard",
+        "licenseType": "BasePrice",
+        "customSetupScriptProperties": null,
+        "dataProxyProperties": null
+      }
+    }
+  }
+}
