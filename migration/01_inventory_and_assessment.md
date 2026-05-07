@@ -89,7 +89,7 @@ All four Talend jobs are recommended for **Native ADF Rewrite** using ADF Mappin
 | **Version** | 0.1 |
 | **Purpose** | Loads account master data from the `sample` operational database into the `DimAccount` dimension table in the DWH |
 | **Schedule/Trigger** | Manual execution; run second in the load sequence |
-| **Dependencies** | DWH database and `DimAccount` table must exist; `DimCustomer` should be loaded first for referential integrity |
+| **Dependencies** | DWH database and `DimAccount` table must exist |
 | **Complexity Rating** | **Simple** |
 | **Source** | SQL Server `sample.dbo.account` (localhost:1433) |
 | **Target** | SQL Server `DWH.dbo.DimAccount` (localhost:1433) |
@@ -113,7 +113,7 @@ All four Talend jobs are recommended for **Native ADF Rewrite** using ADF Mappin
 | `account_id` | `AccountID` | INT | PK |
 | `customer_id` | `CustomerID` | INT | - |
 | `account_type` | `AccountType` | VARCHAR(10) | - |
-| `balance` | `Balance` | INT | - |
+| `balance` | `Balance` | MONEY | - |
 | `date_opened` | `DateOpened` | DATETIME2 | - |
 | `status` | `Status` | VARCHAR(10) | - |
 
@@ -220,7 +220,7 @@ tFileInputDelimited (CSV)      --row2--> /
 | `transaction_id` | `TransactionID` | INT | PK |
 | `account_id` | `AccountID` | INT | FK -> DimAccount |
 | `transaction_date` | `TransactionDate` | DATETIME2 | - |
-| `amount` | `Amount` | INT | - |
+| `amount` | `Amount` | MONEY | - |
 | `transaction_type` | `TransactionType` | VARCHAR(50) | - |
 | `branch_id` | `BranchID` | INT | FK -> DimBranch |
 
