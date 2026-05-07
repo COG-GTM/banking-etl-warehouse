@@ -40,7 +40,7 @@ This document provides a comprehensive inventory and migration assessment for th
 
 ### Migration Recommendation Summary
 
-All four Talend jobs are recommended for **Native ADF Rewrite** using ADF Mapping Data Flows. There are no existing SSIS packages, so Azure-SSIS Integration Runtime is not required. The stored procedures are fully compatible with Azure SQL Database. The estimated total migration effort is **52-76 hours**.
+All four Talend jobs are recommended for **Native ADF Rewrite** using ADF Mapping Data Flows. There are no existing SSIS packages, so Azure-SSIS Integration Runtime is not required. The stored procedures are fully compatible with Azure SQL Database. The estimated total migration effort is **74-110 hours**.
 
 ---
 
