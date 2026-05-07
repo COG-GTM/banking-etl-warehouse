@@ -1,0 +1,88 @@
+{
+  "name": "pipeline_Load_DimBranch",
+  "properties": {
+    "description": "Loads branch master data from source SQL Server into DimBranch dimension table. Migrated from Talend job Load_DimBranch.",
+    "activities": [
+      {
+        "name": "Copy_DimBranch",
+        "type": "Copy",
+        "dependsOn": [],
+        "policy": {
+          "timeout": "0.01:00:00",
+          "retry": 2,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "userProperties": [],
+        "typeProperties": {
+          "source": {
+            "type": "SqlServerSource",
+            "sqlReaderQuery": "SELECT BranchID, BranchName, BranchLocation FROM [sample].dbo.branch",
+            "queryTimeout": "00:10:00",
+            "isolationLevel": "ReadCommitted",
+            "partitionOption": "None"
+          },
+          "sink": {
+            "type": "AzureSqlSink",
+            "preCopyScript": "TRUNCATE TABLE [DWH].[dbo].[DimBranch]",
+            "writeBehavior": "insert",
+            "sqlWriterUseTableLock": true,
+            "tableOption": "autoCreate",
+            "disableMetricsCollection": false
+          },
+          "enableStaging": false,
+          "translator": {
+            "type": "TabularTranslator",
+            "mappings": [
+              {
+                "source": { "name": "BranchID", "type": "Int32" },
+                "sink": { "name": "BranchID", "type": "Int32" }
+              },
+              {
+                "source": { "name": "BranchName", "type": "String" },
+                "sink": { "name": "BranchName", "type": "String" }
+              },
+              {
+                "source": { "name": "BranchLocation", "type": "String" },
+                "sink": { "name": "BranchLocation", "type": "String" }
+              }
+            ]
+          }
+        },
+        "inputs": [
+          {
+            "referenceName": "ds_SqlServer_Branch",
+            "type": "DatasetReference"
+          }
+        ],
+        "outputs": [
+          {
+            "referenceName": "ds_AzureSql_DimBranch",
+            "type": "DatasetReference"
+          }
+        ]
+      }
+    ],
+    "parameters": {
+      "Environment": {
+        "type": "string",
+        "defaultValue": "production"
+      }
+    },
+    "variables": {
+      "RowsCopied": {
+        "type": "String"
+      }
+    },
+    "folder": {
+      "name": "ETL/Dimensions"
+    },
+    "annotations": [
+      "DimBranch",
+      "Dimension",
+      "Migration:Talend_Load_DimBranch"
+    ]
+  },
+  "type": "Microsoft.DataFactory/factories/pipelines"
+}

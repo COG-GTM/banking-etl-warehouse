@@ -1,0 +1,55 @@
+{
+  "name": "pipeline_Load_DimCustomer",
+  "properties": {
+    "description": "Transforms and loads customer data with city/state joins and UPPER() cleansing into DimCustomer. Migrated from Talend job Load_DimCustomer (tMap multi-table JOIN + data cleansing).",
+    "activities": [
+      {
+        "name": "DataFlow_Transform_DimCustomer",
+        "type": "ExecuteDataFlow",
+        "dependsOn": [],
+        "policy": {
+          "timeout": "0.01:00:00",
+          "retry": 2,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "userProperties": [],
+        "typeProperties": {
+          "dataFlow": {
+            "referenceName": "dataflow_Transform_DimCustomer",
+            "type": "DataFlowReference",
+            "parameters": {}
+          },
+          "staging": {},
+          "compute": {
+            "coreCount": 8,
+            "computeType": "General"
+          },
+          "traceLevel": "Fine"
+        }
+      }
+    ],
+    "parameters": {
+      "Environment": {
+        "type": "string",
+        "defaultValue": "production"
+      }
+    },
+    "variables": {
+      "RowsProcessed": {
+        "type": "String"
+      }
+    },
+    "folder": {
+      "name": "ETL/Dimensions"
+    },
+    "annotations": [
+      "DimCustomer",
+      "Dimension",
+      "DataFlow",
+      "Migration:Talend_Load_DimCustomer"
+    ]
+  },
+  "type": "Microsoft.DataFactory/factories/pipelines"
+}

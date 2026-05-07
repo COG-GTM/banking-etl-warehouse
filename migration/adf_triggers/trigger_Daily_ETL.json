@@ -1,0 +1,38 @@
+{
+  "name": "trigger_Daily_ETL",
+  "properties": {
+    "description": "Schedule trigger that executes the Master ETL pipeline daily at 02:00 UTC. Designed for off-peak batch processing of banking data warehouse loads.",
+    "runtimeState": "Stopped",
+    "pipelines": [
+      {
+        "pipelineReference": {
+          "referenceName": "pipeline_Master_ETL",
+          "type": "PipelineReference"
+        },
+        "parameters": {
+          "Environment": "production"
+        }
+      }
+    ],
+    "type": "ScheduleTrigger",
+    "typeProperties": {
+      "recurrence": {
+        "frequency": "Day",
+        "interval": 1,
+        "startTime": "2024-01-01T02:00:00Z",
+        "timeZone": "UTC",
+        "schedule": {
+          "hours": [2],
+          "minutes": [0]
+        }
+      }
+    },
+    "annotations": [
+      "Daily",
+      "Schedule",
+      "ETL",
+      "Production"
+    ]
+  },
+  "type": "Microsoft.DataFactory/factories/triggers"
+}

@@ -1,0 +1,268 @@
+{
+  "name": "pipeline_Master_ETL",
+  "properties": {
+    "description": "Master orchestration pipeline that executes all ETL jobs in dependency order: DimBranch -> DimAccount -> DimCustomer -> FactTransaction. Includes error handling with failure paths.",
+    "activities": [
+      {
+        "name": "Execute_Load_DimBranch",
+        "type": "ExecutePipeline",
+        "dependsOn": [],
+        "policy": {
+          "secureInput": false
+        },
+        "userProperties": [],
+        "typeProperties": {
+          "pipeline": {
+            "referenceName": "pipeline_Load_DimBranch",
+            "type": "PipelineReference"
+          },
+          "waitOnCompletion": true,
+          "parameters": {
+            "Environment": {
+              "value": "@pipeline().parameters.Environment",
+              "type": "Expression"
+            }
+          }
+        }
+      },
+      {
+        "name": "Execute_Load_DimAccount",
+        "type": "ExecutePipeline",
+        "dependsOn": [
+          {
+            "activity": "Execute_Load_DimBranch",
+            "dependencyConditions": ["Succeeded"]
+          }
+        ],
+        "policy": {
+          "secureInput": false
+        },
+        "userProperties": [],
+        "typeProperties": {
+          "pipeline": {
+            "referenceName": "pipeline_Load_DimAccount",
+            "type": "PipelineReference"
+          },
+          "waitOnCompletion": true,
+          "parameters": {
+            "Environment": {
+              "value": "@pipeline().parameters.Environment",
+              "type": "Expression"
+            }
+          }
+        }
+      },
+      {
+        "name": "Execute_Load_DimCustomer",
+        "type": "ExecutePipeline",
+        "dependsOn": [
+          {
+            "activity": "Execute_Load_DimAccount",
+            "dependencyConditions": ["Succeeded"]
+          }
+        ],
+        "policy": {
+          "secureInput": false
+        },
+        "userProperties": [],
+        "typeProperties": {
+          "pipeline": {
+            "referenceName": "pipeline_Load_DimCustomer",
+            "type": "PipelineReference"
+          },
+          "waitOnCompletion": true,
+          "parameters": {
+            "Environment": {
+              "value": "@pipeline().parameters.Environment",
+              "type": "Expression"
+            }
+          }
+        }
+      },
+      {
+        "name": "Execute_Load_FactTransaction",
+        "type": "ExecutePipeline",
+        "dependsOn": [
+          {
+            "activity": "Execute_Load_DimCustomer",
+            "dependencyConditions": ["Succeeded"]
+          }
+        ],
+        "policy": {
+          "secureInput": false
+        },
+        "userProperties": [],
+        "typeProperties": {
+          "pipeline": {
+            "referenceName": "pipeline_Load_FactTransaction",
+            "type": "PipelineReference"
+          },
+          "waitOnCompletion": true,
+          "parameters": {
+            "Environment": {
+              "value": "@pipeline().parameters.Environment",
+              "type": "Expression"
+            }
+          }
+        }
+      },
+      {
+        "name": "On_DimBranch_Failure",
+        "type": "WebActivity",
+        "dependsOn": [
+          {
+            "activity": "Execute_Load_DimBranch",
+            "dependencyConditions": ["Failed"]
+          }
+        ],
+        "policy": {
+          "timeout": "0.00:05:00",
+          "retry": 1,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "userProperties": [],
+        "typeProperties": {
+          "url": {
+            "value": "@pipeline().parameters.AlertWebhookUrl",
+            "type": "Expression"
+          },
+          "method": "POST",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "value": "@json(concat('{\"pipeline\":\"', pipeline().Pipeline, '\",\"activity\":\"Execute_Load_DimBranch\",\"status\":\"Failed\",\"runId\":\"', pipeline().RunId, '\",\"timestamp\":\"', utcNow(), '\",\"message\":\"DimBranch load failed. Downstream pipelines will not execute.\"}'))",
+            "type": "Expression"
+          }
+        }
+      },
+      {
+        "name": "On_DimAccount_Failure",
+        "type": "WebActivity",
+        "dependsOn": [
+          {
+            "activity": "Execute_Load_DimAccount",
+            "dependencyConditions": ["Failed"]
+          }
+        ],
+        "policy": {
+          "timeout": "0.00:05:00",
+          "retry": 1,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "userProperties": [],
+        "typeProperties": {
+          "url": {
+            "value": "@pipeline().parameters.AlertWebhookUrl",
+            "type": "Expression"
+          },
+          "method": "POST",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "value": "@json(concat('{\"pipeline\":\"', pipeline().Pipeline, '\",\"activity\":\"Execute_Load_DimAccount\",\"status\":\"Failed\",\"runId\":\"', pipeline().RunId, '\",\"timestamp\":\"', utcNow(), '\",\"message\":\"DimAccount load failed. DimCustomer and FactTransaction will not execute.\"}'))",
+            "type": "Expression"
+          }
+        }
+      },
+      {
+        "name": "On_DimCustomer_Failure",
+        "type": "WebActivity",
+        "dependsOn": [
+          {
+            "activity": "Execute_Load_DimCustomer",
+            "dependencyConditions": ["Failed"]
+          }
+        ],
+        "policy": {
+          "timeout": "0.00:05:00",
+          "retry": 1,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "userProperties": [],
+        "typeProperties": {
+          "url": {
+            "value": "@pipeline().parameters.AlertWebhookUrl",
+            "type": "Expression"
+          },
+          "method": "POST",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "value": "@json(concat('{\"pipeline\":\"', pipeline().Pipeline, '\",\"activity\":\"Execute_Load_DimCustomer\",\"status\":\"Failed\",\"runId\":\"', pipeline().RunId, '\",\"timestamp\":\"', utcNow(), '\",\"message\":\"DimCustomer load failed. FactTransaction will not execute.\"}'))",
+            "type": "Expression"
+          }
+        }
+      },
+      {
+        "name": "On_FactTransaction_Failure",
+        "type": "WebActivity",
+        "dependsOn": [
+          {
+            "activity": "Execute_Load_FactTransaction",
+            "dependencyConditions": ["Failed"]
+          }
+        ],
+        "policy": {
+          "timeout": "0.00:05:00",
+          "retry": 1,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "userProperties": [],
+        "typeProperties": {
+          "url": {
+            "value": "@pipeline().parameters.AlertWebhookUrl",
+            "type": "Expression"
+          },
+          "method": "POST",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "value": "@json(concat('{\"pipeline\":\"', pipeline().Pipeline, '\",\"activity\":\"Execute_Load_FactTransaction\",\"status\":\"Failed\",\"runId\":\"', pipeline().RunId, '\",\"timestamp\":\"', utcNow(), '\",\"message\":\"FactTransaction load failed. ETL pipeline did not complete successfully.\"}'))",
+            "type": "Expression"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Environment": {
+        "type": "string",
+        "defaultValue": "production"
+      },
+      "AlertWebhookUrl": {
+        "type": "string",
+        "defaultValue": "https://your-alert-endpoint.azurewebsites.net/api/pipeline-alerts"
+      }
+    },
+    "variables": {
+      "PipelineStatus": {
+        "type": "String",
+        "defaultValue": "InProgress"
+      },
+      "ErrorMessage": {
+        "type": "String"
+      }
+    },
+    "folder": {
+      "name": "ETL/Orchestration"
+    },
+    "annotations": [
+      "Master",
+      "Orchestration",
+      "ETL",
+      "Migration:Talend_Master"
+    ]
+  },
+  "type": "Microsoft.DataFactory/factories/pipelines"
+}

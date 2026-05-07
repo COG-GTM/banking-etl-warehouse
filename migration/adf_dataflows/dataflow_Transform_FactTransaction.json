@@ -1,0 +1,138 @@
+{
+  "name": "dataflow_Transform_FactTransaction",
+  "properties": {
+    "description": "Data flow that replicates the Talend Load_FactTransaction job: unions 3 transaction sources (SQL, Excel, CSV), deduplicates on transaction_id, and maps to FactTransaction schema.",
+    "type": "MappingDataFlow",
+    "typeProperties": {
+      "sources": [
+        {
+          "dataset": {
+            "referenceName": "ds_SqlServer_Transaction",
+            "type": "DatasetReference"
+          },
+          "name": "SourceSqlTransaction",
+          "description": "Transaction records from SQL Server source database"
+        },
+        {
+          "dataset": {
+            "referenceName": "ds_Blob_TransactionExcel",
+            "type": "DatasetReference"
+          },
+          "name": "SourceExcelTransaction",
+          "description": "Transaction records from Excel file in Azure Blob Storage"
+        },
+        {
+          "dataset": {
+            "referenceName": "ds_Blob_TransactionCsv",
+            "type": "DatasetReference"
+          },
+          "name": "SourceCsvTransaction",
+          "description": "Transaction records from CSV file in Azure Blob Storage"
+        }
+      ],
+      "sinks": [
+        {
+          "dataset": {
+            "referenceName": "ds_AzureSql_FactTransaction",
+            "type": "DatasetReference"
+          },
+          "name": "SinkFactTransaction",
+          "description": "Target FactTransaction table in DWH Azure SQL Database"
+        }
+      ],
+      "transformations": [
+        {
+          "name": "UnionAllSources",
+          "description": "Combine all 3 transaction sources into a single stream (equivalent to Talend tUnite)"
+        },
+        {
+          "name": "DeduplicateTransactions",
+          "description": "Remove duplicate transactions based on transaction_id, keeping the first occurrence (equivalent to Talend tUniqRow)"
+        },
+        {
+          "name": "SelectFactColumns",
+          "description": "Map and rename columns to match FactTransaction target schema"
+        }
+      ],
+      "scriptLines": [
+        "source(output(",
+        "     transaction_id as integer,",
+        "     account_id as integer,",
+        "     transaction_date as timestamp,",
+        "     amount as decimal(19,4),",
+        "     transaction_type as string,",
+        "     branch_id as integer",
+        "   ),",
+        "   allowSchemaDrift: false,",
+        "   validateSchema: true,",
+        "   isolationLevel: 'READ_COMMITTED',",
+        "   format: 'table') ~> SourceSqlTransaction",
+        "",
+        "source(output(",
+        "     transaction_id as integer,",
+        "     account_id as integer,",
+        "     transaction_date as timestamp,",
+        "     amount as decimal(19,4),",
+        "     transaction_type as string,",
+        "     branch_id as integer",
+        "   ),",
+        "   allowSchemaDrift: false,",
+        "   validateSchema: true,",
+        "   format: 'excel',",
+        "   firstRowAsHeader: true) ~> SourceExcelTransaction",
+        "",
+        "source(output(",
+        "     transaction_id as integer,",
+        "     account_id as integer,",
+        "     transaction_date as timestamp,",
+        "     amount as decimal(19,4),",
+        "     transaction_type as string,",
+        "     branch_id as integer",
+        "   ),",
+        "   allowSchemaDrift: false,",
+        "   validateSchema: true,",
+        "   format: 'delimited',",
+        "   columnDelimiter: ',',",
+        "   escapeChar: '\\\\',",
+        "   quoteChar: '\\\"',",
+        "   firstRowAsHeader: true) ~> SourceCsvTransaction",
+        "",
+        "SourceSqlTransaction, SourceExcelTransaction, SourceCsvTransaction union(byName: true) ~> UnionAllSources",
+        "",
+        "UnionAllSources aggregate(",
+        "   groupBy(transaction_id),",
+        "   account_id = first(account_id),",
+        "   transaction_date = first(transaction_date),",
+        "   amount = first(amount),",
+        "   transaction_type = first(transaction_type),",
+        "   branch_id = first(branch_id)",
+        ") ~> DeduplicateTransactions",
+        "",
+        "DeduplicateTransactions select(mapColumn(",
+        "     TransactionID = transaction_id,",
+        "     AccountID = account_id,",
+        "     TransactionDate = transaction_date,",
+        "     Amount = amount,",
+        "     TransactionType = transaction_type,",
+        "     BranchID = branch_id",
+        "   ),",
+        "   skipDuplicateMapInputs: true,",
+        "   skipDuplicateMapOutputs: true) ~> SelectFactColumns",
+        "",
+        "SelectFactColumns sink(",
+        "   allowSchemaDrift: false,",
+        "   validateSchema: true,",
+        "   deletable: false,",
+        "   insertable: true,",
+        "   updateable: false,",
+        "   upsertable: false,",
+        "   truncate: true,",
+        "   format: 'table',",
+        "   skipDuplicateMapInputs: true,",
+        "   skipDuplicateMapOutputs: true,",
+        "   errorHandlingOption: 'stopOnFirstError') ~> SinkFactTransaction"
+      ]
+    }
+  },
+  "type": "Microsoft.DataFactory/factories/dataflows"
+}
