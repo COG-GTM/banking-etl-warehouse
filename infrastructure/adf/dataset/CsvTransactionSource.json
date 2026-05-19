@@ -1,0 +1,37 @@
+{
+    "name": "CsvTransactionSource",
+    "type": "Microsoft.DataFactory/factories/datasets",
+    "properties": {
+        "description": "Dataset pointing to transaction_csv.csv in Azure Blob Storage. Schema mirrors the CSV source from data_sources/transaction_csv.csv.",
+        "linkedServiceName": {
+            "referenceName": "AzureBlobSources",
+            "type": "LinkedServiceReference"
+        },
+        "type": "DelimitedText",
+        "typeProperties": {
+            "location": {
+                "type": "AzureBlobStorageLocation",
+                "container": "banking-sources",
+                "folderPath": "transactions",
+                "fileName": "transaction_csv.csv"
+            },
+            "columnDelimiter": ",",
+            "escapeChar": "\\",
+            "quoteChar": "\"",
+            "firstRowAsHeader": true
+        },
+        "schema": [
+            { "name": "TransactionID", "type": "String" },
+            { "name": "AccountID", "type": "String" },
+            { "name": "TransactionDate", "type": "String" },
+            { "name": "Amount", "type": "String" },
+            { "name": "TransactionType", "type": "String" },
+            { "name": "BranchID", "type": "String" }
+        ],
+        "annotations": [
+            "source",
+            "csv",
+            "transactions"
+        ]
+    }
+}

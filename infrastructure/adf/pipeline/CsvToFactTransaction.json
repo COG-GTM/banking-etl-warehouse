@@ -1,0 +1,123 @@
+{
+    "name": "CsvToFactTransaction",
+    "type": "Microsoft.DataFactory/factories/pipelines",
+    "properties": {
+        "description": "Sample ADF pipeline that demonstrates data movement from CSV source to the FactTransaction table in the DWH. This mirrors the existing Talend Load_FactTransaction ETL job. The pipeline: (1) copies CSV data from Blob Storage, (2) maps columns to the Star Schema, and (3) performs upsert to handle deduplication by TransactionID.",
+        "activities": [
+            {
+                "name": "CopyCsvToFactTransaction",
+                "description": "Copy transaction data from CSV in Blob Storage to FactTransaction table in DWH SQL Database",
+                "type": "Copy",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "0.01:00:00",
+                    "retry": 2,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "typeProperties": {
+                    "source": {
+                        "type": "DelimitedTextSource",
+                        "storeSettings": {
+                            "type": "AzureBlobStorageReadSettings",
+                            "recursive": false,
+                            "enablePartitionDiscovery": false
+                        },
+                        "formatSettings": {
+                            "type": "DelimitedTextReadSettings"
+                        }
+                    },
+                    "sink": {
+                        "type": "AzureSqlSink",
+                        "writeBehavior": "upsert",
+                        "upsertSettings": {
+                            "useTempDB": true,
+                            "keys": ["TransactionID"]
+                        },
+                        "sqlWriterUseTableLock": false,
+                        "disableMetricsCollection": false
+                    },
+                    "enableStaging": false,
+                    "translator": {
+                        "type": "TabularTranslator",
+                        "mappings": [
+                            {
+                                "source": { "name": "TransactionID", "type": "String" },
+                                "sink": { "name": "TransactionID", "type": "Int32" }
+                            },
+                            {
+                                "source": { "name": "AccountID", "type": "String" },
+                                "sink": { "name": "AccountID", "type": "Int32" }
+                            },
+                            {
+                                "source": { "name": "TransactionDate", "type": "String" },
+                                "sink": { "name": "TransactionDate", "type": "DateTime" }
+                            },
+                            {
+                                "source": { "name": "Amount", "type": "String" },
+                                "sink": { "name": "Amount", "type": "Decimal" }
+                            },
+                            {
+                                "source": { "name": "TransactionType", "type": "String" },
+                                "sink": { "name": "TransactionType", "type": "String" }
+                            },
+                            {
+                                "source": { "name": "BranchID", "type": "String" },
+                                "sink": { "name": "BranchID", "type": "Int32" }
+                            }
+                        ]
+                    }
+                },
+                "inputs": [
+                    {
+                        "referenceName": "CsvTransactionSource",
+                        "type": "DatasetReference"
+                    }
+                ],
+                "outputs": [
+                    {
+                        "referenceName": "SqlFactTransaction",
+                        "type": "DatasetReference"
+                    }
+                ]
+            },
+            {
+                "name": "LogRowCount",
+                "description": "Log the number of rows copied for monitoring and validation",
+                "type": "SetVariable",
+                "dependsOn": [
+                    {
+                        "activity": "CopyCsvToFactTransaction",
+                        "dependencyConditions": ["Succeeded"]
+                    }
+                ],
+                "policy": {
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "typeProperties": {
+                    "variableName": "rowsCopied",
+                    "value": {
+                        "value": "@string(activity('CopyCsvToFactTransaction').output.rowsCopied)",
+                        "type": "Expression"
+                    }
+                }
+            }
+        ],
+        "variables": {
+            "rowsCopied": {
+                "type": "String",
+                "defaultValue": "0"
+            }
+        },
+        "annotations": [
+            "etl",
+            "csv-to-sql",
+            "fact-transaction"
+        ],
+        "folder": {
+            "name": "BankingETL"
+        }
+    }
+}

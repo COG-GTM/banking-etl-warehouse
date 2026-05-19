@@ -1,0 +1,21 @@
+{
+    "name": "AzureBlobSources",
+    "type": "Microsoft.DataFactory/factories/linkedservices",
+    "properties": {
+        "description": "Azure Blob Storage hosting CSV and Excel source files (transaction_csv.csv, transaction_excel.xlsx)",
+        "type": "AzureBlobStorage",
+        "typeProperties": {
+            "serviceUri": "https://<your-storage-account>.blob.core.windows.net",
+            "accountKind": "StorageV2"
+        },
+        "annotations": [
+            "source-files",
+            "csv",
+            "excel"
+        ],
+        "connectVia": {
+            "referenceName": "AutoResolveIntegrationRuntime",
+            "type": "IntegrationRuntimeReference"
+        }
+    }
+}

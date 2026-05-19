@@ -1,0 +1,18 @@
+{
+    "name": "AzureSqlDWH",
+    "type": "Microsoft.DataFactory/factories/linkedservices",
+    "properties": {
+        "description": "Connection to the DWH database containing the Star Schema (DimCustomer, DimAccount, DimBranch, FactTransaction)",
+        "type": "AzureSqlDatabase",
+        "typeProperties": {
+            "connectionString": {
+                "type": "SecureString",
+                "value": "Server=tcp:<your-sql-server>.database.windows.net,1433;Initial Catalog=DWH;Persist Security Info=False;User ID=<sql-admin-login>;Password=<sql-admin-password>;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+            }
+        },
+        "annotations": [
+            "target-dwh",
+            "star-schema"
+        ]
+    }
+}
