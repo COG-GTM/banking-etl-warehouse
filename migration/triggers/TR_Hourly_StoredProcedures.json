@@ -1,0 +1,39 @@
+{
+    "name": "TR_Hourly_StoredProcedures",
+    "properties": {
+        "description": "Scheduled trigger that runs the reporting stored procedures hourly during business hours (08:00-18:00 UTC). Provides near-real-time reporting data for daily transaction summaries.",
+        "runtimeState": "Stopped",
+        "type": "ScheduleTrigger",
+        "typeProperties": {
+            "recurrence": {
+                "frequency": "Hour",
+                "interval": 1,
+                "startTime": "2024-01-01T08:00:00Z",
+                "endTime": "2099-12-31T18:00:00Z",
+                "timeZone": "UTC",
+                "schedule": {
+                    "hours": [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
+                    "minutes": [0]
+                }
+            }
+        },
+        "pipelines": [
+            {
+                "pipelineReference": {
+                    "referenceName": "PL_Execute_StoredProcedures",
+                    "type": "PipelineReference"
+                },
+                "parameters": {
+                    "StartDate": "",
+                    "EndDate": "",
+                    "CustomerName": ""
+                }
+            }
+        ],
+        "annotations": [
+            "hourly",
+            "business-hours",
+            "reporting"
+        ]
+    }
+}

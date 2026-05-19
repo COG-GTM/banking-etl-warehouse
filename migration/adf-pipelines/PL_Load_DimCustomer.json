@@ -1,0 +1,152 @@
+{
+    "name": "PL_Load_DimCustomer",
+    "properties": {
+        "description": "Loads customer dimension data into the DWH DimCustomer table. Replaces the Talend Load_DimCustomer job which performed multi-table JOINs (customer + city + state) via tMap and data cleansing (UPPER conversion).",
+        "activities": [
+            {
+                "name": "Lookup_DimCustomer_Pre_Count",
+                "type": "Lookup",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "0.00:10:00",
+                    "retry": 2,
+                    "retryIntervalInSeconds": 30
+                },
+                "typeProperties": {
+                    "source": {
+                        "type": "SqlServerSource",
+                        "sqlReaderQuery": "SELECT COUNT(*) AS row_count FROM DWH.dbo.DimCustomer"
+                    },
+                    "dataset": {
+                        "referenceName": "DS_SqlServer_DWH_DimCustomer",
+                        "type": "DatasetReference"
+                    },
+                    "firstRowOnly": true
+                }
+            },
+            {
+                "name": "DF_Transform_DimCustomer",
+                "type": "ExecuteDataFlow",
+                "dependsOn": [
+                    {
+                        "activity": "Lookup_DimCustomer_Pre_Count",
+                        "dependencyConditions": ["Succeeded"]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.01:00:00",
+                    "retry": 3,
+                    "retryIntervalInSeconds": 60
+                },
+                "typeProperties": {
+                    "dataFlow": {
+                        "referenceName": "DF_Transform_DimCustomer",
+                        "type": "DataFlowReference"
+                    },
+                    "compute": {
+                        "coreCount": 8,
+                        "computeType": "General"
+                    },
+                    "traceLevel": "Fine",
+                    "staging": {}
+                }
+            },
+            {
+                "name": "Lookup_DimCustomer_Post_Count",
+                "type": "Lookup",
+                "dependsOn": [
+                    {
+                        "activity": "DF_Transform_DimCustomer",
+                        "dependencyConditions": ["Succeeded"]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.00:10:00",
+                    "retry": 2,
+                    "retryIntervalInSeconds": 30
+                },
+                "typeProperties": {
+                    "source": {
+                        "type": "SqlServerSource",
+                        "sqlReaderQuery": "SELECT COUNT(*) AS row_count FROM DWH.dbo.DimCustomer"
+                    },
+                    "dataset": {
+                        "referenceName": "DS_SqlServer_DWH_DimCustomer",
+                        "type": "DatasetReference"
+                    },
+                    "firstRowOnly": true
+                }
+            },
+            {
+                "name": "Validate_DimCustomer_RowCount",
+                "type": "IfCondition",
+                "dependsOn": [
+                    {
+                        "activity": "Lookup_DimCustomer_Post_Count",
+                        "dependencyConditions": ["Succeeded"]
+                    }
+                ],
+                "typeProperties": {
+                    "expression": {
+                        "value": "@equals(activity('Lookup_DimCustomer_Post_Count').output.firstRow.row_count, 0)",
+                        "type": "Expression"
+                    },
+                    "ifTrueActivities": [
+                        {
+                            "name": "Fail_DimCustomer_Empty",
+                            "type": "Fail",
+                            "typeProperties": {
+                                "message": "DimCustomer load resulted in 0 rows. Investigate source data or data flow transformation.",
+                                "errorCode": "DIM_CUSTOMER_EMPTY"
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                "name": "Log_DimCustomer_Load",
+                "type": "SqlServerStoredProcedure",
+                "dependsOn": [
+                    {
+                        "activity": "Validate_DimCustomer_RowCount",
+                        "dependencyConditions": ["Succeeded"]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.00:05:00",
+                    "retry": 1,
+                    "retryIntervalInSeconds": 30
+                },
+                "typeProperties": {
+                    "storedProcedureName": "sp_LogPipelineExecution",
+                    "storedProcedureParameters": {
+                        "PipelineName": { "value": "PL_Load_DimCustomer", "type": "String" },
+                        "TableName": { "value": "DimCustomer", "type": "String" },
+                        "RowsLoaded": {
+                            "value": { "value": "@activity('Lookup_DimCustomer_Post_Count').output.firstRow.row_count", "type": "Expression" },
+                            "type": "Int32"
+                        },
+                        "Status": { "value": "Success", "type": "String" },
+                        "ExecutionTime": {
+                            "value": { "value": "@utcNow()", "type": "Expression" },
+                            "type": "DateTime"
+                        }
+                    }
+                },
+                "linkedServiceName": {
+                    "referenceName": "LS_SqlServer_DWH",
+                    "type": "LinkedServiceReference"
+                }
+            }
+        ],
+        "annotations": [
+            "dimension-load",
+            "dwh",
+            "customer",
+            "data-flow"
+        ],
+        "folder": {
+            "name": "DimensionLoads"
+        }
+    }
+}

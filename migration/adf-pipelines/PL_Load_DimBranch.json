@@ -1,0 +1,138 @@
+{
+    "name": "PL_Load_DimBranch",
+    "properties": {
+        "description": "Loads branch dimension data from the Sample_DB source into the DWH DimBranch table. Replaces the Talend Load_DimBranch job.",
+        "activities": [
+            {
+                "name": "Lookup_DimBranch_Pre_Count",
+                "type": "Lookup",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "0.00:10:00",
+                    "retry": 2,
+                    "retryIntervalInSeconds": 30
+                },
+                "typeProperties": {
+                    "source": {
+                        "type": "SqlServerSource",
+                        "sqlReaderQuery": "SELECT COUNT(*) AS row_count FROM DWH.dbo.DimBranch"
+                    },
+                    "dataset": {
+                        "referenceName": "DS_SqlServer_DWH_DimBranch",
+                        "type": "DatasetReference"
+                    },
+                    "firstRowOnly": true
+                }
+            },
+            {
+                "name": "Copy_DimBranch",
+                "type": "Copy",
+                "dependsOn": [
+                    {
+                        "activity": "Lookup_DimBranch_Pre_Count",
+                        "dependencyConditions": ["Succeeded"]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.01:00:00",
+                    "retry": 3,
+                    "retryIntervalInSeconds": 60
+                },
+                "typeProperties": {
+                    "source": {
+                        "type": "SqlServerSource",
+                        "sqlReaderQuery": "SELECT BranchID, BranchName, BranchLocation FROM Sample_DB.dbo.Branch"
+                    },
+                    "sink": {
+                        "type": "SqlServerSink",
+                        "preCopyScript": "TRUNCATE TABLE DWH.dbo.DimBranch",
+                        "writeBehavior": "insert",
+                        "tableOption": "none"
+                    },
+                    "enableStaging": false
+                },
+                "inputs": [
+                    {
+                        "referenceName": "DS_SqlServer_SampleDB_Branch",
+                        "type": "DatasetReference"
+                    }
+                ],
+                "outputs": [
+                    {
+                        "referenceName": "DS_SqlServer_DWH_DimBranch",
+                        "type": "DatasetReference"
+                    }
+                ]
+            },
+            {
+                "name": "Lookup_DimBranch_Post_Count",
+                "type": "Lookup",
+                "dependsOn": [
+                    {
+                        "activity": "Copy_DimBranch",
+                        "dependencyConditions": ["Succeeded"]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.00:10:00",
+                    "retry": 2,
+                    "retryIntervalInSeconds": 30
+                },
+                "typeProperties": {
+                    "source": {
+                        "type": "SqlServerSource",
+                        "sqlReaderQuery": "SELECT COUNT(*) AS row_count FROM DWH.dbo.DimBranch"
+                    },
+                    "dataset": {
+                        "referenceName": "DS_SqlServer_DWH_DimBranch",
+                        "type": "DatasetReference"
+                    },
+                    "firstRowOnly": true
+                }
+            },
+            {
+                "name": "Log_DimBranch_Load",
+                "type": "SqlServerStoredProcedure",
+                "dependsOn": [
+                    {
+                        "activity": "Lookup_DimBranch_Post_Count",
+                        "dependencyConditions": ["Succeeded"]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.00:05:00",
+                    "retry": 1,
+                    "retryIntervalInSeconds": 30
+                },
+                "typeProperties": {
+                    "storedProcedureName": "sp_LogPipelineExecution",
+                    "storedProcedureParameters": {
+                        "PipelineName": { "value": "PL_Load_DimBranch", "type": "String" },
+                        "TableName": { "value": "DimBranch", "type": "String" },
+                        "RowsLoaded": {
+                            "value": { "value": "@activity('Lookup_DimBranch_Post_Count').output.firstRow.row_count", "type": "Expression" },
+                            "type": "Int32"
+                        },
+                        "Status": { "value": "Success", "type": "String" },
+                        "ExecutionTime": {
+                            "value": { "value": "@utcNow()", "type": "Expression" },
+                            "type": "DateTime"
+                        }
+                    }
+                },
+                "linkedServiceName": {
+                    "referenceName": "LS_SqlServer_DWH",
+                    "type": "LinkedServiceReference"
+                }
+            }
+        ],
+        "annotations": [
+            "dimension-load",
+            "dwh",
+            "branch"
+        ],
+        "folder": {
+            "name": "DimensionLoads"
+        }
+    }
+}

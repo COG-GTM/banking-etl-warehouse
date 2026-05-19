@@ -1,0 +1,172 @@
+{
+    "name": "PL_Master_DWH_Load",
+    "properties": {
+        "description": "Master orchestration pipeline that executes all dimension and fact loading pipelines in the correct dependency order. Replaces the Talend job execution sequence: DimBranch -> DimAccount -> DimCustomer -> FactTransaction. Includes post-load stored procedure execution.",
+        "activities": [
+            {
+                "name": "Load_DimBranch",
+                "type": "ExecutePipeline",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "0.02:00:00"
+                },
+                "typeProperties": {
+                    "pipeline": {
+                        "referenceName": "PL_Load_DimBranch",
+                        "type": "PipelineReference"
+                    },
+                    "waitOnCompletion": true
+                }
+            },
+            {
+                "name": "Load_DimAccount",
+                "type": "ExecutePipeline",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "0.02:00:00"
+                },
+                "typeProperties": {
+                    "pipeline": {
+                        "referenceName": "PL_Load_DimAccount",
+                        "type": "PipelineReference"
+                    },
+                    "waitOnCompletion": true
+                }
+            },
+            {
+                "name": "Load_DimCustomer",
+                "type": "ExecutePipeline",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "0.02:00:00"
+                },
+                "typeProperties": {
+                    "pipeline": {
+                        "referenceName": "PL_Load_DimCustomer",
+                        "type": "PipelineReference"
+                    },
+                    "waitOnCompletion": true
+                }
+            },
+            {
+                "name": "Load_FactTransaction",
+                "type": "ExecutePipeline",
+                "dependsOn": [
+                    {
+                        "activity": "Load_DimBranch",
+                        "dependencyConditions": ["Succeeded"]
+                    },
+                    {
+                        "activity": "Load_DimAccount",
+                        "dependencyConditions": ["Succeeded"]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.04:00:00"
+                },
+                "typeProperties": {
+                    "pipeline": {
+                        "referenceName": "PL_Load_FactTransaction",
+                        "type": "PipelineReference"
+                    },
+                    "waitOnCompletion": true
+                }
+            },
+            {
+                "name": "Execute_Reporting_Procedures",
+                "type": "ExecutePipeline",
+                "dependsOn": [
+                    {
+                        "activity": "Load_FactTransaction",
+                        "dependencyConditions": ["Succeeded"]
+                    },
+                    {
+                        "activity": "Load_DimCustomer",
+                        "dependencyConditions": ["Succeeded"]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.01:00:00"
+                },
+                "typeProperties": {
+                    "pipeline": {
+                        "referenceName": "PL_Execute_StoredProcedures",
+                        "type": "PipelineReference"
+                    },
+                    "waitOnCompletion": true,
+                    "parameters": {
+                        "StartDate": "",
+                        "EndDate": "",
+                        "CustomerName": ""
+                    }
+                }
+            },
+            {
+                "name": "Send_Success_Notification",
+                "type": "WebActivity",
+                "dependsOn": [
+                    {
+                        "activity": "Execute_Reporting_Procedures",
+                        "dependencyConditions": ["Succeeded"]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.00:05:00",
+                    "retry": 1,
+                    "retryIntervalInSeconds": 30
+                },
+                "typeProperties": {
+                    "url": {
+                        "value": "@pipeline().globalParameters.webhook_url",
+                        "type": "Expression"
+                    },
+                    "method": "POST",
+                    "headers": {
+                        "Content-Type": "application/json"
+                    },
+                    "body": {
+                        "value": "@json(concat('{\"pipeline\":\"PL_Master_DWH_Load\",\"status\":\"Success\",\"runId\":\"', pipeline().RunId, '\",\"timestamp\":\"', utcNow(), '\"}'))",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "Send_Failure_Notification",
+                "type": "WebActivity",
+                "dependsOn": [
+                    {
+                        "activity": "Load_FactTransaction",
+                        "dependencyConditions": ["Failed"]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.00:05:00",
+                    "retry": 1,
+                    "retryIntervalInSeconds": 30
+                },
+                "typeProperties": {
+                    "url": {
+                        "value": "@pipeline().globalParameters.webhook_url",
+                        "type": "Expression"
+                    },
+                    "method": "POST",
+                    "headers": {
+                        "Content-Type": "application/json"
+                    },
+                    "body": {
+                        "value": "@json(concat('{\"pipeline\":\"PL_Master_DWH_Load\",\"status\":\"Failed\",\"runId\":\"', pipeline().RunId, '\",\"timestamp\":\"', utcNow(), '\",\"error\":\"FactTransaction load failed\"}'))",
+                        "type": "Expression"
+                    }
+                }
+            }
+        ],
+        "annotations": [
+            "master-pipeline",
+            "orchestration",
+            "dwh-load"
+        ],
+        "folder": {
+            "name": "Orchestration"
+        }
+    }
+}

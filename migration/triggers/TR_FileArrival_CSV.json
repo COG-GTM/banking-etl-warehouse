@@ -1,0 +1,31 @@
+{
+    "name": "TR_FileArrival_CSV",
+    "properties": {
+        "description": "Event-based trigger that fires when a new CSV transaction file is uploaded to the designated Azure Blob Storage container. Enables near-real-time ingestion of CSV-sourced transaction data.",
+        "runtimeState": "Stopped",
+        "type": "BlobEventsTrigger",
+        "typeProperties": {
+            "blobPathBeginsWith": "/data-sources/blobs/transaction_csv",
+            "blobPathEndsWith": ".csv",
+            "ignoreEmptyBlobs": true,
+            "scope": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.Storage/storageAccounts/{storage-account}",
+            "events": [
+                "Microsoft.Storage.BlobCreated"
+            ]
+        },
+        "pipelines": [
+            {
+                "pipelineReference": {
+                    "referenceName": "PL_Load_FactTransaction",
+                    "type": "PipelineReference"
+                },
+                "parameters": {}
+            }
+        ],
+        "annotations": [
+            "event-driven",
+            "csv-upload",
+            "file-arrival"
+        ]
+    }
+}

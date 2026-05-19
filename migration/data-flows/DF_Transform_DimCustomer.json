@@ -1,0 +1,157 @@
+{
+    "name": "DF_Transform_DimCustomer",
+    "properties": {
+        "description": "Replicates Talend Load_DimCustomer tMap logic: joins customer, city, and state tables, applies UPPER() transformation on text fields, and loads into DimCustomer. Equivalent Talend components: tMap (multi-table JOIN), tLogRow (data cleansing).",
+        "type": "MappingDataFlow",
+        "typeProperties": {
+            "sources": [
+                {
+                    "name": "srcCustomer",
+                    "description": "Customer records from Sample_DB.dbo.Customer",
+                    "dataset": {
+                        "referenceName": "DS_SqlServer_SampleDB_Customer",
+                        "type": "DatasetReference"
+                    }
+                },
+                {
+                    "name": "srcCity",
+                    "description": "City lookup from Sample_DB.dbo.City",
+                    "dataset": {
+                        "referenceName": "DS_SqlServer_SampleDB_City",
+                        "type": "DatasetReference"
+                    }
+                },
+                {
+                    "name": "srcState",
+                    "description": "State lookup from Sample_DB.dbo.State",
+                    "dataset": {
+                        "referenceName": "DS_SqlServer_SampleDB_State",
+                        "type": "DatasetReference"
+                    }
+                }
+            ],
+            "sinks": [
+                {
+                    "name": "sinkDimCustomer",
+                    "description": "Target: DWH.dbo.DimCustomer",
+                    "dataset": {
+                        "referenceName": "DS_SqlServer_DWH_DimCustomer",
+                        "type": "DatasetReference"
+                    }
+                }
+            ],
+            "transformations": [
+                {
+                    "name": "JoinCustomerCity",
+                    "description": "Equivalent to tMap JOIN: customer.city_id = city.city_id"
+                },
+                {
+                    "name": "JoinWithState",
+                    "description": "Equivalent to tMap JOIN: city.state_id = state.state_id"
+                },
+                {
+                    "name": "CleanseAndTransform",
+                    "description": "Equivalent to tMap expression: UPPER() on CustomerName, CityName, StateName"
+                },
+                {
+                    "name": "SelectFinalColumns",
+                    "description": "Map to DimCustomer schema: CustomerID, CustomerName, Address, CityName, StateName, Age, Gender, Email"
+                }
+            ],
+            "scriptLines": [
+                "source(output(",
+                "    CustomerID as integer,",
+                "    CustomerName as string,",
+                "    Address as string,",
+                "    CityID as integer,",
+                "    Age as integer,",
+                "    Gender as string,",
+                "    Email as string",
+                "),",
+                "allowSchemaDrift: false,",
+                "validateSchema: true) ~> srcCustomer",
+                "",
+                "source(output(",
+                "    CityID as integer,",
+                "    CityName as string,",
+                "    StateID as integer",
+                "),",
+                "allowSchemaDrift: false,",
+                "validateSchema: true) ~> srcCity",
+                "",
+                "source(output(",
+                "    StateID as integer,",
+                "    StateName as string",
+                "),",
+                "allowSchemaDrift: false,",
+                "validateSchema: true) ~> srcState",
+                "",
+                "srcCustomer, srcCity join(",
+                "    srcCustomer@CityID == srcCity@CityID,",
+                "    joinType: 'left',",
+                "    matchType: 'exact',",
+                "    ignoreSpaces: false,",
+                "    broadcast: 'auto'",
+                ") ~> JoinCustomerCity",
+                "",
+                "JoinCustomerCity, srcState join(",
+                "    srcCity@StateID == srcState@StateID,",
+                "    joinType: 'left',",
+                "    matchType: 'exact',",
+                "    ignoreSpaces: false,",
+                "    broadcast: 'auto'",
+                ") ~> JoinWithState",
+                "",
+                "JoinWithState derive(",
+                "    CustomerName = upper(CustomerName),",
+                "    CityName = upper(CityName),",
+                "    StateName = upper(StateName),",
+                "    Address = upper(Address)",
+                ") ~> CleanseAndTransform",
+                "",
+                "CleanseAndTransform select(",
+                "    mapColumn(",
+                "        CustomerID,",
+                "        CustomerName,",
+                "        Address,",
+                "        CityName,",
+                "        StateName,",
+                "        Age,",
+                "        Gender,",
+                "        Email",
+                "    ),",
+                "    skipDuplicateMapInputs: true,",
+                "    skipDuplicateMapOutputs: true",
+                ") ~> SelectFinalColumns",
+                "",
+                "SelectFinalColumns sink(",
+                "    allowSchemaDrift: false,",
+                "    validateSchema: true,",
+                "    deletable: false,",
+                "    insertable: true,",
+                "    updateable: false,",
+                "    upsertable: false,",
+                "    truncate: true,",
+                "    format: 'table',",
+                "    skipDuplicateMapInputs: true,",
+                "    skipDuplicateMapOutputs: true,",
+                "    mapColumn(",
+                "        CustomerID,",
+                "        CustomerName,",
+                "        Address,",
+                "        CityName,",
+                "        StateName,",
+                "        Age,",
+                "        Gender,",
+                "        Email",
+                "    )",
+                ") ~> sinkDimCustomer"
+            ]
+        },
+        "annotations": [
+            "dimension",
+            "customer",
+            "tMap-replacement"
+        ]
+    }
+}

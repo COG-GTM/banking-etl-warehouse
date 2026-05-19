@@ -1,0 +1,138 @@
+{
+    "name": "PL_Load_DimAccount",
+    "properties": {
+        "description": "Loads account dimension data from the Sample_DB source into the DWH DimAccount table. Replaces the Talend Load_DimAccount job.",
+        "activities": [
+            {
+                "name": "Lookup_DimAccount_Pre_Count",
+                "type": "Lookup",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "0.00:10:00",
+                    "retry": 2,
+                    "retryIntervalInSeconds": 30
+                },
+                "typeProperties": {
+                    "source": {
+                        "type": "SqlServerSource",
+                        "sqlReaderQuery": "SELECT COUNT(*) AS row_count FROM DWH.dbo.DimAccount"
+                    },
+                    "dataset": {
+                        "referenceName": "DS_SqlServer_DWH_DimAccount",
+                        "type": "DatasetReference"
+                    },
+                    "firstRowOnly": true
+                }
+            },
+            {
+                "name": "Copy_DimAccount",
+                "type": "Copy",
+                "dependsOn": [
+                    {
+                        "activity": "Lookup_DimAccount_Pre_Count",
+                        "dependencyConditions": ["Succeeded"]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.01:00:00",
+                    "retry": 3,
+                    "retryIntervalInSeconds": 60
+                },
+                "typeProperties": {
+                    "source": {
+                        "type": "SqlServerSource",
+                        "sqlReaderQuery": "SELECT AccountID, CustomerID, AccountType, Balance, DateOpened, Status FROM Sample_DB.dbo.Account"
+                    },
+                    "sink": {
+                        "type": "SqlServerSink",
+                        "preCopyScript": "TRUNCATE TABLE DWH.dbo.DimAccount",
+                        "writeBehavior": "insert",
+                        "tableOption": "none"
+                    },
+                    "enableStaging": false
+                },
+                "inputs": [
+                    {
+                        "referenceName": "DS_SqlServer_SampleDB_Account",
+                        "type": "DatasetReference"
+                    }
+                ],
+                "outputs": [
+                    {
+                        "referenceName": "DS_SqlServer_DWH_DimAccount",
+                        "type": "DatasetReference"
+                    }
+                ]
+            },
+            {
+                "name": "Lookup_DimAccount_Post_Count",
+                "type": "Lookup",
+                "dependsOn": [
+                    {
+                        "activity": "Copy_DimAccount",
+                        "dependencyConditions": ["Succeeded"]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.00:10:00",
+                    "retry": 2,
+                    "retryIntervalInSeconds": 30
+                },
+                "typeProperties": {
+                    "source": {
+                        "type": "SqlServerSource",
+                        "sqlReaderQuery": "SELECT COUNT(*) AS row_count FROM DWH.dbo.DimAccount"
+                    },
+                    "dataset": {
+                        "referenceName": "DS_SqlServer_DWH_DimAccount",
+                        "type": "DatasetReference"
+                    },
+                    "firstRowOnly": true
+                }
+            },
+            {
+                "name": "Log_DimAccount_Load",
+                "type": "SqlServerStoredProcedure",
+                "dependsOn": [
+                    {
+                        "activity": "Lookup_DimAccount_Post_Count",
+                        "dependencyConditions": ["Succeeded"]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.00:05:00",
+                    "retry": 1,
+                    "retryIntervalInSeconds": 30
+                },
+                "typeProperties": {
+                    "storedProcedureName": "sp_LogPipelineExecution",
+                    "storedProcedureParameters": {
+                        "PipelineName": { "value": "PL_Load_DimAccount", "type": "String" },
+                        "TableName": { "value": "DimAccount", "type": "String" },
+                        "RowsLoaded": {
+                            "value": { "value": "@activity('Lookup_DimAccount_Post_Count').output.firstRow.row_count", "type": "Expression" },
+                            "type": "Int32"
+                        },
+                        "Status": { "value": "Success", "type": "String" },
+                        "ExecutionTime": {
+                            "value": { "value": "@utcNow()", "type": "Expression" },
+                            "type": "DateTime"
+                        }
+                    }
+                },
+                "linkedServiceName": {
+                    "referenceName": "LS_SqlServer_DWH",
+                    "type": "LinkedServiceReference"
+                }
+            }
+        ],
+        "annotations": [
+            "dimension-load",
+            "dwh",
+            "account"
+        ],
+        "folder": {
+            "name": "DimensionLoads"
+        }
+    }
+}

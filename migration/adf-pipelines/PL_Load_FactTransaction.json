@@ -1,0 +1,211 @@
+{
+    "name": "PL_Load_FactTransaction",
+    "properties": {
+        "description": "Loads fact transaction data from SQL Server, CSV, and Excel sources into the DWH FactTransaction table. Replaces the Talend Load_FactTransaction job which used tUnite (multi-source merge) and tUniqRow (deduplication on transaction_id).",
+        "activities": [
+            {
+                "name": "Lookup_FactTransaction_Pre_Count",
+                "type": "Lookup",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "0.00:10:00",
+                    "retry": 2,
+                    "retryIntervalInSeconds": 30
+                },
+                "typeProperties": {
+                    "source": {
+                        "type": "SqlServerSource",
+                        "sqlReaderQuery": "SELECT COUNT(*) AS row_count FROM DWH.dbo.FactTransaction"
+                    },
+                    "dataset": {
+                        "referenceName": "DS_SqlServer_DWH_FactTransaction",
+                        "type": "DatasetReference"
+                    },
+                    "firstRowOnly": true
+                }
+            },
+            {
+                "name": "DF_Transform_FactTransaction",
+                "type": "ExecuteDataFlow",
+                "dependsOn": [
+                    {
+                        "activity": "Lookup_FactTransaction_Pre_Count",
+                        "dependencyConditions": ["Succeeded"]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.02:00:00",
+                    "retry": 3,
+                    "retryIntervalInSeconds": 120
+                },
+                "typeProperties": {
+                    "dataFlow": {
+                        "referenceName": "DF_Transform_FactTransaction",
+                        "type": "DataFlowReference"
+                    },
+                    "compute": {
+                        "coreCount": 16,
+                        "computeType": "General"
+                    },
+                    "traceLevel": "Fine",
+                    "staging": {
+                        "linkedService": {
+                            "referenceName": "LS_AzureBlobStorage_Staging",
+                            "type": "LinkedServiceReference"
+                        },
+                        "folderPath": "staging/fact-transaction"
+                    }
+                }
+            },
+            {
+                "name": "Lookup_FactTransaction_Post_Count",
+                "type": "Lookup",
+                "dependsOn": [
+                    {
+                        "activity": "DF_Transform_FactTransaction",
+                        "dependencyConditions": ["Succeeded"]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.00:10:00",
+                    "retry": 2,
+                    "retryIntervalInSeconds": 30
+                },
+                "typeProperties": {
+                    "source": {
+                        "type": "SqlServerSource",
+                        "sqlReaderQuery": "SELECT COUNT(*) AS row_count FROM DWH.dbo.FactTransaction"
+                    },
+                    "dataset": {
+                        "referenceName": "DS_SqlServer_DWH_FactTransaction",
+                        "type": "DatasetReference"
+                    },
+                    "firstRowOnly": true
+                }
+            },
+            {
+                "name": "Validate_FactTransaction_RowCount",
+                "type": "IfCondition",
+                "dependsOn": [
+                    {
+                        "activity": "Lookup_FactTransaction_Post_Count",
+                        "dependencyConditions": ["Succeeded"]
+                    }
+                ],
+                "typeProperties": {
+                    "expression": {
+                        "value": "@equals(activity('Lookup_FactTransaction_Post_Count').output.firstRow.row_count, 0)",
+                        "type": "Expression"
+                    },
+                    "ifTrueActivities": [
+                        {
+                            "name": "Fail_FactTransaction_Empty",
+                            "type": "Fail",
+                            "typeProperties": {
+                                "message": "FactTransaction load resulted in 0 rows. Check source data availability across SQL, CSV, and Excel inputs.",
+                                "errorCode": "FACT_TRANSACTION_EMPTY"
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                "name": "Validate_Referential_Integrity",
+                "type": "Lookup",
+                "dependsOn": [
+                    {
+                        "activity": "Validate_FactTransaction_RowCount",
+                        "dependencyConditions": ["Succeeded"]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.00:10:00",
+                    "retry": 1,
+                    "retryIntervalInSeconds": 30
+                },
+                "typeProperties": {
+                    "source": {
+                        "type": "SqlServerSource",
+                        "sqlReaderQuery": "SELECT (SELECT COUNT(*) FROM DWH.dbo.FactTransaction ft WHERE NOT EXISTS (SELECT 1 FROM DWH.dbo.DimAccount da WHERE da.AccountID = ft.AccountID)) AS orphan_accounts, (SELECT COUNT(*) FROM DWH.dbo.FactTransaction ft WHERE NOT EXISTS (SELECT 1 FROM DWH.dbo.DimBranch db WHERE db.BranchID = ft.BranchID)) AS orphan_branches"
+                    },
+                    "dataset": {
+                        "referenceName": "DS_SqlServer_DWH_FactTransaction",
+                        "type": "DatasetReference"
+                    },
+                    "firstRowOnly": true
+                }
+            },
+            {
+                "name": "Check_Orphan_Records",
+                "type": "IfCondition",
+                "dependsOn": [
+                    {
+                        "activity": "Validate_Referential_Integrity",
+                        "dependencyConditions": ["Succeeded"]
+                    }
+                ],
+                "typeProperties": {
+                    "expression": {
+                        "value": "@or(greater(activity('Validate_Referential_Integrity').output.firstRow.orphan_accounts, 0), greater(activity('Validate_Referential_Integrity').output.firstRow.orphan_branches, 0))",
+                        "type": "Expression"
+                    },
+                    "ifTrueActivities": [
+                        {
+                            "name": "Fail_Orphan_Records",
+                            "type": "Fail",
+                            "typeProperties": {
+                                "message": "Referential integrity violation: orphan records found in FactTransaction. Check AccountID and BranchID foreign key relationships.",
+                                "errorCode": "FACT_REF_INTEGRITY_VIOLATION"
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                "name": "Log_FactTransaction_Load",
+                "type": "SqlServerStoredProcedure",
+                "dependsOn": [
+                    {
+                        "activity": "Check_Orphan_Records",
+                        "dependencyConditions": ["Succeeded"]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.00:05:00",
+                    "retry": 1,
+                    "retryIntervalInSeconds": 30
+                },
+                "typeProperties": {
+                    "storedProcedureName": "sp_LogPipelineExecution",
+                    "storedProcedureParameters": {
+                        "PipelineName": { "value": "PL_Load_FactTransaction", "type": "String" },
+                        "TableName": { "value": "FactTransaction", "type": "String" },
+                        "RowsLoaded": {
+                            "value": { "value": "@activity('Lookup_FactTransaction_Post_Count').output.firstRow.row_count", "type": "Expression" },
+                            "type": "Int32"
+                        },
+                        "Status": { "value": "Success", "type": "String" },
+                        "ExecutionTime": {
+                            "value": { "value": "@utcNow()", "type": "Expression" },
+                            "type": "DateTime"
+                        }
+                    }
+                },
+                "linkedServiceName": {
+                    "referenceName": "LS_SqlServer_DWH",
+                    "type": "LinkedServiceReference"
+                }
+            }
+        ],
+        "annotations": [
+            "fact-load",
+            "dwh",
+            "transaction",
+            "multi-source",
+            "deduplication"
+        ],
+        "folder": {
+            "name": "FactLoads"
+        }
+    }
+}
