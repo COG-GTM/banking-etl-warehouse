@@ -1,0 +1,29 @@
+{
+    "name": "SqlFactTransaction",
+    "type": "Microsoft.DataFactory/factories/datasets",
+    "properties": {
+        "description": "Dataset pointing to the FactTransaction table in the DWH database. Schema matches sql_scripts/01_create_tables.sql.",
+        "linkedServiceName": {
+            "referenceName": "AzureSqlDWH",
+            "type": "LinkedServiceReference"
+        },
+        "type": "AzureSqlTable",
+        "typeProperties": {
+            "schema": "dbo",
+            "table": "FactTransaction"
+        },
+        "structure": [
+            { "name": "TransactionID", "type": "Int32" },
+            { "name": "AccountID", "type": "Int32" },
+            { "name": "TransactionDate", "type": "DateTime" },
+            { "name": "Amount", "type": "Decimal" },
+            { "name": "TransactionType", "type": "String" },
+            { "name": "BranchID", "type": "Int32" }
+        ],
+        "annotations": [
+            "target",
+            "fact-table",
+            "dwh"
+        ]
+    }
+}

@@ -1,0 +1,205 @@
+# =============================================================================
+# GitHub Actions: Deploy ADF Infrastructure
+# Description: Validates and deploys Bicep templates for Azure Data Factory,
+#              Azure-SSIS Integration Runtime, and supporting resources.
+#
+# Workflow:
+#   1. Lint & validate Bicep templates (runs on every PR)
+#   2. Deploy to dev (on merge to main)
+#   3. Deploy to staging (manual approval gate)
+#   4. Deploy to prod (manual approval gate)
+#
+# Required GitHub Secrets:
+#   AZURE_CREDENTIALS        — Service principal JSON for az login
+#   SQL_ADMIN_PASSWORD_DEV   — SQL admin password for dev environment
+#   SQL_ADMIN_PASSWORD_STG   — SQL admin password for staging environment
+#   SQL_ADMIN_PASSWORD_PROD  — SQL admin password for production environment
+#
+# Required GitHub Variables:
+#   AZURE_RG_DEV             — Resource group name for dev
+#   AZURE_RG_STG             — Resource group name for staging
+#   AZURE_RG_PROD            — Resource group name for production
+# =============================================================================
+
+name: Deploy ADF Infrastructure
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'infrastructure/bicep/**'
+      - 'infrastructure/parameters/**'
+      - 'infrastructure/pipelines/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'infrastructure/bicep/**'
+      - 'infrastructure/parameters/**'
+      - 'infrastructure/pipelines/**'
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: 'Target environment to deploy'
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+permissions:
+  id-token: write
+  contents: read
+
+# ---------------------------------------------------------------------------
+# Jobs
+# ---------------------------------------------------------------------------
+jobs:
+  # =========================================================================
+  # Job 1: Lint and validate Bicep templates
+  # =========================================================================
+  validate:
+    name: Validate Bicep Templates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Bicep CLI
+        run: |
+          az bicep install
+          az bicep version
+
+      - name: Lint Bicep templates
+        working-directory: infrastructure/bicep
+        run: |
+          echo "=== Linting main.bicep ==="
+          az bicep lint --file main.bicep
+
+          echo "=== Linting individual modules ==="
+          for f in modules/*.bicep; do
+            echo "--- Linting $f ---"
+            az bicep lint --file "$f"
+          done
+
+      - name: Build Bicep (compile to ARM)
+        working-directory: infrastructure/bicep
+        run: |
+          az bicep build --file main.bicep --stdout > /dev/null
+          echo "Bicep compilation successful"
+
+      - name: Validate against Azure (dev)
+        if: github.event_name == 'pull_request'
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Run what-if (dry run)
+        if: github.event_name == 'pull_request'
+        working-directory: infrastructure
+        run: |
+          az deployment group what-if \
+            --resource-group ${{ vars.AZURE_RG_DEV }} \
+            --template-file bicep/main.bicep \
+            --parameters parameters/dev.bicepparam \
+            --parameters sqlAdminPassword='${{ secrets.SQL_ADMIN_PASSWORD_DEV }}'
+
+  # =========================================================================
+  # Job 2: Deploy to dev (auto on merge to main)
+  # =========================================================================
+  deploy-dev:
+    name: Deploy to Dev
+    needs: validate
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy Bicep to dev
+        working-directory: infrastructure
+        run: |
+          az deployment group create \
+            --resource-group ${{ vars.AZURE_RG_DEV }} \
+            --template-file bicep/main.bicep \
+            --parameters parameters/dev.bicepparam \
+            --parameters sqlAdminPassword='${{ secrets.SQL_ADMIN_PASSWORD_DEV }}' \
+            --name "adf-infra-dev-${{ github.run_number }}"
+
+      - name: Output deployment results
+        working-directory: infrastructure
+        run: |
+          az deployment group show \
+            --resource-group ${{ vars.AZURE_RG_DEV }} \
+            --name "adf-infra-dev-${{ github.run_number }}" \
+            --query properties.outputs
+
+  # =========================================================================
+  # Job 3: Deploy to staging (manual trigger or after dev)
+  # =========================================================================
+  deploy-staging:
+    name: Deploy to Staging
+    needs: deploy-dev
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.target_environment == 'staging')
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy Bicep to staging
+        working-directory: infrastructure
+        run: |
+          az deployment group create \
+            --resource-group ${{ vars.AZURE_RG_STG }} \
+            --template-file bicep/main.bicep \
+            --parameters parameters/staging.bicepparam \
+            --parameters sqlAdminPassword='${{ secrets.SQL_ADMIN_PASSWORD_STG }}' \
+            --name "adf-infra-stg-${{ github.run_number }}"
+
+  # =========================================================================
+  # Job 4: Deploy to production (manual approval required)
+  # =========================================================================
+  deploy-prod:
+    name: Deploy to Production
+    needs: deploy-staging
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.target_environment == 'prod')
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy Bicep to production
+        working-directory: infrastructure
+        run: |
+          az deployment group create \
+            --resource-group ${{ vars.AZURE_RG_PROD }} \
+            --template-file bicep/main.bicep \
+            --parameters parameters/prod.bicepparam \
+            --parameters sqlAdminPassword='${{ secrets.SQL_ADMIN_PASSWORD_PROD }}' \
+            --name "adf-infra-prod-${{ github.run_number }}"
+
+      - name: Output deployment results
+        working-directory: infrastructure
+        run: |
+          az deployment group show \
+            --resource-group ${{ vars.AZURE_RG_PROD }} \
+            --name "adf-infra-prod-${{ github.run_number }}" \
+            --query properties.outputs
