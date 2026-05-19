@@ -1,0 +1,250 @@
+{
+    "description": "Azure Monitor alert rule definitions for ADF pipeline monitoring. Deploy via ARM template or Bicep.",
+    "alerts": [
+        {
+            "name": "alert-adf-pipeline-failure",
+            "properties": {
+                "displayName": "ADF Pipeline Failure - DWH Load",
+                "description": "Fires when any DWH load pipeline (dimension or fact) fails. Severity 1 (Error) for immediate investigation.",
+                "severity": 1,
+                "enabled": true,
+                "evaluationFrequency": "PT5M",
+                "windowSize": "PT5M",
+                "scopes": [
+                    "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.DataFactory/factories/{data-factory-name}"
+                ],
+                "criteria": {
+                    "allOf": [
+                        {
+                            "metricName": "PipelineFailedRuns",
+                            "metricNamespace": "Microsoft.DataFactory/factories",
+                            "operator": "GreaterThan",
+                            "threshold": 0,
+                            "timeAggregation": "Total",
+                            "dimensions": [
+                                {
+                                    "name": "Name",
+                                    "operator": "Include",
+                                    "values": [
+                                        "PL_Master_DWH_Load",
+                                        "PL_Load_DimAccount",
+                                        "PL_Load_DimBranch",
+                                        "PL_Load_DimCustomer",
+                                        "PL_Load_FactTransaction"
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "actions": [
+                    {
+                        "actionGroupId": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.Insights/actionGroups/ag-data-engineering-team"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "alert-adf-pipeline-long-running",
+            "properties": {
+                "displayName": "ADF Pipeline Long Running - DWH Load",
+                "description": "Fires when the master DWH load pipeline exceeds 2 hours, indicating potential performance degradation or data volume issues.",
+                "severity": 2,
+                "enabled": true,
+                "evaluationFrequency": "PT15M",
+                "windowSize": "PT15M",
+                "scopes": [
+                    "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.DataFactory/factories/{data-factory-name}"
+                ],
+                "criteria": {
+                    "allOf": [
+                        {
+                            "metricName": "PipelineElapsedTimeRuns",
+                            "metricNamespace": "Microsoft.DataFactory/factories",
+                            "operator": "GreaterThan",
+                            "threshold": 7200,
+                            "timeAggregation": "Maximum",
+                            "dimensions": [
+                                {
+                                    "name": "Name",
+                                    "operator": "Include",
+                                    "values": ["PL_Master_DWH_Load"]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "actions": [
+                    {
+                        "actionGroupId": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.Insights/actionGroups/ag-data-engineering-team"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "alert-adf-activity-failure",
+            "properties": {
+                "displayName": "ADF Activity Failure - Data Flow or Copy",
+                "description": "Fires when individual Copy or Data Flow activities fail within any pipeline.",
+                "severity": 2,
+                "enabled": true,
+                "evaluationFrequency": "PT5M",
+                "windowSize": "PT5M",
+                "scopes": [
+                    "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.DataFactory/factories/{data-factory-name}"
+                ],
+                "criteria": {
+                    "allOf": [
+                        {
+                            "metricName": "ActivityFailedRuns",
+                            "metricNamespace": "Microsoft.DataFactory/factories",
+                            "operator": "GreaterThan",
+                            "threshold": 0,
+                            "timeAggregation": "Total",
+                            "dimensions": [
+                                {
+                                    "name": "ActivityType",
+                                    "operator": "Include",
+                                    "values": [
+                                        "Copy",
+                                        "ExecuteDataFlow",
+                                        "SqlServerStoredProcedure"
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "actions": [
+                    {
+                        "actionGroupId": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.Insights/actionGroups/ag-data-engineering-team"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "alert-adf-integration-runtime-unavailable",
+            "properties": {
+                "displayName": "ADF Integration Runtime Unavailable",
+                "description": "Fires when the self-hosted integration runtime (used for on-premises SQL Server connectivity) goes offline.",
+                "severity": 0,
+                "enabled": true,
+                "evaluationFrequency": "PT5M",
+                "windowSize": "PT5M",
+                "scopes": [
+                    "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.DataFactory/factories/{data-factory-name}"
+                ],
+                "criteria": {
+                    "allOf": [
+                        {
+                            "metricName": "IntegrationRuntimeAvailableNodeNumber",
+                            "metricNamespace": "Microsoft.DataFactory/factories",
+                            "operator": "LessThan",
+                            "threshold": 1,
+                            "timeAggregation": "Minimum"
+                        }
+                    ]
+                },
+                "actions": [
+                    {
+                        "actionGroupId": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.Insights/actionGroups/ag-data-engineering-team"
+                    },
+                    {
+                        "actionGroupId": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.Insights/actionGroups/ag-infrastructure-oncall"
+                    }
+                ]
+            }
+        }
+    ],
+    "actionGroups": [
+        {
+            "name": "ag-data-engineering-team",
+            "properties": {
+                "groupShortName": "DataEngTeam",
+                "enabled": true,
+                "emailReceivers": [
+                    {
+                        "name": "DataEngineeringLead",
+                        "emailAddress": "{data-engineering-lead-email}",
+                        "useCommonAlertSchema": true
+                    },
+                    {
+                        "name": "DataEngineeringTeam",
+                        "emailAddress": "{data-engineering-team-dl}",
+                        "useCommonAlertSchema": true
+                    }
+                ],
+                "webhookReceivers": [
+                    {
+                        "name": "SlackWebhook",
+                        "serviceUri": "{slack-webhook-url}",
+                        "useCommonAlertSchema": true
+                    }
+                ]
+            }
+        },
+        {
+            "name": "ag-infrastructure-oncall",
+            "properties": {
+                "groupShortName": "InfraOncall",
+                "enabled": true,
+                "emailReceivers": [
+                    {
+                        "name": "InfraOncall",
+                        "emailAddress": "{infra-oncall-email}",
+                        "useCommonAlertSchema": true
+                    }
+                ]
+            }
+        }
+    ],
+    "keyMetrics": {
+        "description": "Key ADF metrics to monitor in Azure Monitor dashboards",
+        "metrics": [
+            {
+                "name": "PipelineSucceededRuns",
+                "description": "Count of successful pipeline executions",
+                "aggregation": "Total",
+                "frequency": "Daily"
+            },
+            {
+                "name": "PipelineFailedRuns",
+                "description": "Count of failed pipeline executions",
+                "aggregation": "Total",
+                "frequency": "Per-run"
+            },
+            {
+                "name": "PipelineElapsedTimeRuns",
+                "description": "Pipeline execution duration in seconds",
+                "aggregation": "Average/Maximum",
+                "frequency": "Per-run",
+                "baseline": "< 3600 seconds for PL_Master_DWH_Load"
+            },
+            {
+                "name": "ActivitySucceededRuns",
+                "description": "Count of successful activity executions",
+                "aggregation": "Total",
+                "frequency": "Per-run"
+            },
+            {
+                "name": "ActivityFailedRuns",
+                "description": "Count of failed activity executions by type",
+                "aggregation": "Total",
+                "frequency": "Per-run"
+            },
+            {
+                "name": "IntegrationRuntimeAvailableNodeNumber",
+                "description": "Available SHIR nodes for on-premises connectivity",
+                "aggregation": "Minimum",
+                "frequency": "Continuous",
+                "threshold": ">= 1"
+            },
+            {
+                "name": "FactoryResourceCount",
+                "description": "Total ADF resource count (pipelines, datasets, linked services)",
+                "aggregation": "Maximum",
+                "frequency": "Daily"
+            }
+        ]
+    }
+}

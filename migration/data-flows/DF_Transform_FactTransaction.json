@@ -1,0 +1,181 @@
+{
+    "name": "DF_Transform_FactTransaction",
+    "properties": {
+        "description": "Replicates Talend Load_FactTransaction logic: merges transaction data from three sources (SQL Server, CSV, Excel) using Union (replaces tUnite), deduplicates on transaction_id using Aggregate (replaces tUniqRow), and loads into FactTransaction.",
+        "type": "MappingDataFlow",
+        "typeProperties": {
+            "sources": [
+                {
+                    "name": "srcTransactionSQL",
+                    "description": "Transaction records from Sample_DB.dbo.Transaction (SQL Server source)",
+                    "dataset": {
+                        "referenceName": "DS_SqlServer_SampleDB_Transaction",
+                        "type": "DatasetReference"
+                    }
+                },
+                {
+                    "name": "srcTransactionCSV",
+                    "description": "Transaction records from transaction_csv.csv file",
+                    "dataset": {
+                        "referenceName": "DS_CSV_Transaction",
+                        "type": "DatasetReference"
+                    }
+                },
+                {
+                    "name": "srcTransactionExcel",
+                    "description": "Transaction records from transaction_excel.xlsx file",
+                    "dataset": {
+                        "referenceName": "DS_Excel_Transaction",
+                        "type": "DatasetReference"
+                    }
+                }
+            ],
+            "sinks": [
+                {
+                    "name": "sinkFactTransaction",
+                    "description": "Target: DWH.dbo.FactTransaction",
+                    "dataset": {
+                        "referenceName": "DS_SqlServer_DWH_FactTransaction",
+                        "type": "DatasetReference"
+                    }
+                }
+            ],
+            "transformations": [
+                {
+                    "name": "NormalizeCSVSchema",
+                    "description": "Cast and rename CSV columns to match unified schema"
+                },
+                {
+                    "name": "NormalizeExcelSchema",
+                    "description": "Cast and rename Excel columns to match unified schema"
+                },
+                {
+                    "name": "UnionAllSources",
+                    "description": "Equivalent to Talend tUnite: merges SQL, CSV, and Excel transaction streams into a single stream"
+                },
+                {
+                    "name": "DeduplicateTransactions",
+                    "description": "Equivalent to Talend tUniqRow: removes duplicate records based on transaction_id, keeping the first occurrence"
+                },
+                {
+                    "name": "FormatTransactionDate",
+                    "description": "Standardize transaction_date to DATETIME format across all sources"
+                },
+                {
+                    "name": "SelectFinalColumns",
+                    "description": "Map to FactTransaction schema: TransactionID, AccountID, TransactionDate, Amount, TransactionType, BranchID"
+                }
+            ],
+            "scriptLines": [
+                "source(output(",
+                "    TransactionID as integer,",
+                "    AccountID as integer,",
+                "    TransactionDate as timestamp,",
+                "    Amount as decimal(19,4),",
+                "    TransactionType as string,",
+                "    BranchID as integer",
+                "),",
+                "allowSchemaDrift: false,",
+                "validateSchema: true) ~> srcTransactionSQL",
+                "",
+                "source(output(",
+                "    transaction_id as string,",
+                "    account_id as string,",
+                "    transaction_date as string,",
+                "    amount as string,",
+                "    transaction_type as string,",
+                "    branch_id as string",
+                "),",
+                "allowSchemaDrift: false,",
+                "validateSchema: true) ~> srcTransactionCSV",
+                "",
+                "source(output(",
+                "    transaction_id as string,",
+                "    account_id as string,",
+                "    transaction_date as string,",
+                "    amount as string,",
+                "    transaction_type as string,",
+                "    branch_id as string",
+                "),",
+                "allowSchemaDrift: false,",
+                "validateSchema: true) ~> srcTransactionExcel",
+                "",
+                "srcTransactionCSV derive(",
+                "    TransactionID = toInteger(transaction_id),",
+                "    AccountID = toInteger(account_id),",
+                "    TransactionDate = toTimestamp(transaction_date, 'dd-MM-yyyy HH:mm:ss'),",
+                "    Amount = toDecimal(amount, 19, 4),",
+                "    TransactionType = trim(transaction_type),",
+                "    BranchID = toInteger(branch_id)",
+                ") ~> NormalizeCSVSchema",
+                "",
+                "srcTransactionExcel derive(",
+                "    TransactionID = toInteger(transaction_id),",
+                "    AccountID = toInteger(account_id),",
+                "    TransactionDate = toTimestamp(transaction_date, 'dd-MM-yyyy HH:mm:ss'),",
+                "    Amount = toDecimal(amount, 19, 4),",
+                "    TransactionType = trim(transaction_type),",
+                "    BranchID = toInteger(branch_id)",
+                ") ~> NormalizeExcelSchema",
+                "",
+                "srcTransactionSQL, NormalizeCSVSchema, NormalizeExcelSchema union(",
+                "    byName: true",
+                ") ~> UnionAllSources",
+                "",
+                "UnionAllSources aggregate(",
+                "    groupBy(TransactionID),",
+                "    AccountID = first(AccountID),",
+                "    TransactionDate = first(TransactionDate),",
+                "    Amount = first(Amount),",
+                "    TransactionType = first(TransactionType),",
+                "    BranchID = first(BranchID)",
+                ") ~> DeduplicateTransactions",
+                "",
+                "DeduplicateTransactions derive(",
+                "    TransactionDate = coalesce(TransactionDate, currentTimestamp())",
+                ") ~> FormatTransactionDate",
+                "",
+                "FormatTransactionDate select(",
+                "    mapColumn(",
+                "        TransactionID,",
+                "        AccountID,",
+                "        TransactionDate,",
+                "        Amount,",
+                "        TransactionType,",
+                "        BranchID",
+                "    ),",
+                "    skipDuplicateMapInputs: true,",
+                "    skipDuplicateMapOutputs: true",
+                ") ~> SelectFinalColumns",
+                "",
+                "SelectFinalColumns sink(",
+                "    allowSchemaDrift: false,",
+                "    validateSchema: true,",
+                "    deletable: false,",
+                "    insertable: true,",
+                "    updateable: false,",
+                "    upsertable: false,",
+                "    truncate: true,",
+                "    format: 'table',",
+                "    skipDuplicateMapInputs: true,",
+                "    skipDuplicateMapOutputs: true,",
+                "    mapColumn(",
+                "        TransactionID,",
+                "        AccountID,",
+                "        TransactionDate,",
+                "        Amount,",
+                "        TransactionType,",
+                "        BranchID",
+                "    )",
+                ") ~> sinkFactTransaction"
+            ]
+        },
+        "annotations": [
+            "fact",
+            "transaction",
+            "multi-source",
+            "tUnite-replacement",
+            "tUniqRow-replacement"
+        ]
+    }
+}
