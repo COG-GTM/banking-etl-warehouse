@@ -74,7 +74,7 @@ To replicate this solution, follow these steps:
     - In SSMS, restore the source database using the provided `sample.bak` file. This will create the `sample` database with all necessary source tables.
 
 3.  **Build the Data Warehouse:**
-    - In the `sql_scripts` folder of this repository, you will find `create_tables.sql`.
+    - In the `sql_scripts` folder of this repository, you will find `01_create_tables.sql`.
     - Open this script in SSMS and execute it to create the `DWH` database and all dimension and fact tables.
 
 4.  **Configure and Run the Talend Jobs:**
@@ -87,9 +87,14 @@ To replicate this solution, follow these steps:
         4. `Load_FactTransaction`
 
 5.  **Deploy and Test the Stored Procedures:**
-    - In the `sql_scripts` folder, open `create_procedures.sql`.
+    - In the `sql_scripts` folder, open `02_create_procedures.sql`.
     - Execute this script in SSMS against the `DWH` database.
     - You can now test the procedures with sample commands, e.g., `EXEC sp_DailyTransaction @start_date = '2024-01-18', @end_date = '2024-01-20';`.
+
+6.  **Run the Automated Test Suite:**
+    - The stored procedures are covered by a [tSQLt](https://tsqlt.org/) unit test suite in the `tests` folder.
+    - With Docker available, run `./tests/run_tests.sh` to provision SQL Server, install tSQLt, and execute `EXEC tSQLt.RunAll;`.
+    - See [`tests/README.md`](tests/README.md) for coverage details and the manual `sqlcmd` steps.
 
 ---
 

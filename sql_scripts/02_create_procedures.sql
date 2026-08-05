@@ -15,6 +15,7 @@ GO
 -- Menghasilkan ringkasan jumlah transaksi dan total nominal per hari.
 -------------------------------------------------------------------------------------
 PRINT 'Creating Stored Procedure sp_DailyTransaction...';
+GO
 CREATE PROCEDURE sp_DailyTransaction
     -- Mendefinisikan dua parameter input: tanggal mulai dan tanggal selesai
     @start_date DATE,
@@ -47,6 +48,7 @@ GO
 -- Menghitung saldo akhir setiap rekening aktif milik seorang nasabah.
 -------------------------------------------------------------------------------------
 PRINT 'Creating Stored Procedure sp_BalancePerCustomer...';
+GO
 CREATE PROCEDURE sp_BalancePerCustomer
     -- Mendefinisikan satu parameter input: nama customer yang ingin dicari
     @customer_name VARCHAR(100)
