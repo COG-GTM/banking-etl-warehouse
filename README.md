@@ -93,6 +93,15 @@ To replicate this solution, follow these steps:
 
 ---
 
+## ☁️ Databricks Migration
+
+The Talend/SQL Server solution is being migrated to Databricks (Delta Lake,
+medallion architecture, Unity Catalog catalog `dwh`). See
+[`databricks/README.md`](databricks/README.md) for the layout, the Delta DDL in
+`databricks/ddl/` and the bronze SQL Server ingestion in `databricks/bronze/`.
+
+---
+
 ## 🌟 Project Outcomes
 
 This project successfully demonstrates a complete data engineering lifecycle. The final solution transforms a chaotic, multi-source data environment into a clean, reliable, and high-performance Data Warehouse, ready to power business intelligence and analytics.
