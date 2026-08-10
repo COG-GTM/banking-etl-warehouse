@@ -1,0 +1,41 @@
+{
+  "type": "struct",
+  "fields": [
+    {
+      "name": "transaction_id",
+      "type": "integer",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "account_id",
+      "type": "integer",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "transaction_date",
+      "type": "timestamp",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "amount",
+      "type": "decimal(19,4)",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "transaction_type",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "branch_id",
+      "type": "integer",
+      "nullable": true,
+      "metadata": {}
+    }
+  ]
+}
