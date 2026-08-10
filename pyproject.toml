@@ -1,0 +1,34 @@
+[project]
+name = "banking-etl-warehouse"
+version = "0.1.0"
+description = "Databricks lakehouse migration of the Talend + SQL Server banking ETL warehouse"
+requires-python = ">=3.10"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = ["talend_jobs", "data_sources"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4"]
+ignore = [
+    # Databricks notebook source files use `# MAGIC`/`# COMMAND` comment lines and
+    # long SQL strings that should not be wrapped.
+    "E501",
+    # `spark`, `dbutils` and `display` are injected by the Databricks runtime.
+    "F821",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Notebook source cells legitimately re-import and re-assign across cells, and the
+# notebook body is module-level code rather than functions.
+"databricks/**/*.py" = ["E402", "B018"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-q"

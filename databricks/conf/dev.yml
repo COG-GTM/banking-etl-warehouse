@@ -1,0 +1,44 @@
+# Environment config — dev
+# No credentials live here. Everything sensitive is read at runtime via
+# dbutils.secrets.get(scope=<secret_scope>, key=...).
+environment: dev
+
+catalog: dwh_dev
+
+schemas:
+  bronze: bronze
+  silver: silver
+  gold: gold
+  analytics: analytics
+
+# MANAGED LOCATION for the catalog/schemas (see databricks/ddl/00_catalog_schemas.sql).
+# Empty string -> inherit the metastore default root storage.
+storage_root: ""
+
+# Legacy SQL Server source (`sample` database restored from data_sources/sample.bak).
+source_jdbc:
+  host: sqlserver-dev.internal          # placeholder
+  port: 1433
+  database: sample
+  schema: dbo
+  driver: com.microsoft.sqlserver.jdbc.SQLServerDriver
+  url: jdbc:sqlserver://sqlserver-dev.internal:1433;databaseName=sample;encrypt=true;trustServerCertificate=true
+  tables:
+    - account
+    - branch
+    - city
+    - customer
+    - state
+    - transaction_db
+
+# CSV / Excel transaction extracts (data_sources/transaction_csv.csv, transaction_excel.xlsx).
+source_files:
+  root: /Volumes/dwh_dev/bronze/landing
+  transaction_csv: transaction_csv.csv
+  transaction_excel: transaction_excel.xlsx
+
+# Databricks secret scope; keys are read with dbutils.secrets.get(scope="dwh", key=...).
+secret_scope: dwh
+secret_keys:
+  jdbc_username: sqlserver_username
+  jdbc_password: sqlserver_password

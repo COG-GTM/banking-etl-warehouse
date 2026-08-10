@@ -1,0 +1,99 @@
+# =====================================================================================
+# Databricks Asset Bundle for the banking data warehouse migration
+# (SQL Server DWH + Talend  ->  Databricks lakehouse, medallion architecture)
+#
+# Deploy:   databricks bundle validate -t dev
+#           databricks bundle deploy   -t dev
+#           databricks bundle run      -t dev dwh_daily_load
+#
+# Workflow (job) definitions live in databricks/workflows/ and are picked up by the
+# `include` block below; notebooks under databricks/{bronze,silver,gold,analytics}
+# are synced to the workspace and referenced from those job definitions.
+# =====================================================================================
+bundle:
+  name: banking-etl-warehouse
+
+include:
+  - databricks/workflows/*.yml
+  - databricks/workflows/*.yaml
+
+# Only the project sources need to be synced to the workspace; the legacy SQL Server
+# and Talend assets stay in git.
+sync:
+  include:
+    - databricks/**
+  exclude:
+    - data_sources/**
+    - talend_jobs/**
+    - sql_scripts/**
+
+variables:
+  catalog:
+    description: Unity Catalog catalog holding the bronze/silver/gold/analytics schemas.
+    default: dwh
+  storage_root:
+    description: >-
+      Cloud storage URL backing the catalog's MANAGED LOCATION (must map to an existing
+      Unity Catalog external location). Leave empty to inherit the metastore root.
+    default: ""
+  secret_scope:
+    description: Databricks secret scope holding source-system credentials.
+    default: dwh
+  source_jdbc_url:
+    description: JDBC URL of the legacy SQL Server source database (`sample`).
+    default: jdbc:sqlserver://sqlserver.internal:1433;databaseName=sample;encrypt=true;trustServerCertificate=true
+  source_files_root:
+    description: Cloud storage path holding the CSV / Excel transaction extracts.
+    default: /Volumes/dwh/bronze/landing
+  job_cluster:
+    description: >-
+      Job cluster spec shared by every task in the DWH workflows. DBR 14.3 LTS,
+      Unity-Catalog-enabled (SINGLE_USER) access mode.
+    type: complex
+    default:
+      spark_version: 14.3.x-scala2.12
+      data_security_mode: SINGLE_USER
+      runtime_engine: PHOTON
+      node_type_id: Standard_DS3_v2
+      num_workers: 2
+      spark_conf:
+        spark.databricks.delta.schema.autoMerge.enabled: "false"
+      spark_env_vars:
+        PYSPARK_PYTHON: /databricks/python3/bin/python3
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://adb-0000000000000000.0.azuredatabricks.net
+      root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}
+    variables:
+      catalog: dwh_dev
+      source_files_root: /Volumes/dwh_dev/bronze/landing
+      job_cluster:
+        spark_version: 14.3.x-scala2.12
+        data_security_mode: SINGLE_USER
+        runtime_engine: STANDARD
+        node_type_id: Standard_DS3_v2
+        num_workers: 1
+        spark_conf:
+          spark.databricks.delta.schema.autoMerge.enabled: "false"
+        spark_env_vars:
+          PYSPARK_PYTHON: /databricks/python3/bin/python3
+    presets:
+      name_prefix: "[dev] "
+
+  prod:
+    mode: production
+    workspace:
+      host: https://adb-0000000000000000.0.azuredatabricks.net
+      root_path: /Workspace/Shared/.bundle/${bundle.name}/${bundle.target}
+    variables:
+      catalog: dwh
+      source_files_root: /Volumes/dwh/bronze/landing
+    permissions:
+      - level: CAN_MANAGE
+        group_name: dwh_admins
+      - level: CAN_VIEW
+        group_name: dwh_readers
