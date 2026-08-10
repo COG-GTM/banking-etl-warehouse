@@ -1,0 +1,259 @@
+# Databricks Workflow definition for the banking DWH medallion pipeline.
+#
+# This file is consumed by the Databricks Asset Bundle (see databricks.yml from
+# ticket 2) via an `include:` entry, so the top-level key is `resources.jobs`.
+#
+#   databricks bundle validate -t dev
+#   databricks bundle deploy   -t dev
+#   databricks bundle run dwh_etl_job -t dev
+#
+# DAG:
+#   ingest_sqlserver ─┐
+#                     ├─> build_dim_branch -> build_dim_account -> build_dim_customer -> build_fact_transaction ─┬─> analytics
+#   ingest_files ─────┘                                                                                          └─> validation
+#
+# NOTE ON DIMENSION ORDERING:
+#   DimBranch, DimAccount and DimCustomer have no data dependency on each other
+#   and could be built in parallel. They are deliberately chained sequentially
+#   because the legacy README mandates running the Talend jobs in the exact
+#   order Load_DimBranch -> Load_DimAccount -> Load_DimCustomer -> Load_FactTransaction.
+#   Keeping that order makes the Databricks run reproducible against the legacy
+#   run for parity testing during cutover. Once cutover is complete and parity
+#   is signed off, the three dimension tasks can be flattened to depend on the
+#   ingest tasks directly for a faster DAG.
+
+resources:
+  jobs:
+    dwh_etl_job:
+      name: "[${var.environment}] dwh_etl_job"
+      description: >-
+        Banking data warehouse medallion ETL: bronze ingestion (SQL Server +
+        flat files) -> silver dimensions -> gold fact -> analytics + parity
+        validation. Replaces the legacy Talend jobs Load_DimBranch,
+        Load_DimAccount, Load_DimCustomer and Load_FactTransaction.
+
+      tags:
+        project: banking-etl-warehouse
+        layer: dwh
+        environment: ${var.environment}
+
+      # Serialize runs: the medallion build is not safe to run concurrently
+      # against the same catalog.
+      max_concurrent_runs: 1
+
+      # 4 hours: whole-job ceiling.
+      timeout_seconds: 14400
+
+      parameters:
+        - name: environment
+          default: ${var.environment}
+        - name: catalog
+          default: ${var.catalog}
+        - name: load_mode
+          # full | incremental — silver/gold notebooks branch on this.
+          default: full
+        - name: source_system
+          default: sample
+
+      schedule:
+        # 02:00 Asia/Jakarta daily, after the operational systems close batch.
+        quartz_cron_expression: "0 0 2 * * ?"
+        timezone_id: Asia/Jakarta
+        # Paused by default; unpause per-environment after cutover sign-off.
+        pause_status: PAUSED
+
+      email_notifications:
+        on_failure:
+          - data-engineering-oncall@example.com
+        on_duration_warning_threshold_exceeded:
+          - data-engineering-oncall@example.com
+        no_alert_for_skipped_runs: true
+
+      webhook_notifications:
+        on_failure:
+          - id: ${var.failure_webhook_id}
+
+      health:
+        rules:
+          - metric: RUN_DURATION_SECONDS
+            op: GREATER_THAN
+            value: 5400
+
+      job_clusters:
+        - job_cluster_key: dwh_etl_cluster
+          new_cluster:
+            spark_version: "14.3.x-scala2.12" # DBR 14.3 LTS
+            # Unity Catalog enabled, multi-user isolation.
+            data_security_mode: USER_ISOLATION
+            node_type_id: ${var.node_type_id}
+            driver_node_type_id: ${var.node_type_id}
+            runtime_engine: PHOTON
+            autoscale:
+              min_workers: 2
+              max_workers: 8
+            spark_conf:
+              spark.databricks.delta.optimizeWrite.enabled: "true"
+              spark.databricks.delta.autoCompact.enabled: "true"
+              spark.sql.session.timeZone: "Asia/Jakarta"
+            custom_tags:
+              project: banking-etl-warehouse
+              environment: ${var.environment}
+
+      tasks:
+        # ------------------------------------------------------------------
+        # Bronze: the two ingestion tasks are independent and run in parallel.
+        # ------------------------------------------------------------------
+        - task_key: ingest_sqlserver
+          description: >-
+            JDBC extract of the legacy `sample` database (customer, city,
+            state, account, branch, transaction_db) into dwh.bronze.*.
+          job_cluster_key: dwh_etl_cluster
+          notebook_task:
+            notebook_path: ../bronze/ingest_sqlserver.py
+            source: WORKSPACE
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              environment: "{{job.parameters.environment}}"
+              load_mode: "{{job.parameters.load_mode}}"
+              source_system: "{{job.parameters.source_system}}"
+          timeout_seconds: 3600
+          max_retries: 2
+          min_retry_interval_millis: 120000
+          retry_on_timeout: false
+
+        - task_key: ingest_files
+          description: >-
+            Ingest transaction_csv.csv and transaction_excel.xlsx into
+            dwh.bronze.transaction_csv and dwh.bronze.transaction_excel.
+          job_cluster_key: dwh_etl_cluster
+          notebook_task:
+            notebook_path: ../bronze/ingest_files.py
+            source: WORKSPACE
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              environment: "{{job.parameters.environment}}"
+              load_mode: "{{job.parameters.load_mode}}"
+          timeout_seconds: 1800
+          max_retries: 2
+          min_retry_interval_millis: 120000
+          retry_on_timeout: false
+
+        # ------------------------------------------------------------------
+        # Silver: dimensions, chained in the legacy-mandated order.
+        # ------------------------------------------------------------------
+        - task_key: build_dim_branch
+          description: Build dwh.silver.dim_branch (replaces Load_DimBranch).
+          job_cluster_key: dwh_etl_cluster
+          depends_on:
+            - task_key: ingest_sqlserver
+            - task_key: ingest_files
+          notebook_task:
+            notebook_path: ../silver/build_dim_branch.py
+            source: WORKSPACE
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              environment: "{{job.parameters.environment}}"
+              load_mode: "{{job.parameters.load_mode}}"
+          timeout_seconds: 1800
+          max_retries: 2
+          min_retry_interval_millis: 60000
+
+        - task_key: build_dim_account
+          description: Build dwh.silver.dim_account (replaces Load_DimAccount).
+          job_cluster_key: dwh_etl_cluster
+          depends_on:
+            - task_key: build_dim_branch
+          notebook_task:
+            notebook_path: ../silver/build_dim_account.py
+            source: WORKSPACE
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              environment: "{{job.parameters.environment}}"
+              load_mode: "{{job.parameters.load_mode}}"
+          timeout_seconds: 1800
+          max_retries: 2
+          min_retry_interval_millis: 60000
+
+        - task_key: build_dim_customer
+          description: >-
+            Build dwh.silver.dim_customer — customer joined to city and state
+            with the uppercase cleansing the legacy tMap applied
+            (replaces Load_DimCustomer).
+          job_cluster_key: dwh_etl_cluster
+          depends_on:
+            - task_key: build_dim_account
+          notebook_task:
+            notebook_path: ../silver/build_dim_customer.py
+            source: WORKSPACE
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              environment: "{{job.parameters.environment}}"
+              load_mode: "{{job.parameters.load_mode}}"
+          timeout_seconds: 1800
+          max_retries: 2
+          min_retry_interval_millis: 60000
+
+        # ------------------------------------------------------------------
+        # Gold: the fact table, unioning the three transaction sources.
+        # ------------------------------------------------------------------
+        - task_key: build_fact_transaction
+          description: >-
+            Build dwh.gold.fact_transaction — union of transaction_db, CSV and
+            Excel sources, deduplicated on transaction_id
+            (replaces Load_FactTransaction: tUnite + tUniqRow).
+          job_cluster_key: dwh_etl_cluster
+          depends_on:
+            - task_key: build_dim_customer
+          notebook_task:
+            notebook_path: ../gold/build_fact_transaction.py
+            source: WORKSPACE
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              environment: "{{job.parameters.environment}}"
+              load_mode: "{{job.parameters.load_mode}}"
+          timeout_seconds: 5400
+          max_retries: 2
+          min_retry_interval_millis: 120000
+
+        # ------------------------------------------------------------------
+        # Analytics + validation run in parallel once the fact table is built.
+        # ------------------------------------------------------------------
+        - task_key: analytics
+          description: >-
+            Refresh the stored-procedure replacements
+            (daily_transaction / balance_per_customer) in dwh.analytics.
+          job_cluster_key: dwh_etl_cluster
+          depends_on:
+            - task_key: build_fact_transaction
+          notebook_task:
+            notebook_path: ../analytics/refresh_analytics.py
+            source: WORKSPACE
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              environment: "{{job.parameters.environment}}"
+          timeout_seconds: 1800
+          max_retries: 1
+          min_retry_interval_millis: 60000
+
+        - task_key: validation
+          description: >-
+            Parity check of the Databricks output against the legacy SQL Server
+            DWH; writes dwh.analytics.parity_results.
+          job_cluster_key: dwh_etl_cluster
+          depends_on:
+            - task_key: build_fact_transaction
+          notebook_task:
+            notebook_path: ../validation/parity_check.py
+            source: WORKSPACE
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              environment: "{{job.parameters.environment}}"
+              secret_scope: dwh
+              # Comparison is advisory during the parallel-run period; set to
+              # "true" to make the job fail on a parity breach at cutover.
+              fail_on_mismatch: "false"
+              row_count_tolerance_pct: "0.0"
+              amount_tolerance_pct: "0.01"
+          timeout_seconds: 3600
+          max_retries: 1
+          min_retry_interval_millis: 60000
