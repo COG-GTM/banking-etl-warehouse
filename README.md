@@ -22,7 +22,7 @@ The solution follows a classic ETL (Extract, Transform, Load) architecture, desi
     - **Transformation:** Cleansing data, joining multiple tables, unifying different data streams, and deduplicating records.
     - **Loading:** Loading the clean, transformed data into the target Data Warehouse.
 3.  **Data Warehouse (SQL Server):** A centralized DWH built on Microsoft SQL Server using a Star Schema data model. It consists of:
-    - **3 Dimension Tables:** `DimCustomer`, `DimAccount`, `DimBranch`
+    - **4 Dimension Tables:** `DimCustomer`, `DimAccount`, `DimBranch`, `DimExchangeRate`
     - **1 Fact Table:** `FactTransaction`
 4.  **Data Access & Analytics:** Pre-built Stored Procedures provide quick, aggregated insights for business users and analysts, enabling faster decision-making.
 
@@ -59,6 +59,36 @@ To provide immediate value to the "client," two parameterized Stored Procedures 
 
 - **`sp_DailyTransaction`**: Generates a daily summary of transaction volume and total amount for a given date range.
 - **`sp_BalancePerCustomer`**: A sophisticated procedure that calculates the current balance of each active account for a specific customer, applying business logic (`CASE WHEN`) to handle deposits and withdrawals.
+
+### 4. FX Exchange Rates with Stochastic Sampling
+
+A dimension of historical exchange rates plus a procedure that draws a rate at random from recent history, for simulation and what-if analysis.
+
+- **`DimExchangeRate`**: Historical FX rates, one row per currency pair per date.
+
+  | Column | Type | Description |
+  | --- | --- | --- |
+  | `RateID` | `INT` (PK) | Surrogate key |
+  | `CurrencyFrom` | `VARCHAR(3)` | ISO code of the source currency |
+  | `CurrencyTo` | `VARCHAR(3)` | ISO code of the target currency |
+  | `RateDate` | `DATE` | Date the rate was observed |
+  | `Rate` | `DECIMAL(19,6)` | Units of `CurrencyTo` per unit of `CurrencyFrom` |
+
+- **`FactTransaction.CurrencyCode`**: New `VARCHAR(3)` column giving each transaction a currency context. It defaults to the base currency `'USD'`, so existing ETL loads keep working unchanged.
+
+- **`sp_SampleExchangeRate @CurrencyFrom, @CurrencyTo, @AsOfDate`**: Filters `DimExchangeRate` to the given pair with `RateDate BETWEEN DATEADD(MONTH, -6, @AsOfDate) AND @AsOfDate` and returns a single row picked at random from that window (`TOP 1 ... ORDER BY NEWID()`). It raises an error if the window contains no rates.
+
+  ```sql
+  EXEC sp_SampleExchangeRate @CurrencyFrom = 'EUR', @CurrencyTo = 'USD', @AsOfDate = '2024-06-30';
+  ```
+
+- **`vw_FactTransactionSampledUSD`**: Demonstration view converting `FactTransaction.Amount` to USD using a rate sampled from the trailing 6 months before each transaction's own date.
+
+#### ⚠️ Non-deterministic by design
+
+The sampled rate is drawn at random, so **two identical calls will usually return different rates**, and the view re-samples on every execution. This is intended for simulation, stress-testing and what-if analysis only.
+
+Do **not** use it for accounting, settlement, regulatory reporting or anything else needing the exact historical conversion rate — for those, query `DimExchangeRate` directly on the specific `RateDate`. Results built on sampled rates are not reproducible unless the sampled rates are themselves persisted.
 
 ---
 
