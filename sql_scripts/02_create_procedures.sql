@@ -92,4 +92,107 @@ GO
 PRINT 'Stored Procedure sp_BalancePerCustomer created successfully.';
 GO
 
+-------------------------------------------------------------------------------------
+-- STORED PROCEDURE 3: SampleExchangeRate
+-- Returns ONE exchange rate for a currency pair, randomly sampled from the rates
+-- observed in DimExchangeRate over the 6 months ending at @AsOfDate.
+--
+-- !! NON-DETERMINISTIC !!
+-- The rate is drawn at random (ORDER BY NEWID()) from the trailing 6-month window,
+-- so two identical calls will usually return different rates. This is intended for
+-- simulation, stress-testing and what-if analysis only. Do NOT use it for
+-- accounting, settlement, regulatory reporting or any other use case that requires
+-- the exact historical rate for a given date: for those, query DimExchangeRate
+-- directly on the specific RateDate.
+-------------------------------------------------------------------------------------
+PRINT 'Creating Stored Procedure sp_SampleExchangeRate...';
+GO
+CREATE PROCEDURE sp_SampleExchangeRate
+    @CurrencyFrom VARCHAR(3),
+    @CurrencyTo VARCHAR(3),
+    @AsOfDate DATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Sampling window: the 6 months up to and including @AsOfDate
+    DECLARE @WindowStart DATE = DATEADD(MONTH, -6, @AsOfDate);
+
+    SELECT TOP 1
+        r.RateID,
+        r.CurrencyFrom,
+        r.CurrencyTo,
+        r.RateDate       AS SampledRateDate,
+        r.Rate           AS SampledRate,
+        @AsOfDate        AS AsOfDate,
+        @WindowStart     AS WindowStartDate
+    FROM
+        DimExchangeRate r
+    WHERE
+        r.CurrencyFrom = @CurrencyFrom
+        AND r.CurrencyTo = @CurrencyTo
+        AND r.RateDate BETWEEN @WindowStart AND @AsOfDate
+    -- Random draw: NEWID() assigns a fresh random value to every candidate row
+    ORDER BY
+        NEWID();
+
+    -- No history in the window: surface it instead of silently returning nothing
+    IF @@ROWCOUNT = 0
+    BEGIN
+        DECLARE @WindowStartText VARCHAR(10) = CONVERT(VARCHAR(10), @WindowStart, 23);
+        DECLARE @AsOfDateText VARCHAR(10) = CONVERT(VARCHAR(10), @AsOfDate, 23);
+
+        RAISERROR('No exchange rates found for %s/%s between %s and %s.', 16, 1,
+                  @CurrencyFrom, @CurrencyTo,
+                  @WindowStartText, @AsOfDateText);
+    END
+END;
+GO
+PRINT 'Stored Procedure sp_SampleExchangeRate created successfully.';
+GO
+
+-------------------------------------------------------------------------------------
+-- VIEW: vw_FactTransactionSampledUSD
+-- Demonstrates converting FactTransaction.Amount with a rate sampled at random from
+-- the trailing 6 months of history for the transaction's own currency pair.
+--
+-- !! NON-DETERMINISTIC !!
+-- Every execution re-samples, so ConvertedAmount changes between runs. Simulation
+-- and what-if analysis only; never use it as a source for reported figures.
+-------------------------------------------------------------------------------------
+PRINT 'Creating View vw_FactTransactionSampledUSD...';
+GO
+CREATE VIEW vw_FactTransactionSampledUSD
+AS
+    SELECT
+        f.TransactionID,
+        f.AccountID,
+        f.TransactionDate,
+        f.Amount,
+        f.CurrencyCode,
+        s.SampledRateDate,
+        -- Transactions already in the base currency convert at parity
+        COALESCE(s.SampledRate, CASE WHEN f.CurrencyCode = 'USD' THEN 1.0 END) AS SampledRate,
+        CAST(f.Amount * COALESCE(s.SampledRate, CASE WHEN f.CurrencyCode = 'USD' THEN 1.0 END)
+             AS DECIMAL(19,6)) AS ConvertedAmountUSD
+    FROM
+        FactTransaction f
+    OUTER APPLY (
+        SELECT TOP 1
+            r.RateDate AS SampledRateDate,
+            r.Rate     AS SampledRate
+        FROM
+            DimExchangeRate r
+        WHERE
+            r.CurrencyFrom = f.CurrencyCode
+            AND r.CurrencyTo = 'USD'
+            AND r.RateDate BETWEEN DATEADD(MONTH, -6, CAST(f.TransactionDate AS DATE))
+                               AND CAST(f.TransactionDate AS DATE)
+        ORDER BY
+            NEWID()
+    ) s;
+GO
+PRINT 'View vw_FactTransactionSampledUSD created successfully.';
+GO
+
 PRINT 'All Stored Procedures have been created.';
