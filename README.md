@@ -96,3 +96,23 @@ To replicate this solution, follow these steps:
 ## 🌟 Project Outcomes
 
 This project successfully demonstrates a complete data engineering lifecycle. The final solution transforms a chaotic, multi-source data environment into a clean, reliable, and high-performance Data Warehouse, ready to power business intelligence and analytics.
+
+## dbt + Databricks Medallion Rebuild
+
+This repository is being rebuilt as a dbt project targeting Databricks SQL with a medallion architecture:
+
+- **Bronze**: Typed passthrough views of raw sources.
+- **Silver**: Conformed and deduplicated tables.
+- **Gold**: Star-schema dimensions and facts, plus report models.
+
+The rebuild follows a test-driven workflow. Schema and unit tests are authored before their models, and `dbt build` runs models and tests together.
+
+### Running the dbt project
+
+Install the project dependencies, resolve packages, and run the build:
+
+```bash
+pip install 'dbt-core>=1.8' 'dbt-databricks>=1.8'
+dbt deps
+DBT_PROFILES_DIR=. dbt build
+```
