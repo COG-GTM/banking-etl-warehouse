@@ -1,0 +1,54 @@
+version: 2
+
+models:
+  - name: rpt_daily_transaction
+    description: >
+      Daily transaction volume and total amount. Replaces the legacy stored procedure
+      sp_DailyTransaction. The legacy @start_date / @end_date parameters are the dbt
+      vars start_date and end_date; when either var is empty that bound is not applied,
+      so the model can be built unfiltered and sliced in the BI layer.
+    columns:
+      - name: transaction_day
+        description: Transaction date, truncated to day (cast of transaction_date).
+        tests:
+          - not_null
+          - unique
+      - name: total_transactions
+        description: Count of transactions on that day.
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: true
+      - name: total_amount
+        description: Sum of transaction amounts on that day.
+        tests:
+          - not_null
+
+  - name: rpt_balance_per_customer
+    description: >
+      Current balance per active account, per customer. Replaces the legacy stored
+      procedure sp_BalancePerCustomer. The legacy @customer_name LIKE '%x%' parameter is
+      the dbt var customer_name, applied only when non-empty. Depends on the
+      transaction_type casing produced by staging (Ticket 5); the deposit test is
+      case-insensitive so either casing works.
+    columns:
+      - name: customer_name
+        description: Customer name from dim_customer.
+        tests:
+          - not_null
+      - name: account_type
+        description: Account type from dim_account.
+        tests:
+          - not_null
+      - name: initial_balance
+        description: dim_account.balance, the opening balance of the account.
+        tests:
+          - not_null
+      - name: current_balance
+        description: >
+          initial_balance plus the net of transactions on the account
+          (deposits add, everything else subtracts); coalesced to 0 when the
+          account has no transactions.
+        tests:
+          - not_null
