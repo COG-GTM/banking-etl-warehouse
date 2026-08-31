@@ -96,3 +96,27 @@ To replicate this solution, follow these steps:
 ## 🌟 Project Outcomes
 
 This project successfully demonstrates a complete data engineering lifecycle. The final solution transforms a chaotic, multi-source data environment into a clean, reliable, and high-performance Data Warehouse, ready to power business intelligence and analytics.
+
+---
+
+## 🚚 Migration to dbt + Databricks SQL
+
+This warehouse is being re-platformed onto **dbt + Databricks SQL** (Unity
+Catalog, Delta tables). The Talend jobs become dbt models, the T-SQL stored
+procedures become reporting models parameterised by dbt vars, and the PK/FK
+constraints become dbt tests, since Databricks does not enforce keys.
+
+| Document | Contents |
+| --- | --- |
+| [`docs/legacy_to_dbt_mapping.md`](docs/legacy_to_dbt_mapping.md) | Every Talend job, table, column, type and constraint mapped to its dbt counterpart |
+| [`docs/migration_guide.md`](docs/migration_guide.md) | Cutover runbook: landing raw data, `dbt deps`/`seed`/`build`, validation, parallel run, decommissioning Talend |
+| [`parity/README.md`](parity/README.md) | Offline legacy-vs-dbt parity harness |
+
+The dbt project lives in [`dbt/`](dbt). Parity between the legacy stored
+procedures and the dbt logic is proven locally on DuckDB — no Databricks
+workspace or SQL Server instance required:
+
+```bash
+pip install -r parity/requirements.txt
+python3 parity/run_parity.py
+```
