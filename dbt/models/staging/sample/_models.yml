@@ -1,0 +1,45 @@
+version: 2
+
+models:
+  - name: stg_sample__transaction
+    description: >
+      Staging model for the SQL Server `sample.transaction` extract, one of the three
+      transaction streams unioned by the legacy Talend `Load_FactTransaction` job.
+      Emits the shared transaction contract
+      (transaction_id, account_id, transaction_date, amount, transaction_type,
+      branch_id, source_system). `transaction_type` is normalized with `initcap`
+      (e.g. 'DEPOSIT' -> 'Deposit') so downstream deposit logic can compare against
+      the legacy literal 'Deposit'.
+    columns:
+      - name: transaction_id
+        description: Legacy FactTransaction primary key (TransactionID).
+        tests:
+          - not_null
+          - unique
+      - name: account_id
+        description: Foreign key to DimAccount (AccountID).
+        tests:
+          - not_null
+      - name: transaction_date
+        description: Transaction timestamp (legacy DATETIME).
+        tests:
+          - not_null
+      - name: amount
+        description: Transaction amount (legacy MONEY -> DECIMAL(18,2)).
+        tests:
+          - not_null
+      - name: transaction_type
+        description: Initcap-normalized transaction type (Deposit, Withdrawal, Transfer, ...).
+        tests:
+          - not_null
+      - name: branch_id
+        description: Foreign key to DimBranch (BranchID).
+        tests:
+          - not_null
+      - name: source_system
+        description: Constant 'sample' identifying the originating source stream.
+        tests:
+          - not_null
+    tests:
+      - dbt_utils.expression_is_true:
+          expression: "amount >= 0"

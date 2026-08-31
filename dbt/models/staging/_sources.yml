@@ -1,0 +1,12 @@
+version: 2
+
+sources:
+  - name: sample
+    description: >
+      Source OLTP tables from the legacy SQL Server `sample` database, landed in
+      Unity Catalog as external tables.
+    database: banking
+    schema: raw
+    tables:
+      - name: transaction
+        description: Operational transaction records from the SQL Server source system.
