@@ -1,0 +1,41 @@
+name: dbt CI
+
+on:
+  pull_request:
+    paths:
+      - 'dbt/**'
+      - '.github/workflows/dbt-ci.yml'
+
+defaults:
+  run:
+    working-directory: dbt
+
+jobs:
+  parse:
+    name: dbt deps & parse
+    runs-on: ubuntu-latest
+    env:
+      DBT_PROFILES_DIR: ${{ github.workspace }}/dbt/.ci
+      DATABRICKS_HOST: example.cloud.databricks.com
+      DATABRICKS_HTTP_PATH: /sql/1.0/warehouses/ci-dummy
+      DATABRICKS_TOKEN: dapi00000000000000000000000000000000
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dbt-databricks
+        run: pip install 'dbt-databricks>=1.8,<2.0'
+
+      - name: Write dummy profile
+        run: |
+          mkdir -p .ci
+          cp profiles.yml.example .ci/profiles.yml
+
+      - name: dbt deps
+        run: dbt deps
+
+      - name: dbt parse
+        run: dbt parse
