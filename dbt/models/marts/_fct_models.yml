@@ -1,0 +1,79 @@
+version: 2
+
+models:
+  - name: fct_transaction
+    description: >
+      Transaction fact table, the dbt/Databricks replacement for the legacy
+      T-SQL `FactTransaction` table. One row per unique transaction, sourced
+      from `int_transactions_unioned` (union of the SQL Server, CSV and Excel
+      transaction feeds, deduplicated on `transaction_id`, replacing the
+      Talend `tUnite` + `tUniqRow` steps).
+
+      Legacy `PRIMARY KEY (TransactionID)` and the two foreign keys
+      (`AccountID -> DimAccount`, `BranchID -> DimBranch`) are not enforceable
+      on Databricks, so they are encoded as dbt tests below plus the singular
+      test `assert_fact_no_orphan_keys`. A Databricks informational
+      `PRIMARY KEY` / `FOREIGN KEY ... NOT ENFORCED` constraint can be declared
+      alongside these tests (see the PR description); it documents the grain to
+      the query optimizer and catalog but never validates data, so the tests
+      remain the only real guarantee.
+    columns:
+      - name: transaction_id
+        description: >
+          Business key of the transaction (legacy `TransactionID`, INT).
+          Replaces the legacy primary key constraint.
+        data_type: int
+        tests:
+          - unique
+          - not_null
+
+      - name: account_id
+        description: >
+          Account the transaction belongs to (legacy `AccountID`, INT).
+          Replaces `FK_FactTransaction_DimAccount`.
+        data_type: int
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_account')
+              field: account_id
+
+      - name: transaction_date
+        description: Transaction timestamp (legacy `TransactionDate`, DATETIME -> TIMESTAMP).
+        data_type: timestamp
+        tests:
+          - not_null
+
+      - name: amount
+        description: Transaction amount (legacy `Amount`, MONEY -> DECIMAL(18,2)).
+        data_type: decimal(18,2)
+        tests:
+          - not_null
+
+      - name: transaction_type
+        description: Transaction category, e.g. Deposit / Withdrawal (legacy `TransactionType`, VARCHAR(50) -> STRING).
+        data_type: string
+        tests:
+          - not_null
+
+      - name: branch_id
+        description: >
+          Branch where the transaction occurred (legacy `BranchID`, INT).
+          Replaces `FK_FactTransaction_DimBranch`.
+        data_type: int
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_branch')
+              field: branch_id
+
+      - name: source_system
+        description: >
+          Lineage metadata added by this re-platforming; not present in the
+          legacy `FactTransaction` table. Identifies which of the three
+          transaction feeds (SQL Server / CSV / Excel) a row survived
+          deduplication from, so that source-specific data quality issues can
+          be traced without re-running the union.
+        data_type: string
+        tests:
+          - not_null
