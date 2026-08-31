@@ -1,0 +1,33 @@
+name: banking_dwh
+version: 1.0.0
+config-version: 2
+
+profile: banking_dwh
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+test-paths: ["tests"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+vars:
+  start_date: '2024-01-01'
+  end_date: '2024-12-31'
+  customer_name: ''
+
+models:
+  banking_dwh:
+    staging:
+      +materialized: view
+      +schema: staging
+    intermediate:
+      +materialized: view
+      +schema: intermediate
+    marts:
+      +materialized: table
+      +schema: marts
+
+seeds:
+  banking_dwh:
+    +schema: raw
