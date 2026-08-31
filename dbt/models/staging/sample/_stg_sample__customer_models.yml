@@ -1,0 +1,59 @@
+version: 2
+
+models:
+  - name: stg_sample__customer
+    description: >
+      Staging model for the source OLTP `sample.dbo.customer` table. Columns are
+      renamed to snake_case, cast to Databricks types and trimmed. Text fields are
+      UPPER-cased, replicating the `StringHandling.UPCASE` cleansing applied in the
+      Talend `Load_DimCustomer` tMap. No joins are performed here.
+    columns:
+      - name: customer_id
+        description: Primary key of the customer source table.
+        tests:
+          - unique
+          - not_null
+      - name: customer_name
+        description: Customer full name, trimmed and upper-cased.
+      - name: address
+        description: Customer street address, trimmed and upper-cased.
+      - name: city_id
+        description: Foreign key to stg_sample__city; resolved to a city name in the intermediate layer.
+        tests:
+          - not_null
+      - name: age
+        description: Customer age. Stored as VARCHAR(3) in the source, cast to INT to match DimCustomer.Age.
+      - name: gender
+        description: Customer gender, trimmed and upper-cased.
+      - name: email
+        description: Customer email address, trimmed (not upper-cased in the legacy job).
+
+  - name: stg_sample__city
+    description: >
+      Staging model for the source OLTP `sample.dbo.city` table. Renamed, typed and
+      trimmed; `city_name` is UPPER-cased per the Talend cleansing rule.
+    columns:
+      - name: city_id
+        description: Primary key of the city source table.
+        tests:
+          - unique
+          - not_null
+      - name: city_name
+        description: City name, trimmed and upper-cased.
+      - name: state_id
+        description: Foreign key to stg_sample__state.
+        tests:
+          - not_null
+
+  - name: stg_sample__state
+    description: >
+      Staging model for the source OLTP `sample.dbo.state` table. Renamed, typed and
+      trimmed; `state_name` is UPPER-cased per the Talend cleansing rule.
+    columns:
+      - name: state_id
+        description: Primary key of the state source table.
+        tests:
+          - unique
+          - not_null
+      - name: state_name
+        description: State name, trimmed and upper-cased.
