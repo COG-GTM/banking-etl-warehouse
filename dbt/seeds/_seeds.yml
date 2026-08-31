@@ -1,0 +1,208 @@
+version: 2
+
+seeds:
+  - name: raw_transaction_csv
+    description: >
+      Verbatim copy of `data_sources/transaction_csv.csv`, the CSV transaction extract that
+      the `Load_FactTransaction` Talend job unioned with the Excel and SQL Server streams.
+      Column names and values are unchanged; `transaction_date` is kept as text in the
+      source format `dd-MM-yyyy HH:mm:ss` and is parsed in staging.
+    config:
+      column_types:
+        transaction_id: INT
+        account_id: INT
+        transaction_date: STRING
+        amount: DECIMAL(18,2)
+        transaction_type: STRING
+        branch_id: INT
+    columns:
+      - name: transaction_id
+        description: Transaction identifier, unique within this extract.
+        tests: [not_null, unique]
+      - name: account_id
+        description: Account the transaction belongs to.
+        tests: [not_null]
+      - name: transaction_date
+        description: Transaction timestamp as text, `dd-MM-yyyy HH:mm:ss`.
+      - name: amount
+        description: Transaction amount.
+      - name: transaction_type
+        description: Deposit / Withdrawal / Transfer / Payment.
+      - name: branch_id
+        description: Branch the transaction was booked at.
+
+  - name: raw_transaction_excel
+    description: >
+      CSV rendering of `data_sources/transaction_excel.xlsx` (sheet `Sheet1`), produced with
+      openpyxl and committed so the project builds without an Excel reader. Column names and
+      values are unchanged; the Excel datetime cells are rendered as text in the same
+      `dd-MM-yyyy HH:mm:ss` format used by the CSV extract. Rows overlap with the other two
+      transaction streams by design (ids 6, 7, 14, 15) — deduplication on `transaction_id`
+      happens in the intermediate layer, so no `unique` test here.
+    config:
+      column_types:
+        transaction_id: INT
+        account_id: INT
+        transaction_date: STRING
+        amount: DECIMAL(18,2)
+        transaction_type: STRING
+        branch_id: INT
+    columns:
+      - name: transaction_id
+        description: Transaction identifier; may collide with the CSV and SQL Server streams.
+        tests: [not_null]
+      - name: account_id
+        description: Account the transaction belongs to.
+        tests: [not_null]
+      - name: transaction_date
+        description: Transaction timestamp as text, `dd-MM-yyyy HH:mm:ss`.
+      - name: amount
+        description: Transaction amount.
+      - name: transaction_type
+        description: Deposit / Withdrawal / Transfer / Payment.
+      - name: branch_id
+        description: Branch the transaction was booked at.
+
+  - name: raw_sample_state
+    description: >
+      SAMPLE DATA — dev-only stand-in for the `sample.state` SQL Server table, extracted from
+      `data_sources/sample.bak`. In production this table is read from the Unity Catalog
+      external table `banking.raw.state`, not from this seed.
+    config:
+      column_types:
+        state_id: INT
+        state_name: STRING
+    columns:
+      - name: state_id
+        description: Primary key of the state.
+        tests: [not_null, unique]
+      - name: state_name
+        description: State name.
+
+  - name: raw_sample_city
+    description: >
+      SAMPLE DATA — dev-only stand-in for the `sample.city` SQL Server table, extracted from
+      `data_sources/sample.bak`. Production reads `banking.raw.city`.
+    config:
+      column_types:
+        city_id: INT
+        city_name: STRING
+        state_id: INT
+    columns:
+      - name: city_id
+        description: Primary key of the city.
+        tests: [not_null, unique]
+      - name: city_name
+        description: City name.
+      - name: state_id
+        description: Foreign key to `raw_sample_state.state_id`.
+        tests: [not_null]
+
+  - name: raw_sample_customer
+    description: >
+      SAMPLE DATA — dev-only stand-in for the `sample.customer` SQL Server table, extracted
+      from `data_sources/sample.bak`. Production reads `banking.raw.customer`.
+    config:
+      column_types:
+        customer_id: INT
+        customer_name: STRING
+        address: STRING
+        city_id: INT
+        age: INT
+        gender: STRING
+        email: STRING
+    columns:
+      - name: customer_id
+        description: Primary key of the customer.
+        tests: [not_null, unique]
+      - name: customer_name
+        description: Full customer name.
+      - name: address
+        description: Street address.
+      - name: city_id
+        description: Foreign key to `raw_sample_city.city_id`.
+        tests: [not_null]
+      - name: age
+        description: Customer age (text in SQL Server, landed as INT here).
+      - name: gender
+        description: male / female.
+      - name: email
+        description: Customer e-mail address.
+
+  - name: raw_sample_account
+    description: >
+      SAMPLE DATA — dev-only stand-in for the `sample.account` SQL Server table, extracted
+      from `data_sources/sample.bak`. Production reads `banking.raw.account`.
+    config:
+      column_types:
+        account_id: INT
+        customer_id: INT
+        account_type: STRING
+        balance: DECIMAL(18,2)
+        date_opened: TIMESTAMP
+        status: STRING
+    columns:
+      - name: account_id
+        description: Primary key of the account.
+        tests: [not_null, unique]
+      - name: customer_id
+        description: Foreign key to `raw_sample_customer.customer_id`.
+        tests: [not_null]
+      - name: account_type
+        description: saving / checking.
+      - name: balance
+        description: Opening balance (MONEY -> DECIMAL(18,2)).
+      - name: date_opened
+        description: Date/time the account was opened.
+      - name: status
+        description: active / terminated.
+
+  - name: raw_sample_branch
+    description: >
+      SAMPLE DATA — dev-only stand-in for the `sample.branch` SQL Server table, extracted
+      from `data_sources/sample.bak`. Production reads `banking.raw.branch`.
+    config:
+      column_types:
+        branch_id: INT
+        branch_name: STRING
+        branch_location: STRING
+    columns:
+      - name: branch_id
+        description: Primary key of the branch.
+        tests: [not_null, unique]
+      - name: branch_name
+        description: Branch name.
+      - name: branch_location
+        description: Branch street address.
+
+  - name: raw_sample_transaction
+    description: >
+      SAMPLE DATA — dev-only stand-in for the `sample.transaction` SQL Server table (physically
+      `transaction_bank` / `transaction_db` in `sample.bak`), the third transaction stream of
+      `Load_FactTransaction`. Production reads `banking.raw.transaction`. Timestamps are ISO
+      (`yyyy-MM-dd HH:mm:ss`) because they come from a typed SQL Server column, unlike the CSV
+      and Excel extracts.
+    config:
+      column_types:
+        transaction_id: INT
+        account_id: INT
+        transaction_date: TIMESTAMP
+        amount: DECIMAL(18,2)
+        transaction_type: STRING
+        branch_id: INT
+    columns:
+      - name: transaction_id
+        description: Primary key of the transaction within this stream.
+        tests: [not_null, unique]
+      - name: account_id
+        description: Foreign key to `raw_sample_account.account_id`.
+        tests: [not_null]
+      - name: transaction_date
+        description: Transaction timestamp.
+      - name: amount
+        description: Transaction amount (MONEY -> DECIMAL(18,2)).
+      - name: transaction_type
+        description: Deposit / Withdrawal / Transfer / Payment.
+      - name: branch_id
+        description: Foreign key to `raw_sample_branch.branch_id`.
+        tests: [not_null]

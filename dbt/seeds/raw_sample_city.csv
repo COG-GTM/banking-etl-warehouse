@@ -1,0 +1,53 @@
+city_id,city_name,state_id
+1,Cilincing,1
+2,Kelapa Gading,1
+3,Tanjung Priok,1
+4,Koja,1
+5,Pademangan,1
+6,Penjaringan,1
+7,Cilandak,2
+8,Jagakarsa,2
+9,Mampang Prapatan,2
+10,Pancoran,2
+11,Tebet,2
+12,Setiabudi,2
+13,Gambir,3
+14,Sawah Besar,3
+15,Kemayoran,3
+16,Menteng,3
+17,Senen,3
+18,Tanah Abang,3
+19,Gambir,3
+20,Cakung,4
+21,Ciracas,4
+22,Duren Sawit,4
+23,Jatinegara,4
+24,Pasar Rebo,4
+25,Pulo Gadung,4
+26,Cengkareng,5
+27,Grogol Petamburan,5
+28,Kebon Jeruk,5
+29,Palmerah,5
+30,Kalideres,5
+31,Bojonggede,6
+32,Ciawi,6
+33,Cibinong,6
+34,Cileungsi,6
+35,Ciomas,6
+36,Tajurhalang,6
+37,Beji,7
+38,Cilodong,7
+39,Cinere,7
+40,Cimanggis,7
+41,Sawangan,7
+42,Sukmajaya,7
+43,Balaraja,8
+44,Cisauk,8
+45,Tigaraksa,8
+46,Legok,8
+47,Kosambi,8
+48,Babelan,9
+49,Cibitung,9
+50,Tambun Selatan,9
+51,Cikarang Selatan,9
+52,Sukatani,9

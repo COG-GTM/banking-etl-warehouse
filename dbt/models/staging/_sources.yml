@@ -1,0 +1,96 @@
+version: 2
+
+sources:
+  - name: sample
+    description: >
+      Legacy SQL Server OLTP database (`sample`, restored from `data_sources/sample.bak`),
+      landed in Unity Catalog as external tables in `banking.raw`. Table and column names
+      are kept exactly as they are in SQL Server; renaming to the warehouse conventions
+      happens in the staging models.
+    database: banking
+    schema: raw
+    tables:
+      - name: state
+        description: Province / state reference table.
+        columns:
+          - name: state_id
+            description: Primary key of the state (INT).
+          - name: state_name
+            description: State name (VARCHAR).
+
+      - name: city
+        description: City reference table, child of `state`.
+        columns:
+          - name: city_id
+            description: Primary key of the city (INT).
+          - name: city_name
+            description: City name (VARCHAR).
+          - name: state_id
+            description: Foreign key to `state.state_id` (INT).
+
+      - name: customer
+        description: >
+          Customer master. Denormalised into `dim_customer` by joining `city` and `state`,
+          reproducing the `Load_DimCustomer` Talend job.
+        columns:
+          - name: customer_id
+            description: Primary key of the customer (INT).
+          - name: customer_name
+            description: Full customer name (VARCHAR).
+          - name: address
+            description: Street address (VARCHAR).
+          - name: city_id
+            description: Foreign key to `city.city_id` (INT).
+          - name: age
+            description: Customer age, stored as text in the source (VARCHAR).
+          - name: gender
+            description: Customer gender, `male` / `female` (VARCHAR).
+          - name: email
+            description: Customer e-mail address (VARCHAR).
+
+      - name: account
+        description: Bank account master, source of `dim_account`.
+        columns:
+          - name: account_id
+            description: Primary key of the account (INT).
+          - name: customer_id
+            description: Foreign key to `customer.customer_id` (INT).
+          - name: account_type
+            description: Account type, `saving` / `checking` (VARCHAR).
+          - name: balance
+            description: Opening balance, MONEY in SQL Server -> DECIMAL(18,2).
+          - name: date_opened
+            description: Date the account was opened, DATETIME2 in SQL Server -> TIMESTAMP.
+          - name: status
+            description: Account status, `active` / `terminated` (VARCHAR).
+
+      - name: branch
+        description: Bank branch master, source of `dim_branch`.
+        columns:
+          - name: branch_id
+            description: Primary key of the branch (INT).
+          - name: branch_name
+            description: Branch name (VARCHAR).
+          - name: branch_location
+            description: Branch street address (VARCHAR).
+
+      - name: transaction
+        description: >
+          Transaction table of the OLTP system, the first of the three transaction
+          streams unioned by the `Load_FactTransaction` Talend job (the other two are the
+          CSV and Excel extracts, landed as seeds). In `sample.bak` this table is physically
+          named `transaction_bank` in the older backup set and `transaction_db` in the newer
+          one; the Unity Catalog external table is expected to expose it as `transaction`.
+        columns:
+          - name: transaction_id
+            description: Primary key of the transaction (INT).
+          - name: account_id
+            description: Foreign key to `account.account_id` (INT).
+          - name: transaction_date
+            description: Timestamp of the transaction, DATETIME2 in SQL Server -> TIMESTAMP.
+          - name: amount
+            description: Transaction amount, MONEY in SQL Server -> DECIMAL(18,2).
+          - name: transaction_type
+            description: One of `Deposit`, `Withdrawal`, `Transfer`, `Payment` (VARCHAR).
+          - name: branch_id
+            description: Foreign key to `branch.branch_id` (INT).
