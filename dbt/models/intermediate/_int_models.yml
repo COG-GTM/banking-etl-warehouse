@@ -1,0 +1,44 @@
+version: 2
+
+models:
+  - name: int_transactions_unioned
+    description: >
+      Union of the three staging transaction feeds (SQL Server `sample`, CSV file,
+      Excel file), deduplicated to exactly one row per `transaction_id`.
+      Replaces the `tUnite` + `tUniqRow` components of the Talend
+      `Load_FactTransaction` job. The surviving row is chosen deterministically by
+      source precedence (SQL Server > CSV > Excel), then earliest `transaction_date`.
+    columns:
+      - name: transaction_id
+        description: Business key of the transaction; legacy `FactTransaction.TransactionID`.
+        tests:
+          - unique
+          - not_null
+      - name: account_id
+        description: Account the transaction belongs to; legacy `AccountID`.
+        tests:
+          - not_null
+      - name: transaction_date
+        description: Timestamp of the transaction; legacy `TransactionDate` (DATETIME).
+        tests:
+          - not_null
+      - name: amount
+        description: Transaction amount as DECIMAL(18,2); legacy `Amount` (MONEY).
+        tests:
+          - not_null
+      - name: transaction_type
+        description: Transaction category (Deposit, Withdrawal, Transfer, Payment, ...).
+        tests:
+          - not_null
+      - name: branch_id
+        description: Branch where the transaction occurred; legacy `BranchID`.
+      - name: record_source
+        description: Feed the surviving row came from, kept for lineage/debugging.
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['sample_sqlserver', 'transaction_csv', 'transaction_excel']
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - transaction_id
