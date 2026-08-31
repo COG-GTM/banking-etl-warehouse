@@ -1,0 +1,81 @@
+version: 2
+
+models:
+  - name: stg_files__transaction_csv
+    description: >
+      Staging model for the CSV transaction extract (seed `raw_transaction_csv`),
+      one of the three streams unioned by the legacy Talend `Load_FactTransaction` job.
+      Dates arrive as `dd-MM-yyyy HH:mm:ss` strings and are parsed with `to_timestamp`.
+      `transaction_type` is normalized with `initcap` so downstream deposit logic can
+      compare against the legacy literal 'Deposit'. Duplicate transaction_ids across
+      streams are removed downstream (int_transactions_unioned), so no `unique` test here.
+    columns:
+      - name: transaction_id
+        description: Transaction identifier, unique after cross-source dedup.
+        tests:
+          - not_null
+      - name: account_id
+        description: Foreign key to DimAccount (AccountID).
+        tests:
+          - not_null
+      - name: transaction_date
+        description: Transaction timestamp parsed from `dd-MM-yyyy HH:mm:ss`.
+        tests:
+          - not_null
+      - name: amount
+        description: Transaction amount as DECIMAL(18,2).
+        tests:
+          - not_null
+      - name: transaction_type
+        description: Initcap-normalized transaction type (Deposit, Withdrawal, Transfer, ...).
+        tests:
+          - not_null
+      - name: branch_id
+        description: Foreign key to DimBranch (BranchID).
+        tests:
+          - not_null
+      - name: source_system
+        description: Constant 'csv' identifying the originating source stream.
+        tests:
+          - not_null
+    tests:
+      - dbt_utils.expression_is_true:
+          expression: "amount >= 0"
+
+  - name: stg_files__transaction_excel
+    description: >
+      Staging model for the Excel transaction extract (seed `raw_transaction_excel`),
+      one of the three streams unioned by the legacy Talend `Load_FactTransaction` job.
+      Same contract, date parsing and `initcap` type normalization as the CSV model.
+    columns:
+      - name: transaction_id
+        description: Transaction identifier, unique after cross-source dedup.
+        tests:
+          - not_null
+      - name: account_id
+        description: Foreign key to DimAccount (AccountID).
+        tests:
+          - not_null
+      - name: transaction_date
+        description: Transaction timestamp parsed from `dd-MM-yyyy HH:mm:ss`.
+        tests:
+          - not_null
+      - name: amount
+        description: Transaction amount as DECIMAL(18,2).
+        tests:
+          - not_null
+      - name: transaction_type
+        description: Initcap-normalized transaction type (Deposit, Withdrawal, Transfer, ...).
+        tests:
+          - not_null
+      - name: branch_id
+        description: Foreign key to DimBranch (BranchID).
+        tests:
+          - not_null
+      - name: source_system
+        description: Constant 'excel' identifying the originating source stream.
+        tests:
+          - not_null
+    tests:
+      - dbt_utils.expression_is_true:
+          expression: "amount >= 0"
