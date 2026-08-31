@@ -1,0 +1,50 @@
+name: banking_dwh
+version: "1.0.0"
+config-version: 2
+
+require-dbt-version: ">=1.8.0"
+profile: banking_dwh
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+analysis-paths: ["analyses"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+seeds:
+  banking_dwh:
+    +schema: landing
+    transaction_csv:
+      +column_types:
+        transaction_id: int
+        account_id: int
+        transaction_date: string
+        amount: decimal(18,2)
+        transaction_type: string
+        branch_id: int
+    transaction_excel:
+      +column_types:
+        transaction_id: int
+        account_id: int
+        transaction_date: string
+        amount: decimal(18,2)
+        transaction_type: string
+        branch_id: int
+
+models:
+  banking_dwh:
+    bronze:
+      +materialized: view
+      +schema: bronze
+    silver:
+      +materialized: table
+      +schema: silver
+    gold:
+      +materialized: table
+      +schema: gold

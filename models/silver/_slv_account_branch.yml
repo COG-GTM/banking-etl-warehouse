@@ -1,0 +1,32 @@
+# Tests-first: unit tests and schema tests authored before the model.
+version: 2
+
+models:
+  - name: slv_account
+    description: Conformed account with normalized status/type.
+    columns:
+      - name: account_id
+        tests: [unique, not_null]
+      - name: status
+        tests: [not_null]
+      - name: account_type
+        tests: [not_null]
+  - name: slv_branch
+    description: Conformed branch.
+    columns:
+      - name: branch_id
+        tests: [unique, not_null]
+
+unit_tests:
+  - name: slv_account_normalizes_status
+    description: Status is trimmed + lowercased so the 'active' filter in reporting is reliable.
+    model: slv_account
+    given:
+      - input: ref('bronze_account')
+        rows:
+          - {account_id: 1, customer_id: 1, account_type: "Savings", balance: 1000.00, date_opened: "2023-01-01", status: "Active "}
+          - {account_id: 2, customer_id: 1, account_type: " Checking ", balance: 500.00, date_opened: "2023-02-01", status: "CLOSED"}
+    expect:
+      rows:
+        - {account_id: 1, customer_id: 1, account_type: "Savings", balance: 1000.00, date_opened: "2023-01-01", status: "active"}
+        - {account_id: 2, customer_id: 1, account_type: "Checking", balance: 500.00, date_opened: "2023-02-01", status: "closed"}

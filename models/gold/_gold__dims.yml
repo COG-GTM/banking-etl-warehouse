@@ -1,0 +1,19 @@
+# Tests-first: PK expectations authored from sql_scripts/01_create_tables.sql before the models.
+version: 2
+
+models:
+  - name: dim_customer
+    description: Star-schema customer dimension (columns per DimCustomer DDL).
+    columns:
+      - name: CustomerID
+        tests: [unique, not_null]
+  - name: dim_account
+    description: Star-schema account dimension (columns per DimAccount DDL).
+    columns:
+      - name: AccountID
+        tests: [unique, not_null]
+  - name: dim_branch
+    description: Star-schema branch dimension (columns per DimBranch DDL).
+    columns:
+      - name: BranchID
+        tests: [unique, not_null]

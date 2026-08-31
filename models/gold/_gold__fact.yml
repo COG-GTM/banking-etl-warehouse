@@ -1,0 +1,21 @@
+# Tests-first: PK/FK expectations reproduce the FactTransaction constraints in sql_scripts/01_create_tables.sql.
+version: 2
+
+models:
+  - name: fact_transaction
+    description: Transaction fact (FactTransaction DDL), incremental Delta merge on TransactionID.
+    columns:
+      - name: TransactionID
+        tests: [unique, not_null]
+      - name: AccountID
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_account')
+              field: AccountID
+      - name: BranchID
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_branch')
+              field: BranchID

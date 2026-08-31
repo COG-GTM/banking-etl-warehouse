@@ -1,0 +1,203 @@
+# Tests-first: these expectations were authored before the bronze models and define their contract.
+version: 2
+
+models:
+  - name: bronze_customer
+    columns:
+      - name: customer_id
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: int
+      - name: customer_name
+        tests:
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: string
+      - name: address
+        tests:
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: string
+      - name: city_id
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: int
+      - name: age
+        tests:
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: int
+      - name: gender
+        tests:
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: string
+      - name: email
+        tests:
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: string
+
+  - name: bronze_city
+    columns:
+      - name: city_id
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: int
+      - name: city_name
+        tests:
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: string
+      - name: state_id
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: int
+
+  - name: bronze_state
+    columns:
+      - name: state_id
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: int
+      - name: state_name
+        tests:
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: string
+
+  - name: bronze_account
+    columns:
+      - name: account_id
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: int
+      - name: customer_id
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: int
+      - name: account_type
+        tests:
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: string
+      - name: balance
+        tests:
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: decimal(18,2)
+      - name: date_opened
+        tests:
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: date
+      - name: status
+        tests:
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: string
+
+  - name: bronze_branch
+    columns:
+      - name: branch_id
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: int
+      - name: branch_name
+        tests:
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: string
+      - name: branch_location
+        tests:
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: string
+
+  - name: bronze_transaction_db
+    columns:
+      - name: transaction_id
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: int
+      - name: account_id
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: int
+      - name: transaction_date
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: timestamp
+      - name: amount
+        tests:
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: decimal(18,2)
+      - name: transaction_type
+        tests:
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: string
+      - name: branch_id
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: int
+
+  - name: bronze_transaction_csv
+    columns:
+      - name: transaction_id
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: int
+      - name: account_id
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: int
+      - name: transaction_date
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: timestamp
+      - name: amount
+        tests:
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: decimal(18,2)
+      - name: transaction_type
+        tests:
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: string
+      - name: branch_id
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: int
+
+  - name: bronze_transaction_excel
+    columns:
+      - name: transaction_id
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: int
+      - name: account_id
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: int
+      - name: transaction_date
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: timestamp
+      - name: amount
+        tests:
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: decimal(18,2)
+      - name: transaction_type
+        tests:
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: string
+      - name: branch_id
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: int

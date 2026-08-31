@@ -1,0 +1,50 @@
+version: 2
+
+sources:
+  - name: banking_raw
+    description: >
+      Raw landing zone for the 8 banking source systems. The six SQL Server
+      `sample` database tables are ingested into Unity Catalog as-is; the CSV
+      and Excel transaction extracts are landed via dbt seeds.
+    schema: landing
+    tables:
+      - name: customer
+        description: Operational customer master (SQL Server sample DB).
+        columns:
+          - name: customer_id
+            tests: [not_null]
+      - name: city
+        description: City reference joined into DimCustomer.
+        columns:
+          - name: city_id
+            tests: [not_null]
+      - name: state
+        description: State reference joined into DimCustomer.
+        columns:
+          - name: state_id
+            tests: [not_null]
+      - name: account
+        description: Account master with initial balance and status.
+        columns:
+          - name: account_id
+            tests: [not_null]
+      - name: branch
+        description: Branch master.
+        columns:
+          - name: branch_id
+            tests: [not_null]
+      - name: transaction_db
+        description: Transactions recorded in the SQL Server source system.
+        columns:
+          - name: transaction_id
+            tests: [not_null]
+      - name: transaction_csv
+        description: Transaction extract landed from data_sources/transaction_csv.csv via dbt seed.
+        columns:
+          - name: transaction_id
+            tests: [not_null]
+      - name: transaction_excel
+        description: Transaction extract landed from data_sources/transaction_excel.xlsx via dbt seed.
+        columns:
+          - name: transaction_id
+            tests: [not_null]

@@ -1,0 +1,29 @@
+# Tests-first: unit tests and schema tests authored before the model.
+version: 2
+
+models:
+  - name: slv_customer
+    description: Conformed customer reproducing the Talend Load_DimCustomer join + uppercase cleansing.
+    columns:
+      - name: customer_id
+        tests: [unique, not_null]
+
+unit_tests:
+  - name: slv_customer_joins_and_uppercases
+    description: customer x city x state join with uppercase cleansing of name/address/city/state.
+    model: slv_customer
+    given:
+      - input: ref('bronze_customer')
+        rows:
+          - {customer_id: 1, customer_name: "Budi santoso", address: "jl. merdeka 1", city_id: 10, age: 30, gender: "Male", email: "budi@mail.com"}
+          - {customer_id: 2, customer_name: "Siti Aminah", address: "jl. sudirman 2", city_id: 99, age: 25, gender: "Female", email: "siti@mail.com"}
+      - input: ref('bronze_city')
+        rows:
+          - {city_id: 10, city_name: "Jakarta", state_id: 20}
+      - input: ref('bronze_state')
+        rows:
+          - {state_id: 20, state_name: "dki Jakarta"}
+    expect:
+      rows:
+        - {customer_id: 1, customer_name: "BUDI SANTOSO", address: "JL. MERDEKA 1", city_name: "JAKARTA", state_name: "DKI JAKARTA", age: 30, gender: "Male", email: "budi@mail.com"}
+        - {customer_id: 2, customer_name: "SITI AMINAH", address: "JL. SUDIRMAN 2", city_name: null, state_name: null, age: 25, gender: "Female", email: "siti@mail.com"}

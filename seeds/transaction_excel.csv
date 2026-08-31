@@ -1,0 +1,8 @@
+transaction_id,account_id,transaction_date,amount,transaction_type,branch_id
+6,6,18-01-2024 13:10:00,50000,Withdrawal,1
+7,6,19-01-2024 14:00:00,100000,Payment,1
+11,10,20-01-2024 15:00:00,1000000,Transfer,1
+12,11,20-01-2024 10:00:00,500000,Deposit,1
+13,12,20-01-2024 12:10:00,500000,Withdrawal,5
+14,13,21-01-2024 14:00:00,1500000,Deposit,4
+15,14,21-01-2024 08:00:00,500000,Transfer,3
