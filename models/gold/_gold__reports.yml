@@ -1,0 +1,50 @@
+# Tests-first: unit tests authored from sp_DailyTransaction / sp_BalancePerCustomer before the models.
+version: 2
+
+models:
+  - name: rpt_daily_transaction
+    description: Daily transaction count and total amount (sp_DailyTransaction).
+    columns:
+      - name: Date
+        tests: [unique, not_null]
+  - name: rpt_balance_per_customer
+    description: Current balance per active account (sp_BalancePerCustomer).
+    columns:
+      - name: AccountID
+        tests: [unique, not_null]
+
+unit_tests:
+  - name: rpt_daily_transaction_groups_by_day
+    description: Counts and sums transactions per calendar day.
+    model: rpt_daily_transaction
+    given:
+      - input: ref('fact_transaction')
+        rows:
+          - {TransactionID: 1, AccountID: 1, TransactionDate: "2024-01-18 10:00:00", Amount: 100.00, TransactionType: "Deposit", BranchID: 1}
+          - {TransactionID: 2, AccountID: 2, TransactionDate: "2024-01-18 15:30:00", Amount: 50.00, TransactionType: "Withdrawal", BranchID: 1}
+          - {TransactionID: 3, AccountID: 1, TransactionDate: "2024-01-19 09:00:00", Amount: 200.00, TransactionType: "Deposit", BranchID: 2}
+    expect:
+      rows:
+        - {Date: "2024-01-18", TotalTransactions: 2, TotalAmount: 150.00}
+        - {Date: "2024-01-19", TotalTransactions: 1, TotalAmount: 200.00}
+
+  - name: rpt_balance_per_customer_signed_sum
+    description: Deposits add, everything else subtracts; CurrentBalance = InitialBalance + total; only active accounts.
+    model: rpt_balance_per_customer
+    given:
+      - input: ref('dim_customer')
+        rows:
+          - {CustomerID: 1, CustomerName: "BUDI SANTOSO", Address: "X", CityName: "JAKARTA", StateName: "DKI", Age: 30, Gender: "Male", Email: "b@m.com"}
+      - input: ref('dim_account')
+        rows:
+          - {AccountID: 10, CustomerID: 1, AccountType: "Savings", Balance: 1000.00, DateOpened: "2023-01-01", Status: "active"}
+          - {AccountID: 11, CustomerID: 1, AccountType: "Checking", Balance: 500.00, DateOpened: "2023-01-01", Status: "closed"}
+          - {AccountID: 12, CustomerID: 1, AccountType: "Savings", Balance: 300.00, DateOpened: "2023-01-01", Status: "active"}
+      - input: ref('fact_transaction')
+        rows:
+          - {TransactionID: 1, AccountID: 10, TransactionDate: "2024-01-18 10:00:00", Amount: 200.00, TransactionType: "Deposit", BranchID: 1}
+          - {TransactionID: 2, AccountID: 10, TransactionDate: "2024-01-18 11:00:00", Amount: 50.00, TransactionType: "Withdrawal", BranchID: 1}
+    expect:
+      rows:
+        - {CustomerID: 1, CustomerName: "BUDI SANTOSO", AccountID: 10, AccountType: "Savings", InitialBalance: 1000.00, CurrentBalance: 1150.00}
+        - {CustomerID: 1, CustomerName: "BUDI SANTOSO", AccountID: 12, AccountType: "Savings", InitialBalance: 300.00, CurrentBalance: 300.00}
