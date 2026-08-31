@@ -1,0 +1,78 @@
+version: 2
+
+models:
+  - name: dim_customer
+    description: >
+      Customer dimension replacing legacy DimCustomer. Denormalizes customer with
+      city and state (Talend Load_DimCustomer tMap), with uppercase cleansing on the
+      descriptive attributes. LEFT JOINs are used instead of Talend's inner join so
+      customers with a missing city/state reference are retained.
+    columns:
+      - name: customer_id
+        description: Business key, was DimCustomer.CustomerID (PK).
+        tests:
+          - unique
+          - not_null
+      - name: customer_name
+        description: Uppercased customer name.
+        tests:
+          - not_null
+      - name: address
+        description: Uppercased street address.
+      - name: city_name
+        description: Uppercased city name from stg_sample__city; null when the lookup misses.
+      - name: state_name
+        description: Uppercased state name from stg_sample__state; null when the lookup misses.
+      - name: age
+        description: Customer age in years.
+      - name: gender
+        description: Uppercased gender code.
+      - name: email
+        description: Lowercased email address.
+
+  - name: dim_account
+    description: Account dimension replacing legacy DimAccount (Talend Load_DimAccount).
+    columns:
+      - name: account_id
+        description: Business key, was DimAccount.AccountID (PK).
+        tests:
+          - unique
+          - not_null
+      - name: customer_id
+        description: Owning customer, was DimAccount.CustomerID.
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_customer')
+              field: customer_id
+      - name: account_type
+        description: Account product type.
+        tests:
+          - not_null
+      - name: balance
+        description: Opening balance, MONEY -> DECIMAL(18,2).
+        tests:
+          - not_null
+      - name: date_opened
+        description: Date the account was opened.
+      - name: status
+        description: Account status (e.g. active).
+        tests:
+          - not_null
+
+  - name: dim_branch
+    description: Branch dimension replacing legacy DimBranch (Talend Load_DimBranch).
+    columns:
+      - name: branch_id
+        description: Business key, was DimBranch.BranchID (PK).
+        tests:
+          - unique
+          - not_null
+      - name: branch_name
+        description: Branch name.
+        tests:
+          - not_null
+      - name: branch_location
+        description: Branch location / address.
+        tests:
+          - not_null
