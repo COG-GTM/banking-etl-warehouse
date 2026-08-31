@@ -1,0 +1,33 @@
+# Tests-first: unit tests and schema tests authored before the model.
+version: 2
+
+models:
+  - name: slv_transaction
+    description: Union of the three transaction sources with tUnite + tUniqRow dedup semantics.
+    columns:
+      - name: transaction_id
+        tests: [unique, not_null]
+
+unit_tests:
+  - name: slv_transaction_unions_and_dedups
+    description: Unions all three sources and keeps exactly one row per transaction_id (SQL Server wins on duplicates, matching Talend flow order).
+    model: slv_transaction
+    overrides:
+      macros:
+        is_incremental: false
+    given:
+      - input: ref('bronze_transaction_db')
+        rows:
+          - {transaction_id: 1, account_id: 1, transaction_date: "2024-01-18 10:00:00", amount: 100.00, transaction_type: "Deposit", branch_id: 1}
+      - input: ref('bronze_transaction_csv')
+        rows:
+          - {transaction_id: 1, account_id: 1, transaction_date: "2024-01-18 10:00:00", amount: 100.00, transaction_type: "Deposit", branch_id: 1}
+          - {transaction_id: 2, account_id: 2, transaction_date: "2024-01-19 11:00:00", amount: 50.00, transaction_type: "Withdrawal", branch_id: 2}
+      - input: ref('bronze_transaction_excel')
+        rows:
+          - {transaction_id: 3, account_id: 3, transaction_date: "2024-01-20 12:00:00", amount: 75.00, transaction_type: "Transfer", branch_id: 1}
+    expect:
+      rows:
+        - {transaction_id: 1, account_id: 1, transaction_date: "2024-01-18 10:00:00", amount: 100.00, transaction_type: "Deposit", branch_id: 1, source_system: "sql_server"}
+        - {transaction_id: 2, account_id: 2, transaction_date: "2024-01-19 11:00:00", amount: 50.00, transaction_type: "Withdrawal", branch_id: 2, source_system: "csv"}
+        - {transaction_id: 3, account_id: 3, transaction_date: "2024-01-20 12:00:00", amount: 75.00, transaction_type: "Transfer", branch_id: 1, source_system: "excel"}
