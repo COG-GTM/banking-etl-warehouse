@@ -1,0 +1,54 @@
+version: 2
+
+models:
+  - name: stg_sample__account
+    description: >
+      Staging model for the source `sample.account` table, replacing the Talend
+      `Load_DimAccount` extract. Columns are renamed to snake_case and cast to the
+      target Databricks types (MONEY -> DECIMAL(18,2), DATE -> DATE, ids -> INT,
+      text -> STRING).
+    columns:
+      - name: account_id
+        description: Primary key of the account (legacy `DimAccount.AccountID`).
+        tests:
+          - unique
+          - not_null
+      - name: customer_id
+        description: Owning customer (legacy `DimAccount.CustomerID`).
+        tests:
+          - not_null
+      - name: account_type
+        description: Account product type, e.g. savings or checking.
+      - name: balance
+        description: Account balance as recorded in the source system, cast from MONEY to DECIMAL(18,2).
+      - name: date_opened
+        description: Date the account was opened.
+      - name: status
+        description: >
+          Account status, lower-cased and trimmed. The legacy stored procedure
+          `sp_BalancePerCustomer` filters on `a.Status = 'active'` under SQL Server's
+          default case-insensitive collation; Databricks string comparison is
+          case-sensitive, so normalizing here keeps downstream `status = 'active'`
+          filters equivalent to the legacy predicate regardless of source casing or
+          padding.
+        tests:
+          - accepted_values:
+              values: ['active', 'inactive', 'closed']
+              config:
+                severity: warn
+
+  - name: stg_sample__branch
+    description: >
+      Staging model for the source `sample.branch` table, replacing the Talend
+      `Load_DimBranch` extract. Columns are renamed to snake_case and cast to the
+      target Databricks types.
+    columns:
+      - name: branch_id
+        description: Primary key of the branch (legacy `DimBranch.BranchID`).
+        tests:
+          - unique
+          - not_null
+      - name: branch_name
+        description: Branch display name.
+      - name: branch_location
+        description: Branch location / address text.
