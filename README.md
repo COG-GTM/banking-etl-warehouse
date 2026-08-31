@@ -4,15 +4,17 @@
 
 This project is a comprehensive, end-to-end simulation of a real-world data engineering task developed during my project-based internship with **ID/X Partners** and **Rakamin Academy**. The primary objective was to address a common business challenge for a banking client: inefficient and delayed reporting due to operational data being scattered across multiple, disparate systems.
 
-This repository contains the complete solution, which transforms raw data from various sources into a centralized, analytics-ready Data Warehouse, complete with automated ETL pipelines and pre-built analytical queries.
+This repository contains the complete solution, which transforms raw data from various sources into a centralized, analytics-ready Data Warehouse, complete with automated transformation pipelines and pre-built analytical queries. The current implementation is the dbt project targeting Databricks SQL; the original SQL Server and Talend implementation remains available for reference.
 
 ---
 
 ## 🏛️ Solution Architecture
 
-The solution follows a classic ETL (Extract, Transform, Load) architecture, designed to create a robust and scalable single source of truth.
+The current solution follows a dbt medallion architecture on Databricks SQL, designed to create a robust and scalable single source of truth. The legacy SQL Server and Talend architecture below is preserved as a reference for the original implementation.
 
-**The data flows through four key stages:**
+### Legacy architecture (reference)
+
+**The legacy data flows through four key stages:**
 1.  **Data Sources:** Raw data is ingested from three different types of systems:
     - Relational Database (SQL Server)
     - Excel Files (`.xlsx`)
@@ -30,11 +32,14 @@ The solution follows a classic ETL (Extract, Transform, Load) architecture, desi
 
 ## 🛠️ Tech Stack
 
-*   **Database:** Microsoft SQL Server
-*   **ETL Tool:** Talend Open Studio for Data Integration
-*   **Data Modeling:** Star Schema
-*   **Language:** T-SQL (for Stored Procedures)
+*   **Platform:** Databricks SQL (Unity Catalog, Delta Lake)
+*   **Transformation:** dbt (>= 1.8, dbt-databricks) with dbt_utils + dbt_expectations
+*   **Architecture:** Medallion architecture (bronze → silver → gold) with a star schema in gold
+*   **Development:** Test-driven development (schema tests + dbt unit tests authored before models)
+*   **CI/CD:** GitHub Actions CI (`dbt build` + `dbt docs generate`)
 *   **Version Control:** Git & GitHub
+
+The legacy Talend/SQL Server implementation is preserved under `sql_scripts/`, `talend_jobs/`, and `data_sources/` for reference.
 
 ---
 
@@ -64,7 +69,9 @@ To provide immediate value to the "client," two parameterized Stored Procedures 
 
 ## 🚀 How to Run This Project
 
-To replicate this solution, follow these steps:
+### Legacy (SQL Server + Talend)
+
+To replicate the legacy solution, follow these steps:
 
 1.  **Prerequisites:**
     - Microsoft SQL Server and SQL Server Management Studio (SSMS) installed.
@@ -91,6 +98,21 @@ To replicate this solution, follow these steps:
     - Execute this script in SSMS against the `DWH` database.
     - You can now test the procedures with sample commands, e.g., `EXEC sp_DailyTransaction @start_date = '2024-01-18', @end_date = '2024-01-20';`.
 
+### Modern (dbt + Databricks)
+
+Install dbt, resolve the project packages, configure the Databricks connection, and run the medallion build:
+
+```bash
+pip install "dbt-core>=1.8" "dbt-databricks>=1.8"
+dbt deps
+export DATABRICKS_HOST="https://<workspace-host>"
+export DATABRICKS_HTTP_PATH="/sql/1.0/warehouses/<warehouse-id>"
+export DATABRICKS_TOKEN="<personal-access-token>"
+export DATABRICKS_CATALOG="banking_dev"
+export DATABRICKS_SCHEMA="dbt"
+DBT_PROFILES_DIR=. dbt build
+```
+
 ---
 
 ## 🌟 Project Outcomes
@@ -106,6 +128,38 @@ This repository is being rebuilt as a dbt project targeting Databricks SQL with 
 - **Gold**: Star-schema dimensions and facts, plus report models.
 
 The rebuild follows a test-driven workflow. Schema and unit tests are authored before their models, and `dbt build` runs models and tests together.
+
+### Run order
+
+`dbt build` resolves the DAG automatically. The modern flow is:
+
+```text
+seeds → bronze views → silver → gold dimensions → fact → report models
+```
+
+The legacy sequence `Load_DimBranch` → `Load_DimAccount` → `Load_DimCustomer` → `Load_FactTransaction` now corresponds to `slv_branch`/`slv_account`/`slv_customer` → `slv_transaction` → the gold models.
+
+Layer-scoped builds are also available:
+
+```bash
+dbt build --select bronze
+dbt build --select silver
+dbt build --select gold
+```
+
+Report models support optional dbt variables:
+
+- `daily_transaction_start_date`
+- `daily_transaction_end_date`
+- `balance_customer_name`
+
+For example:
+
+```bash
+dbt build --select rpt_daily_transaction --vars '{daily_transaction_start_date: 2024-01-18, daily_transaction_end_date: 2024-01-20}'
+```
+
+GitHub Actions requires the following repository secrets to enable warehouse-backed builds and documentation generation: `DATABRICKS_HOST`, `DATABRICKS_HTTP_PATH`, and `DATABRICKS_TOKEN`. Optional repository variables `DATABRICKS_CATALOG` and `DATABRICKS_SCHEMA` override their defaults.
 
 ### Running the dbt project
 

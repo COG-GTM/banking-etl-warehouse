@@ -1,0 +1,37 @@
+name: dbt build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  dbt-build:
+    runs-on: ubuntu-latest
+    env:
+      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+      DATABRICKS_HTTP_PATH: ${{ secrets.DATABRICKS_HTTP_PATH }}
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+      DATABRICKS_CATALOG: ${{ vars.DATABRICKS_CATALOG || 'banking_dev' }}
+      DATABRICKS_SCHEMA: ${{ vars.DATABRICKS_SCHEMA || 'dbt' }}
+      DBT_PROFILES_DIR: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dbt
+        run: pip install "dbt-core>=1.8" "dbt-databricks>=1.8"
+      - name: dbt deps
+        run: dbt deps
+      - name: dbt parse (offline validation)
+        run: dbt parse
+      - name: dbt build (models + schema tests + unit tests)
+        if: ${{ env.DATABRICKS_HOST != '' }}
+        run: dbt build
+      - name: dbt docs generate
+        if: ${{ env.DATABRICKS_HOST != '' }}
+        run: dbt docs generate
+      - name: Skipped warehouse steps notice
+        if: ${{ env.DATABRICKS_HOST == '' }}
+        run: echo "DATABRICKS_HOST secret not configured — ran offline dbt parse only. Configure DATABRICKS_HOST/DATABRICKS_HTTP_PATH/DATABRICKS_TOKEN repo secrets to enable dbt build + docs."
