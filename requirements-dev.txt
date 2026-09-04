@@ -1,0 +1,4 @@
+pyspark>=3.5
+pytest>=8
+sqlglot>=25
+ruff>=0.5
