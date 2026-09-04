@@ -1,0 +1,104 @@
+# Multi-task job replacing the Talend job chain + stored procedures:
+#   load_dim_branch -> load_dim_account -> load_dim_customer -> load_fact_transaction -> run_analytics
+# Task entry points live in the repo root (synced by databricks.yml `sync.paths: ../..`);
+# ${workspace.file_path} resolves to the synced repo root.
+resources:
+  jobs:
+    banking_dwh_job:
+      name: "[${bundle.target}] banking_dwh_job"
+      description: Loads DimBranch, DimAccount, DimCustomer, FactTransaction and refreshes analytics gold tables.
+      max_concurrent_runs: 1
+      timeout_seconds: 7200
+
+      schedule:
+        quartz_cron_expression: "0 0 2 * * ?"
+        timezone_id: UTC
+        pause_status: PAUSED
+
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema
+          default: ${var.schema}
+
+      job_clusters:
+        - job_cluster_key: dwh_cluster
+          new_cluster:
+            spark_version: ${var.spark_version}
+            node_type_id: ${var.node_type_id}
+            num_workers: 2
+            data_security_mode: SINGLE_USER
+
+      tasks:
+        - task_key: load_dim_branch
+          job_cluster_key: dwh_cluster
+          spark_python_task:
+            python_file: ${workspace.file_path}/databricks/jobs/dimensions/load_dimensions.py
+            parameters:
+              - "--catalog"
+              - "{{job.parameters.catalog}}"
+              - "--schema"
+              - "{{job.parameters.schema}}"
+              - "--dimension"
+              - "DimBranch"
+
+        - task_key: load_dim_account
+          depends_on:
+            - task_key: load_dim_branch
+          job_cluster_key: dwh_cluster
+          spark_python_task:
+            python_file: ${workspace.file_path}/databricks/jobs/dimensions/load_dimensions.py
+            parameters:
+              - "--catalog"
+              - "{{job.parameters.catalog}}"
+              - "--schema"
+              - "{{job.parameters.schema}}"
+              - "--dimension"
+              - "DimAccount"
+
+        - task_key: load_dim_customer
+          depends_on:
+            - task_key: load_dim_account
+          job_cluster_key: dwh_cluster
+          spark_python_task:
+            python_file: ${workspace.file_path}/databricks/jobs/dimensions/load_dimensions.py
+            parameters:
+              - "--catalog"
+              - "{{job.parameters.catalog}}"
+              - "--schema"
+              - "{{job.parameters.schema}}"
+              - "--dimension"
+              - "DimCustomer"
+
+        - task_key: load_fact_transaction
+          depends_on:
+            - task_key: load_dim_customer
+          job_cluster_key: dwh_cluster
+          spark_python_task:
+            python_file: ${workspace.file_path}/databricks/jobs/fact_transaction/load_fact_transaction.py
+            parameters:
+              - "--catalog"
+              - "{{job.parameters.catalog}}"
+              - "--schema"
+              - "{{job.parameters.schema}}"
+
+        - task_key: run_analytics
+          depends_on:
+            - task_key: load_fact_transaction
+          job_cluster_key: dwh_cluster
+          spark_python_task:
+            python_file: ${workspace.file_path}/databricks/analytics/run_analytics.py
+            parameters:
+              - "--catalog"
+              - "{{job.parameters.catalog}}"
+              - "--schema"
+              - "{{job.parameters.schema}}"
+              - "--start-date"
+              - ${var.analytics_start_date}
+              - "--end-date"
+              - ${var.analytics_end_date}
+              - "--customer-name"
+              - ${var.analytics_customer_name}
+
+      email_notifications:
+        on_failure: []

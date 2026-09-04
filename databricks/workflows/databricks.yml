@@ -1,0 +1,52 @@
+# Databricks Asset Bundle for the banking DWH medallion pipeline.
+# Deploy:  cd databricks/workflows && databricks bundle deploy -t dev
+# Run:     databricks bundle run -t dev banking_dwh_job
+bundle:
+  name: banking_dwh
+
+include:
+  - banking_dwh_job.yml
+
+variables:
+  catalog:
+    description: Unity Catalog catalog holding the bronze/silver/gold schemas.
+    default: dev_banking
+  schema:
+    description: Gold schema (star schema + analytics outputs).
+    default: gold
+  analytics_start_date:
+    description: Inclusive start date passed to sp_DailyTransaction.
+    default: "1900-01-01"
+  analytics_end_date:
+    description: Inclusive end date passed to sp_DailyTransaction.
+    default: "2999-12-31"
+  analytics_customer_name:
+    description: Substring filter for sp_BalancePerCustomer ("" = all customers).
+    default: ""
+  spark_version:
+    default: 15.4.x-scala2.12
+  node_type_id:
+    default: i3.xlarge
+
+sync:
+  paths:
+    - ../..
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}
+    variables:
+      catalog: dev_banking
+      schema: gold
+
+  prod:
+    mode: production
+    workspace:
+      root_path: /Workspace/Shared/.bundle/${bundle.name}/${bundle.target}
+    variables:
+      catalog: prod_banking
+      schema: gold
+      node_type_id: i3.2xlarge
