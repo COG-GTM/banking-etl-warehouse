@@ -1,0 +1,29 @@
+# Databricks Asset Bundle for the converted warehouse workloads.
+# Deploy: databricks bundle deploy -t dev   |   Run: databricks bundle run refresh_account_balance -t dev
+bundle:
+  name: banking_dwh
+
+include:
+  - resources/*.yml
+
+variables:
+  catalog:
+    description: Unity Catalog catalog holding the medallion schemas.
+    default: main
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://<workspace>.cloud.databricks.com
+    variables:
+      catalog: dev_banking
+
+  prod:
+    mode: production
+    workspace:
+      host: https://<workspace>.cloud.databricks.com
+      root_path: /Shared/.bundle/prod/${bundle.name}
+    variables:
+      catalog: main

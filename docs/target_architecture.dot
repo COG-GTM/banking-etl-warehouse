@@ -1,0 +1,56 @@
+// Target Databricks architecture for the migrated warehouse.
+// Render: dot -Tpng docs/target_architecture.dot -o docs/target-architecture.png
+digraph target {
+  rankdir=LR;
+  graph [fontname="Helvetica", fontsize=11, labelloc="t", ranksep=1.1, nodesep=0.3,
+         label="Target: Delta Lake medallion on Databricks (Unity Catalog governed)"];
+  node  [fontname="Helvetica", fontsize=10, shape=box, style="rounded,filled", fillcolor="#ffffff"];
+  edge  [fontname="Helvetica", fontsize=9, color="#444444"];
+
+  subgraph cluster_src {
+    label="Sources"; style=filled; fillcolor="#f4f4f4"; color="#bbbbbb";
+    mssql [label="SQL Server\nsample DB\n(CDC / batch extract)"];
+    files [label="Vendor files\n.xlsx / .csv", shape=note, fillcolor="#fdf6e3"];
+  }
+
+  subgraph cluster_bronze {
+    label="Bronze (raw, append-only)"; style=filled; fillcolor="#f6efe6"; color="#c8ab86";
+    b_txn  [label="bronze.transaction_db\nbronze.transaction_files", fillcolor="#f0e2cd"];
+    b_dim  [label="bronze.account / branch\ncustomer / city / state", fillcolor="#f0e2cd"];
+  }
+
+  subgraph cluster_silver {
+    label="Silver (conformed, deduplicated)"; style=filled; fillcolor="#eef1f5"; color="#a9b4c2";
+    s_fact [label="silver.fact_transaction\nDelta, liquid clustering on\nTransactionDate, AccountID", fillcolor="#dfe5ee"];
+    s_cust [label="silver.dim_customer", fillcolor="#dfe5ee"];
+    s_acct [label="silver.dim_account", fillcolor="#dfe5ee"];
+    s_brch [label="silver.dim_branch", fillcolor="#dfe5ee"];
+  }
+
+  subgraph cluster_gold {
+    label="Gold (serving)"; style=filled; fillcolor="#eef8ee"; color="#8fc48f";
+    g_bal   [label="gold.account_balance\n(replaces sp_BalancePerCustomer\naggregation)", fillcolor="#cbebcb"];
+    g_daily [label="gold.daily_transaction_summary\n(replaces sp_DailyTransaction)", fillcolor="#cbebcb"];
+  }
+
+  subgraph cluster_orch {
+    label="Orchestration & governance"; style=filled; fillcolor="#f7eef7"; color="#c4a0c4";
+    dab  [label="Databricks Asset Bundles\ndatabricks/databricks.yml", fillcolor="#eddced"];
+    dlt  [label="Lakeflow Declarative Pipelines (DLT)\nbronze → silver expectations", fillcolor="#eddced"];
+    wf   [label="Databricks Workflows\nreplaces manual Talend run order", fillcolor="#eddced"];
+    uc   [label="Unity Catalog\ncatalog.schema.table, lineage,\nrow filters on PII", fillcolor="#eddced"];
+  }
+
+  consumers [label="BI / SQL Warehouse\npoint reads & dashboards", shape=ellipse];
+
+  mssql -> b_txn; mssql -> b_dim; files -> b_txn;
+  b_txn -> s_fact; b_dim -> s_cust; b_dim -> s_acct; b_dim -> s_brch;
+  s_fact -> g_bal; s_acct -> g_bal; s_cust -> g_bal;
+  s_fact -> g_daily;
+  g_bal -> consumers; g_daily -> consumers;
+
+  dlt -> s_fact [style=dashed, color="#8f6f8f", label="managed by"];
+  wf  -> g_bal  [style=dashed, color="#8f6f8f", label="scheduled by"];
+  dab -> wf     [style=dashed, color="#8f6f8f", label="deploys"];
+  uc  -> consumers [style=dotted, color="#8f6f8f", label="governs"];
+}

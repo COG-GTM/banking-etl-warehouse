@@ -1,0 +1,3 @@
+# Spark 3.5.x matches Databricks Runtime 15.4 LTS, the runtime targeted by the migration.
+pyspark==3.5.3
+pytest==8.3.3
