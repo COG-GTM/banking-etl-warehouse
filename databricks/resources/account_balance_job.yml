@@ -1,0 +1,24 @@
+resources:
+  jobs:
+    refresh_account_balance:
+      name: refresh_account_balance
+      description: >-
+        Replaces sp_BalancePerCustomer's per-call fact aggregation with a scheduled
+        gold-table refresh (sql_scripts/02_create_procedures.sql lines 50-90).
+      schedule:
+        quartz_cron_expression: "0 0 2 * * ?"
+        timezone_id: UTC
+      tasks:
+        - task_key: refresh_gold_account_balance
+          job_cluster_key: batch
+          spark_python_task:
+            python_file: ../src/banking_dwh/balance_per_customer.py
+      job_clusters:
+        - job_cluster_key: batch
+          new_cluster:
+            spark_version: 15.4.x-scala2.12
+            data_security_mode: SINGLE_USER
+            num_workers: 2
+            node_type_id: Standard_D4ds_v5
+      queue:
+        enabled: true

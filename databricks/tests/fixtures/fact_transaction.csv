@@ -1,0 +1,10 @@
+TransactionID,AccountID,Amount,TransactionType
+101,11,1500000.0000,Deposit
+102,11,500000.0000,Withdrawal
+103,11,250000.5000,Transfer
+104,12,0.7500,deposit
+105,13,999999.9999,Deposit
+106,14,10.0000,Withdrawal
+107,16,2000.0000,Deposit
+108,17,0.0002,Deposit
+109,99,777.0000,Deposit

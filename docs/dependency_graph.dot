@@ -1,0 +1,76 @@
+// Dependency map of the current SQL Server + Talend warehouse.
+// Render: dot -Tpng docs/dependency_graph.dot -o docs/dependency-map.png
+//         dot -Tsvg docs/dependency_graph.dot -o docs/dependency-map.svg
+digraph banking_dwh {
+  rankdir=LR;
+  graph [fontname="Helvetica", fontsize=11, labelloc="t", ranksep=1.6, nodesep=0.35, splines=spline,
+         label="COG-GTM/banking-etl-warehouse — source-to-consumer dependency map"];
+  node  [fontname="Helvetica", fontsize=10, shape=box, style="rounded,filled", fillcolor="#ffffff"];
+  edge  [fontname="Helvetica", fontsize=9, color="#444444"];
+
+  subgraph cluster_sources {
+    label="Sources (sample DB on SQL Server + files)"; style=filled; fillcolor="#f4f4f4"; color="#bbbbbb";
+    src_account     [label="dbo.account"];
+    src_branch      [label="dbo.branch"];
+    src_customer    [label="dbo.customer"];
+    src_city        [label="dbo.city"];
+    src_state       [label="dbo.state"];
+    src_txn_db      [label="dbo.transaction_db"];
+    src_txn_xlsx    [label="transaction_excel.xlsx\nC:/Data Rakamin/", shape=note, fillcolor="#fdf6e3"];
+    src_txn_csv     [label="transaction_csv.csv\nC:/Data Rakamin/", shape=note, fillcolor="#fdf6e3"];
+  }
+
+  subgraph cluster_jobs {
+    label="Talend Open Studio jobs (talend_jobs/*.zip)"; style=filled; fillcolor="#eef3fb"; color="#9db6dd";
+    job_branch   [label="Load_DimBranch\ntMSSqlInput → tMap → tMSSqlOutput", fillcolor="#dce8f8"];
+    job_account  [label="Load_DimAccount\ntMSSqlInput → tMap → tMSSqlOutput", fillcolor="#dce8f8"];
+    job_customer [label="Load_DimCustomer\n3× tMSSqlInput → tMap (2 lookups) → tMSSqlOutput", fillcolor="#dce8f8"];
+    job_fact     [label="Load_FactTransaction\ntMSSqlInput + tFileInputExcel + tFileInputDelimited\n→ tUnite → tUniqRow → tMap → tMSSqlOutput", fillcolor="#dce8f8"];
+  }
+
+  subgraph cluster_dwh {
+    label="DWH star schema (sql_scripts/01_create_tables.sql)"; style=filled; fillcolor="#eef8ee"; color="#8fc48f";
+    DimBranch   [label="DimBranch\nPK BranchID", fillcolor="#d9f0d9"];
+    DimAccount  [label="DimAccount\nPK AccountID", fillcolor="#d9f0d9"];
+    DimCustomer [label="DimCustomer\nPK CustomerID", fillcolor="#d9f0d9"];
+    FactTransaction [label="FactTransaction\nPK TransactionID\nFK AccountID, BranchID", fillcolor="#bfe6bf"];
+  }
+
+  subgraph cluster_procs {
+    label="Stored procedures (sql_scripts/02_create_procedures.sql)"; style=filled; fillcolor="#fdeeee"; color="#dda1a1";
+    sp_daily   [label="sp_DailyTransaction\n@start_date, @end_date\nlines 18-40", fillcolor="#fadada"];
+    sp_balance [label="sp_BalancePerCustomer\n@customer_name\nlines 50-90", fillcolor="#fadada"];
+  }
+
+  src_branch   -> job_branch;
+  src_account  -> job_account;
+  src_customer -> job_customer;
+  src_city     -> job_customer [label="tMap lookup\nrow1.city_id = row2.city_id"];
+  src_state    -> job_customer [label="tMap lookup\nrow2.state_id = row3.state_id"];
+  src_txn_db   -> job_fact;
+  src_txn_xlsx -> job_fact;
+  src_txn_csv  -> job_fact;
+
+  job_branch   -> DimBranch   [label="INSERT, commit 10000"];
+  job_account  -> DimAccount  [label="INSERT, commit 10000"];
+  job_customer -> DimCustomer [label="INSERT, commit 10000"];
+  job_fact     -> FactTransaction [label="INSERT, commit 10000"];
+
+  DimAccount  -> FactTransaction [label="FK_FactTransaction_DimAccount", style=dashed, dir=back, constraint=false];
+  DimBranch   -> FactTransaction [label="FK_FactTransaction_DimBranch", style=dashed, dir=back, constraint=false];
+  DimCustomer -> DimAccount      [label="CustomerID (no FK declared)", style=dotted, dir=back, constraint=false];
+
+  FactTransaction -> sp_daily   [label="full scan,\nCAST(TransactionDate AS DATE) predicate"];
+  FactTransaction -> sp_balance [label="full aggregate\nGROUP BY AccountID"];
+  DimAccount      -> sp_balance;
+  DimCustomer     -> sp_balance;
+
+  bi [label="Analyst / BI consumers", shape=ellipse, fillcolor="#ffffff"];
+  sp_daily   -> bi;
+  sp_balance -> bi;
+
+  // Load order enforced manually today (README "How to Run This Project").
+  job_branch -> job_account [style=dotted, color="#999999", label="manual run order", constraint=false];
+  job_account -> job_customer [style=dotted, color="#999999", constraint=false];
+  job_customer -> job_fact [style=dotted, color="#999999", constraint=false];
+}

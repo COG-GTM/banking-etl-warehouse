@@ -1,0 +1,8 @@
+AccountID,CustomerID,AccountType,Balance,Status
+11,1,Savings,1000000.0000,active
+12,1,Checking,250000.5000,Active
+13,1,Deposito,900000.0000,closed
+14,2,Savings,0.0000,active
+15,3,Savings,50000.2500,active
+16,4,Checking,-1000.0000,active
+17,5,Savings,10.0001,active
