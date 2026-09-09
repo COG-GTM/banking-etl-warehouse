@@ -13,6 +13,10 @@ resources:
           job_cluster_key: batch
           spark_python_task:
             python_file: ../src/banking_dwh/balance_per_customer.py
+            # Without this the job would read and overwrite the prod catalog from every target.
+            parameters:
+              - --catalog
+              - ${var.catalog}
       job_clusters:
         - job_cluster_key: batch
           new_cluster:

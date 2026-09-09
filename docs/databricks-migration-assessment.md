@@ -236,11 +236,13 @@ What that proves: the conversion preserves row selection and arithmetic, includi
 | R9 | Credentials leak during migration | encrypted passwords inside `.item` files | Medium | High | Rotate on cutover; secret scopes only; never copy the strings into the new repo |
 | R10 | Small-data workloads regress after being moved for consistency | §3 | Medium | Low | Keep the wave-4 "does not move" list honest; re-measure before moving anything from it |
 | R11 | Excel/CSV date parsing differences produce nulls or shifted dates | `"dd-MM-yyyy HH:mm:ss"` vs `DATETIME2` | Medium | Medium | Explicit `to_timestamp` format per source; expectation on null timestamps in DLT |
+| R12 | `LIKE` grammar differs: T-SQL supports `[abc]`/`[a-z]`/`[^a]` character classes, Spark treats brackets literally | line 88 vs Spark `LIKE` (only `%`, `_`, `ESCAPE`) | Low | Medium | Documented in `balance_per_customer.py`; if callers pass bracket patterns, translate to `rlike` and validate against SQL Server, not SQLite |
+| R13 | Collation folding beyond ASCII: `lower()` is not `SQL_Latin1_General_CP1_CI_AS` for accents and locale-specific casing | Spark `lower()` vs SQL Server collation | Medium | Medium | Cutover validation must sample non-ASCII customer names against the live SQL Server; the SQLite oracle only covers ASCII |
 
 ---
 
 ## 8. What was not verified
 
 * No SQL Server instance was available, so no query plan, no measured runtime, and no row count from `sample.bak` is reported here.
-* No Databricks workspace was available: the bundle and job YAML are written against the documented schema but have not been deployed, and `refresh_gold_table()` has not been executed against a real Delta table. The transformation it calls is the same function the tests exercise.
+* No Databricks workspace was available: the bundle and job YAML are written against the documented schema but have not been deployed, and `refresh_gold_table()` has not been executed against a real Delta table (the Delta jars are not reachable from this environment either). The transformation it calls is the same function the tests exercise, and the catalog binding it uses is asserted in the tests.
 * Talend job screenshots inside the archives were not opened; the component graph above comes from the `.item` XML, which is the authoritative definition.

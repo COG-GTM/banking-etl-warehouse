@@ -28,7 +28,7 @@ pip install -r requirements.txt
 pytest -q
 ```
 
-Expected: `11 passed`. The suite runs local Spark (`local[2]`) against CSV fixtures and compares
+Expected: `16 passed`. The suite runs local Spark (`local[2]`) against CSV fixtures and compares
 row-for-row with the SQLite reference. Read the module docstring in `src/banking_dwh/tsql_reference.py`
 before drawing conclusions from a green run — it states exactly which SQL Server behaviours the
 reference can and cannot stand in for.

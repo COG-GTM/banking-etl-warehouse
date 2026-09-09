@@ -10,7 +10,13 @@ from decimal import Decimal
 
 import pytest
 
-from banking_dwh.balance_per_customer import account_balance, balance_per_customer
+from banking_dwh.balance_per_customer import (
+    DEFAULT_CATALOG,
+    GOLD_TABLE,
+    account_balance,
+    balance_per_customer,
+    qualify,
+)
 from banking_dwh.tsql_reference import BalanceRow, sp_balance_per_customer
 
 PARAMETERS = [
@@ -22,10 +28,12 @@ PARAMETERS = [
     "Wija",  # mid-string match
     "nobody",  # empty result set
     "100%",  # parameter containing a literal-looking wildcard
+    "Rina",  # trailing spaces in Status / TransactionType, which VARCHAR '=' pads away
+    None,  # NULL parameter: the concatenated pattern is NULL, so nothing matches
 ]
 
 
-def _spark_rows(spark_tables, customer_name: str) -> list[BalanceRow]:
+def _spark_rows(spark_tables, customer_name: str | None) -> list[BalanceRow]:
     result = balance_per_customer(
         spark_tables["dim_customer"],
         spark_tables["dim_account"],
@@ -43,7 +51,7 @@ def _spark_rows(spark_tables, customer_name: str) -> list[BalanceRow]:
     )
 
 
-def _reference_rows(sqlite_connection, customer_name: str) -> list[BalanceRow]:
+def _reference_rows(sqlite_connection, customer_name: str | None) -> list[BalanceRow]:
     return sorted(sp_balance_per_customer(sqlite_connection, customer_name))
 
 
@@ -80,6 +88,23 @@ def test_inactive_and_orphan_rows_are_excluded(spark_tables):
 
     assert 13 not in {row["AccountID"] for row in rows}  # Status = 'closed'
     assert 99 not in {row["AccountID"] for row in rows}  # transaction with no matching account
+
+
+def test_trailing_spaces_do_not_change_results(spark_tables):
+    """'active ' is still active and 'Deposit ' still adds: VARCHAR '=' pads its operands."""
+    row = _spark_rows(spark_tables, "Rina")[0]
+
+    assert row.CurrentBalance == Decimal("125.0000")
+
+
+def test_null_customer_name_returns_no_rows(spark_tables):
+    assert _spark_rows(spark_tables, None) == []
+
+
+def test_table_names_follow_the_bundle_catalog():
+    """A dev run must not resolve to the prod catalog."""
+    assert qualify(GOLD_TABLE, "dev_banking") == "dev_banking.banking_dwh_gold.account_balance"
+    assert qualify(GOLD_TABLE) == f"{DEFAULT_CATALOG}.banking_dwh_gold.account_balance"
 
 
 def test_money_arithmetic_is_exact(spark_tables, sqlite_connection):

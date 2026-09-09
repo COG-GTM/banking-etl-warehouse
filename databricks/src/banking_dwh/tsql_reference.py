@@ -18,6 +18,10 @@ floating point is involved on either side.
 
 Case-insensitive comparison is modelled with ``COLLATE NOCASE`` on the text columns, which
 mirrors SQL Server's default ``SQL_Latin1_General_CP1_CI_AS`` collation for ASCII.
+
+``VARCHAR`` equality in SQL Server pads the shorter operand, so ``'Deposit '`` equals
+``'Deposit'``; SQLite compares raw text, so equality operands are wrapped in ``RTRIM``.
+``LIKE`` does not pad in either engine and is left alone.
 """
 
 from __future__ import annotations
@@ -61,7 +65,7 @@ QUERY = """
 WITH TransactionSummary AS (
     SELECT
         AccountID,
-        SUM(CASE WHEN TransactionType = 'Deposit' THEN Amount ELSE -Amount END)
+        SUM(CASE WHEN RTRIM(TransactionType) = 'Deposit' COLLATE NOCASE THEN Amount ELSE -Amount END)
             AS TotalTransactionAmount
     FROM FactTransaction
     GROUP BY AccountID
@@ -75,7 +79,7 @@ FROM DimCustomer c
 JOIN DimAccount a ON c.CustomerID = a.CustomerID
 LEFT JOIN TransactionSummary ts ON a.AccountID = ts.AccountID
 WHERE c.CustomerName LIKE '%' || ? || '%'
-  AND a.Status = 'active';
+  AND RTRIM(a.Status) = 'active' COLLATE NOCASE;
 """
 
 
@@ -115,8 +119,9 @@ def build_database(
 
 
 def sp_balance_per_customer(
-    connection: sqlite3.Connection, customer_name: str
+    connection: sqlite3.Connection, customer_name: str | None
 ) -> list[BalanceRow]:
+    """A NULL ``@customer_name`` makes the LIKE pattern NULL, so no row qualifies."""
     rows = connection.execute(QUERY, (customer_name,)).fetchall()
     return [
         BalanceRow(name, account_type, from_money(initial), from_money(current))
