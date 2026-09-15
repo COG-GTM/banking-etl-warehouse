@@ -1,0 +1,172 @@
+# Databricks Asset Bundle definition for the migrated medallion pipeline.
+#
+# Replaces the manual Talend run order documented in the legacy README:
+#   Load_DimBranch -> Load_DimAccount -> Load_DimCustomer -> Load_FactTransaction
+# with an ingest stage in front (bronze) and a validation stage at the end.
+#
+# Deploy:
+#   databricks bundle deploy  -t dev  --var="catalog=banking"
+#   databricks bundle run banking_medallion -t dev
+#
+# The bronze/silver task entrypoints are owned by the other migration slices;
+# their paths are wired here by convention and can be overridden per target.
+
+bundle:
+  name: banking-medallion
+
+variables:
+  catalog:
+    description: Unity Catalog holding the bronze/silver/gold schemas.
+    default: banking
+  bronze_schema:
+    default: bronze
+  silver_schema:
+    default: silver
+  gold_schema:
+    default: gold
+  start_date:
+    description: Inclusive lower bound passed to gold.daily_transaction during validation.
+    default: "2024-01-01"
+  end_date:
+    default: "2024-12-31"
+  customer_name:
+    description: LIKE '%value%' filter passed to gold.balance_per_customer during validation.
+    default: ""
+  job_cluster_spark_version:
+    default: "15.4.x-scala2.12"
+  job_cluster_node_type:
+    default: Standard_DS3_v2
+
+resources:
+  jobs:
+    banking_medallion:
+      name: banking-medallion-etl
+      max_concurrent_runs: 1
+      tags:
+        project: banking-etl-warehouse
+        migrated_from: talend
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: bronze_schema
+          default: ${var.bronze_schema}
+        - name: silver_schema
+          default: ${var.silver_schema}
+        - name: gold_schema
+          default: ${var.gold_schema}
+      queue:
+        enabled: true
+      email_notifications:
+        on_failure:
+          - data-platform-oncall@example.com
+
+      job_clusters:
+        - job_cluster_key: medallion
+          new_cluster:
+            spark_version: ${var.job_cluster_spark_version}
+            node_type_id: ${var.job_cluster_node_type}
+            num_workers: 2
+            data_security_mode: SINGLE_USER
+            spark_conf:
+              spark.databricks.delta.schema.autoMerge.enabled: "true"
+
+      tasks:
+        # ---------------------------------------------------------------- bronze
+        - task_key: bronze_ingest
+          description: Land the SQL Server extract, the CSV and the Excel file into bronze.
+          job_cluster_key: medallion
+          max_retries: 2
+          min_retry_interval_millis: 60000
+          retry_on_timeout: true
+          timeout_seconds: 3600
+          spark_python_task:
+            python_file: ../../bronze/jobs/ingest_all.py
+            parameters:
+              - --catalog=${var.catalog}
+              - --bronze-schema=${var.bronze_schema}
+
+        # ------------------------------------------------ dimensions (legacy order)
+        - task_key: dim_branch
+          description: Port of Load_DimBranch.
+          depends_on:
+            - task_key: bronze_ingest
+          job_cluster_key: medallion
+          max_retries: 2
+          spark_python_task:
+            python_file: ../../silver/jobs/load_dim_branch.py
+            parameters:
+              - --catalog=${var.catalog}
+              - --bronze-schema=${var.bronze_schema}
+              - --gold-schema=${var.gold_schema}
+
+        - task_key: dim_account
+          description: Port of Load_DimAccount.
+          depends_on:
+            - task_key: dim_branch
+          job_cluster_key: medallion
+          max_retries: 2
+          spark_python_task:
+            python_file: ../../silver/jobs/load_dim_account.py
+            parameters:
+              - --catalog=${var.catalog}
+              - --bronze-schema=${var.bronze_schema}
+              - --gold-schema=${var.gold_schema}
+
+        - task_key: dim_customer
+          description: Port of Load_DimCustomer.
+          depends_on:
+            - task_key: dim_account
+          job_cluster_key: medallion
+          max_retries: 2
+          spark_python_task:
+            python_file: ../../silver/jobs/load_dim_customer.py
+            parameters:
+              - --catalog=${var.catalog}
+              - --bronze-schema=${var.bronze_schema}
+              - --gold-schema=${var.gold_schema}
+
+        # ------------------------------------------------------------------ gold
+        - task_key: fact_transaction
+          description: Port of Load_FactTransaction (tUnite + tUniqRow + tMap -> Delta MERGE).
+          depends_on:
+            - task_key: dim_customer
+          job_cluster_key: medallion
+          max_retries: 2
+          min_retry_interval_millis: 60000
+          timeout_seconds: 7200
+          spark_python_task:
+            python_file: ../jobs/load_fact_transaction.py
+            parameters:
+              - --catalog=${var.catalog}
+              - --bronze-schema=${var.bronze_schema}
+              - --gold-schema=${var.gold_schema}
+              - --run-id={{job.run_id}}
+
+        - task_key: analytics_validation
+          description: Referential-integrity + PK checks and a smoke run of both analytics functions.
+          depends_on:
+            - task_key: fact_transaction
+          job_cluster_key: medallion
+          max_retries: 1
+          spark_python_task:
+            python_file: ../jobs/validate_analytics.py
+            parameters:
+              - --catalog=${var.catalog}
+              - --gold-schema=${var.gold_schema}
+              - --start-date=${var.start_date}
+              - --end-date=${var.end_date}
+              - --customer-name=${var.customer_name}
+
+targets:
+  dev:
+    mode: development
+    default: true
+  prod:
+    mode: production
+    resources:
+      jobs:
+        banking_medallion:
+          schedule:
+            quartz_cron_expression: "0 0 2 * * ?"
+            timezone_id: Asia/Jakarta
+            pause_status: UNPAUSED
