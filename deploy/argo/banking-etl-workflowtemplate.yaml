@@ -1,0 +1,91 @@
+# Replaces the manual Talend run order:
+#   Load_DimBranch, Load_DimAccount, Load_DimCustomer (parallel) -> Load_FactTransaction
+# Each task submits a SparkApplication (Spark Operator) and waits for it to complete.
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: banking-etl
+  namespace: banking-etl
+spec:
+  serviceAccountName: banking-etl-argo
+  entrypoint: warehouse-load
+  arguments:
+    parameters:
+      - name: image
+        value: 111122223333.dkr.ecr.us-east-1.amazonaws.com/banking-etl:1.0.0
+  templates:
+    - name: warehouse-load
+      dag:
+        tasks:
+          - name: load-dim-branch
+            template: spark-job
+            arguments:
+              parameters: [{name: job, value: load_dim_branch}]
+          - name: load-dim-account
+            template: spark-job
+            arguments:
+              parameters: [{name: job, value: load_dim_account}]
+          - name: load-dim-customer
+            template: spark-job
+            arguments:
+              parameters: [{name: job, value: load_dim_customer}]
+          - name: load-fact-transaction
+            template: spark-job
+            dependencies: [load-dim-branch, load-dim-account, load-dim-customer]
+            arguments:
+              parameters: [{name: job, value: load_fact_transaction}]
+
+    - name: spark-job
+      inputs:
+        parameters:
+          - name: job
+      retryStrategy:
+        limit: 1
+      resource:
+        action: create
+        setOwnerReference: true
+        successCondition: status.applicationState.state == COMPLETED
+        failureCondition: status.applicationState.state in (FAILED, SUBMISSION_FAILED, UNKNOWN)
+        manifest: |
+          apiVersion: sparkoperator.k8s.io/v1beta2
+          kind: SparkApplication
+          metadata:
+            generateName: banking-etl-{{workflow.creationTimestamp.Y}}{{workflow.creationTimestamp.m}}{{workflow.creationTimestamp.d}}-
+            labels:
+              app.kubernetes.io/part-of: banking-etl
+              banking-etl/job: "{{inputs.parameters.job}}"
+              workflows.argoproj.io/workflow: "{{workflow.name}}"
+          spec:
+            type: Python
+            pythonVersion: "3"
+            mode: cluster
+            sparkVersion: 3.5.3
+            image: "{{workflow.parameters.image}}"
+            imagePullPolicy: IfNotPresent
+            mainApplicationFile: "local:///opt/banking-etl/jobs/{{inputs.parameters.job}}.py"
+            sparkConf:
+              spark.sql.extensions: io.delta.sql.DeltaSparkSessionExtension
+              spark.sql.catalog.spark_catalog: org.apache.spark.sql.delta.catalog.DeltaCatalog
+              spark.sql.session.timeZone: UTC
+              spark.driver.extraJavaOptions: -Duser.timezone=UTC
+              spark.executor.extraJavaOptions: -Duser.timezone=UTC
+              spark.hadoop.fs.s3a.impl: org.apache.hadoop.fs.s3a.S3AFileSystem
+              spark.hadoop.fs.s3a.aws.credentials.provider: com.amazonaws.auth.WebIdentityTokenCredentialsProvider
+            restartPolicy:
+              type: Never
+            driver:
+              cores: 1
+              coreLimit: 1200m
+              memory: 2g
+              serviceAccount: banking-etl-spark
+              envFrom:
+                - configMapRef:
+                    name: banking-etl-env
+            executor:
+              instances: 2
+              cores: 1
+              memory: 2g
+              serviceAccount: banking-etl-spark
+              envFrom:
+                - configMapRef:
+                    name: banking-etl-env

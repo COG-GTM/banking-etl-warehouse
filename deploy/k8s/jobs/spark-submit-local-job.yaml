@@ -1,0 +1,43 @@
+# Alternative without the Spark Operator: a plain Kubernetes Job running spark-submit in
+# local mode inside one pod (sufficient for this warehouse's data volume). Change JOB and
+# the job name to run another entry point; run the dimension jobs before the fact job.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: load-dim-branch-submit
+  namespace: banking-etl
+  labels:
+    app.kubernetes.io/part-of: banking-etl
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: banking-etl
+    spec:
+      serviceAccountName: banking-etl-spark
+      restartPolicy: Never
+      containers:
+        - name: spark-submit
+          image: 111122223333.dkr.ecr.us-east-1.amazonaws.com/banking-etl:1.0.0
+          env:
+            - name: JOB
+              value: load_dim_branch
+          envFrom:
+            - configMapRef:
+                name: banking-etl-env
+          command: ["/bin/bash", "-c"]
+          args:
+            - >-
+              exec /opt/spark/bin/spark-submit
+              --master "local[*]"
+              --conf spark.driver.memory=3g
+              --conf spark.hadoop.fs.s3a.aws.credentials.provider=com.amazonaws.auth.WebIdentityTokenCredentialsProvider
+              "local:///opt/banking-etl/jobs/${JOB}.py"
+          resources:
+            requests:
+              cpu: "2"
+              memory: 4Gi
+            limits:
+              memory: 4Gi

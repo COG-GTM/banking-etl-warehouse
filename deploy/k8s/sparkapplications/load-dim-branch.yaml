@@ -1,0 +1,51 @@
+apiVersion: sparkoperator.k8s.io/v1beta2
+kind: SparkApplication
+metadata:
+  name: load-dim-branch
+  namespace: banking-etl
+  labels:
+    app.kubernetes.io/part-of: banking-etl
+    banking-etl/job: load_dim_branch
+spec:
+  type: Python
+  pythonVersion: "3"
+  mode: cluster
+  sparkVersion: 3.5.3
+  image: 111122223333.dkr.ecr.us-east-1.amazonaws.com/banking-etl:1.0.0
+  imagePullPolicy: IfNotPresent
+  mainApplicationFile: local:///opt/banking-etl/jobs/load_dim_branch.py
+  sparkConf:
+    spark.sql.extensions: io.delta.sql.DeltaSparkSessionExtension
+    spark.sql.catalog.spark_catalog: org.apache.spark.sql.delta.catalog.DeltaCatalog
+    spark.sql.session.timeZone: UTC
+    spark.driver.extraJavaOptions: -Duser.timezone=UTC
+    spark.executor.extraJavaOptions: -Duser.timezone=UTC
+    spark.hadoop.fs.s3a.impl: org.apache.hadoop.fs.s3a.S3AFileSystem
+    spark.hadoop.fs.s3a.aws.credentials.provider: com.amazonaws.auth.WebIdentityTokenCredentialsProvider
+    spark.kubernetes.executor.deleteOnTermination: "true"
+  restartPolicy:
+    type: OnFailure
+    onFailureRetries: 2
+    onFailureRetryInterval: 60
+    onSubmissionFailureRetries: 3
+    onSubmissionFailureRetryInterval: 30
+  driver:
+    cores: 1
+    coreLimit: 1200m
+    memory: 2g
+    serviceAccount: banking-etl-spark
+    envFrom:
+      - configMapRef:
+          name: banking-etl-env
+    labels:
+      banking-etl/job: load_dim_branch
+  executor:
+    instances: 2
+    cores: 1
+    memory: 2g
+    serviceAccount: banking-etl-spark
+    envFrom:
+      - configMapRef:
+          name: banking-etl-env
+    labels:
+      banking-etl/job: load_dim_branch

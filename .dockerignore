@@ -1,0 +1,8 @@
+**/__pycache__
+**/*.egg-info
+**/.pytest_cache
+**/.ruff_cache
+_local_warehouse
+talend_jobs
+data_sources/sample.bak
+.git

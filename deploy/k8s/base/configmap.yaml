@@ -1,0 +1,20 @@
+# Non-secret job configuration consumed by pyspark/config/config.yaml (${VAR} interpolation).
+# Credentials are NOT stored here: SOURCE_DB_SECRET_ID names an AWS Secrets Manager secret
+# ({"username": "...", "password": "..."}) that the IRSA role may read.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: banking-etl-env
+  namespace: banking-etl
+data:
+  AWS_REGION: us-east-1
+  DWH_STORAGE: path
+  DWH_SCHEMA: dwh
+  DWH_BASE_PATH: s3a://banking-etl-lakehouse-111122223333/dwh
+  SOURCE_JDBC_URL: jdbc:sqlserver://banking-sql.internal.example.com:1433;databaseName=sample;encrypt=true;trustServerCertificate=false
+  SOURCE_DB_SCHEMA: dbo
+  SOURCE_DB_SECRET_ID: banking-etl/sqlserver-source
+  TRANSACTION_EXCEL_PATH: s3a://banking-etl-lakehouse-111122223333/landing/transactions/transaction_excel.xlsx
+  TRANSACTION_CSV_PATH: s3a://banking-etl-lakehouse-111122223333/landing/transactions/transaction_csv.csv
+  EXCEL_ENGINE: pandas
+  FACT_ORPHAN_POLICY: reject

@@ -1,0 +1,11 @@
+# Ad-hoc runs of single jobs. Scheduled, dependency-ordered runs use deploy/argo.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: banking-etl
+resources:
+  - load-dim-branch.yaml
+  - load-dim-account.yaml
+  - load-dim-customer.yaml
+  - load-fact-transaction.yaml
+  - daily-transaction.yaml
+  - balance-per-customer.yaml
