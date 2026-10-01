@@ -1,0 +1,58 @@
+# Databricks Asset Bundle: builds the banking_etl wheel from pyspark/ and deploys the
+# warehouse workflow defined in deploy/databricks/. See deploy/README.md.
+#   databricks bundle validate -t dev
+#   databricks bundle deploy -t dev && databricks bundle run -t dev banking_etl_warehouse
+bundle:
+  name: banking-etl-warehouse
+
+include:
+  - deploy/databricks/*.yml
+
+sync:
+  include:
+    - pyspark/config/config.yaml
+  exclude:
+    - talend_jobs/**
+    - data_sources/**
+    - "**/__pycache__/**"
+
+artifacts:
+  banking_etl_wheel:
+    type: whl
+    path: ./pyspark
+    build: uv build --wheel --out-dir dist
+
+variables:
+  catalog:
+    description: Unity Catalog catalog holding the dwh schema
+    default: banking
+  schema:
+    description: Warehouse schema
+    default: dwh
+  landing_path:
+    description: Landing zone for the Excel/CSV extracts (UC Volume or s3:// external location)
+    default: /Volumes/banking/landing/transactions
+  source_jdbc_url:
+    description: SQL Server source JDBC URL
+    default: jdbc:sqlserver://banking-sql.internal.example.com:1433;databaseName=sample;encrypt=true
+  source_db_secret_id:
+    description: AWS Secrets Manager secret id with {"username", "password"} for the source DB
+    default: banking-etl/sqlserver-source
+  aws_region:
+    default: us-east-1
+  instance_profile_arn:
+    description: Instance profile allowed to read source_db_secret_id
+    default: arn:aws:iam::111122223333:instance-profile/banking-etl-databricks
+  node_type_id:
+    default: m5d.large
+  spark_version:
+    default: 15.4.x-scala2.12
+
+targets:
+  dev:
+    mode: development
+    default: true
+  prod:
+    mode: production
+    variables:
+      catalog: banking_prod

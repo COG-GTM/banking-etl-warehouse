@@ -1,0 +1,59 @@
+# Banking ETL configuration.
+#
+# Values support ${ENV_VAR} and ${ENV_VAR:-default} interpolation. Relative local paths
+# are resolved against this file's directory. Never put credentials in this file: set
+# SOURCE_DB_SECRET_ID to an AWS Secrets Manager secret ({"username": ..., "password": ...})
+# or, for local development only, SOURCE_DB_USER / SOURCE_DB_PASSWORD.
+
+app_name_prefix: banking-etl
+
+warehouse:
+  # Unity Catalog catalog (Databricks). Leave empty for the default spark_catalog.
+  catalog: ${DWH_CATALOG:-}
+  schema: ${DWH_SCHEMA:-dwh}
+  # path  -> Delta tables addressed by location <base_path>/<table> (local runs, EKS
+  #          writing to s3a://<bucket>/delta/dwh; register them in Unity Catalog as
+  #          external tables to query from Databricks).
+  # table -> Delta tables addressed by name <catalog>.<schema>.<table> (Databricks / UC).
+  storage: ${DWH_STORAGE:-path}
+  base_path: ${DWH_BASE_PATH:-../_local_warehouse/dwh}
+
+sources:
+  sqlserver:
+    jdbc_url: ${SOURCE_JDBC_URL:-jdbc:sqlserver://localhost:1433;databaseName=sample;encrypt=true;trustServerCertificate=true}
+    schema: ${SOURCE_DB_SCHEMA:-dbo}
+    secret_id: ${SOURCE_DB_SECRET_ID:-}
+    aws_region: ${AWS_REGION:-}
+    user: ${SOURCE_DB_USER:-}
+    password: ${SOURCE_DB_PASSWORD:-}
+    fetch_size: 10000
+
+  transaction_excel:
+    path: ${TRANSACTION_EXCEL_PATH:-../../data_sources/transaction_excel.xlsx}
+    sheet: Sheet1
+    # pandas (default, needs openpyxl) or spark_excel (needs the
+    # com.crealytics:spark-excel library on the cluster).
+    engine: ${EXCEL_ENGINE:-pandas}
+    timestamp_format: dd-MM-yyyy HH:mm:ss
+
+  transaction_csv:
+    path: ${TRANSACTION_CSV_PATH:-../../data_sources/transaction_csv.csv}
+    delimiter: ","
+    timestamp_format: dd-MM-yyyy HH:mm:ss
+    encoding: ISO-8859-15
+    # Talend tFileInputDelimited routed malformed rows to REJECT; DROPMALFORMED matches.
+    mode: DROPMALFORMED
+
+# merge     -> Delta MERGE upsert on the primary key (idempotent re-runs)
+# overwrite -> full table replace (Talend TRUNCATE + INSERT)
+tables:
+  dim_branch: {write_mode: merge}
+  dim_account: {write_mode: merge}
+  dim_customer: {write_mode: merge}
+  fact_transaction: {write_mode: overwrite}
+
+# Fact rows whose AccountID / BranchID are missing from the dimensions violated the
+# SQL Server foreign keys and were rejected by tMSSqlOutput (DIE_ON_ERROR=false).
+#   reject -> drop and log them (legacy behaviour)   keep -> load them anyway
+#   fail   -> abort the job
+orphan_policy: ${FACT_ORPHAN_POLICY:-reject}

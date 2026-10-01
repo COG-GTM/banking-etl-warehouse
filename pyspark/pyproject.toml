@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "banking-etl"
+version = "1.0.0"
+description = "PySpark / Delta Lake port of the Talend + SQL Server banking data warehouse"
+readme = "README.md"
+requires-python = ">=3.10"
+# pyspark / delta are provided by the Databricks runtime or the Spark container image.
+dependencies = [
+    "PyYAML>=6.0,<7",
+    "boto3>=1.34,<2",
+    "openpyxl>=3.1,<4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pyspark==3.5.3",
+    "pandas==2.2.3",
+    "pyarrow==17.0.0",
+    "pytest==8.3.3",
+    "pymssql==2.3.2",
+    "ruff==0.6.9",
+]
+
+[project.scripts]
+load_dim_branch = "banking_etl.jobs.load_dim_branch:main"
+load_dim_account = "banking_etl.jobs.load_dim_account:main"
+load_dim_customer = "banking_etl.jobs.load_dim_customer:main"
+load_fact_transaction = "banking_etl.jobs.load_fact_transaction:main"
+daily_transaction = "banking_etl.jobs.daily_transaction:main"
+balance_per_customer = "banking_etl.jobs.balance_per_customer:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["integration: requires a live SQL Server restored from data_sources/sample.bak"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]

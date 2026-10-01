@@ -1,0 +1,124 @@
+# Databricks Workflow replacing the manual Talend run order:
+#   load_dim_branch, load_dim_account, load_dim_customer (parallel) -> load_fact_transaction
+# Tables are written as Unity Catalog managed Delta tables ${var.catalog}.${var.schema}.*.
+resources:
+  jobs:
+    banking_etl_warehouse:
+      name: banking-etl-warehouse
+      max_concurrent_runs: 1
+      schedule:
+        quartz_cron_expression: "0 0 2 * * ?"
+        timezone_id: UTC
+        pause_status: PAUSED
+      email_notifications:
+        on_failure: []
+
+      job_clusters:
+        - job_cluster_key: etl
+          new_cluster:
+            spark_version: ${var.spark_version}
+            node_type_id: ${var.node_type_id}
+            num_workers: 1
+            data_security_mode: SINGLE_USER
+            aws_attributes:
+              instance_profile_arn: ${var.instance_profile_arn}
+            spark_conf:
+              spark.sql.session.timeZone: UTC
+            spark_env_vars:
+              DWH_STORAGE: table
+              DWH_CATALOG: ${var.catalog}
+              DWH_SCHEMA: ${var.schema}
+              SOURCE_JDBC_URL: ${var.source_jdbc_url}
+              SOURCE_DB_SCHEMA: dbo
+              SOURCE_DB_SECRET_ID: ${var.source_db_secret_id}
+              AWS_REGION: ${var.aws_region}
+              TRANSACTION_EXCEL_PATH: ${var.landing_path}/transaction_excel.xlsx
+              TRANSACTION_CSV_PATH: ${var.landing_path}/transaction_csv.csv
+              EXCEL_ENGINE: pandas
+              FACT_ORPHAN_POLICY: reject
+              PYARROW_IGNORE_TIMEZONE: "1"
+
+      tasks:
+        - task_key: load_dim_branch
+          job_cluster_key: etl
+          python_wheel_task: &wheel_task
+            package_name: banking_etl
+            entry_point: load_dim_branch
+            parameters: ["--config", "${workspace.file_path}/pyspark/config/config.yaml"]
+          libraries: &wheel
+            - whl: ./pyspark/dist/*.whl
+
+        - task_key: load_dim_account
+          job_cluster_key: etl
+          python_wheel_task:
+            <<: *wheel_task
+            entry_point: load_dim_account
+          libraries: *wheel
+
+        - task_key: load_dim_customer
+          job_cluster_key: etl
+          python_wheel_task:
+            <<: *wheel_task
+            entry_point: load_dim_customer
+          libraries: *wheel
+
+        - task_key: load_fact_transaction
+          depends_on:
+            - task_key: load_dim_branch
+            - task_key: load_dim_account
+            - task_key: load_dim_customer
+          job_cluster_key: etl
+          python_wheel_task:
+            <<: *wheel_task
+            entry_point: load_fact_transaction
+          libraries: *wheel
+
+    banking_etl_analytics:
+      name: banking-etl-analytics
+      parameters:
+        - name: start_date
+          default: "2024-01-18"
+        - name: end_date
+          default: "2024-01-22"
+        - name: customer_name
+          default: shelly
+      job_clusters:
+        - job_cluster_key: analytics
+          new_cluster:
+            spark_version: ${var.spark_version}
+            node_type_id: ${var.node_type_id}
+            num_workers: 1
+            data_security_mode: SINGLE_USER
+            spark_conf:
+              spark.sql.session.timeZone: UTC
+            spark_env_vars:
+              DWH_STORAGE: table
+              DWH_CATALOG: ${var.catalog}
+              DWH_SCHEMA: ${var.schema}
+      tasks:
+        - task_key: daily_transaction
+          job_cluster_key: analytics
+          python_wheel_task:
+            package_name: banking_etl
+            entry_point: daily_transaction
+            parameters:
+              - "--config"
+              - "${workspace.file_path}/pyspark/config/config.yaml"
+              - "--start-date"
+              - "{{job.parameters.start_date}}"
+              - "--end-date"
+              - "{{job.parameters.end_date}}"
+          libraries:
+            - whl: ./pyspark/dist/*.whl
+        - task_key: balance_per_customer
+          job_cluster_key: analytics
+          python_wheel_task:
+            package_name: banking_etl
+            entry_point: balance_per_customer
+            parameters:
+              - "--config"
+              - "${workspace.file_path}/pyspark/config/config.yaml"
+              - "--customer-name"
+              - "{{job.parameters.customer_name}}"
+          libraries:
+            - whl: ./pyspark/dist/*.whl
