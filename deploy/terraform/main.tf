@@ -121,6 +121,7 @@ resource "aws_iam_role_policy" "spark_irsa" {
 }
 
 # --- Spark Operator ---------------------------------------------------------------------------
+# The chart creates RBAC in var.k8s_namespace: apply deploy/k8s/base before this release.
 
 resource "helm_release" "spark_operator" {
   count            = var.install_spark_operator ? 1 : 0

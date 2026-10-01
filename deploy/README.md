@@ -41,7 +41,10 @@ deploy/
 | IAM role `banking-etl-databricks-uc` | Unity Catalog storage credential for the bucket (set `databricks_account_id`) | `aws_iam_role.databricks_uc` |
 | Instance profile for job clusters | Lets Databricks job clusters read the Secrets Manager secret (`instance_profile_arn` in `databricks.yml`) | not included |
 
+The Spark Operator chart creates RBAC inside the job namespace, so create it first:
+
 ```bash
+kubectl apply -k deploy/k8s/base          # namespace, service account, ConfigMap
 cd deploy/terraform
 terraform init
 terraform apply -var eks_cluster_name=<cluster> [-var databricks_account_id=<id>]
