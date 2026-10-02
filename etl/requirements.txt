@@ -1,0 +1,12 @@
+# PySpark ETL for the banking DWH.
+#
+# spark-excel (com.crealytics:spark-excel) has no Spark 4.x build yet, so stay on Spark 3.5.x.
+pyspark>=3.5,<4.0
+
+# For running the unit tests in tests/
+pytest>=7
+
+# JVM packages (not pip-installable) — pulled at SparkSession start-up via spark.jars.packages
+# (see etl/spark_session.py), or pre-download the jars and point SPARK_JARS at them:
+#   com.microsoft.sqlserver:mssql-jdbc:12.8.1.jre11       SQL Server JDBC driver (sample + DWH)
+#   com.crealytics:spark-excel_2.12:3.5.1_0.20.4          .xlsx reader for the Excel transaction source
