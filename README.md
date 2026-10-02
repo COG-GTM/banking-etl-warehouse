@@ -93,6 +93,93 @@ To replicate this solution, follow these steps:
 
 ---
 
+## ⚡ PySpark ETL
+
+The `etl/` package is a PySpark replacement for the four Talend jobs. It reads the same sources, applies the same transformations, and loads the existing `DWH` star schema from `sql_scripts/01_create_tables.sql`.
+
+| Talend job | PySpark job | Logic |
+| --- | --- | --- |
+| `Load_DimBranch` | `etl/jobs/load_dim_branch.py` | `sample.dbo.branch` → `DimBranch` |
+| `Load_DimAccount` | `etl/jobs/load_dim_account.py` | `sample.dbo.account` → `DimAccount` (`date_opened` → `DATE`) |
+| `Load_DimCustomer` | `etl/jobs/load_dim_customer.py` | `customer` ⟕ `city` ⟕ `state` (left lookups, as in the `tMap`), upper-cases name/address/gender → `DimCustomer` |
+| `Load_FactTransaction` | `etl/jobs/load_fact_transaction.py` | union of `sample.dbo.transaction_db` + `transaction_excel.xlsx` + `transaction_csv.csv` (`tUnite`), `dd-MM-yyyy HH:mm:ss` date parsing, dedup on `transaction_id` keeping the first source (`tUniqRow`), `Amount` → `decimal(19,4)` → `FactTransaction` |
+
+`etl/main.py` runs the jobs in dependency order: DimBranch → DimAccount → DimCustomer → FactTransaction.
+
+Like the Talend `tMSSqlOutput` (die-on-error off), fact rows whose `AccountID`/`BranchID` have no match in `DimAccount`/`DimBranch` are rejected and logged rather than failing the load (with the bundled data: transactions 23, 24 and 25 reference accounts 22 and 23, which don't exist). Set `ETL_ENFORCE_FOREIGN_KEYS=false` to skip that check.
+
+### Prerequisites
+
+- Java 11 or 17 (`java -version`)
+- Python 3.10+ and PySpark 3.5.x: `pip install -r etl/requirements.txt` (or a Spark 3.5 install that provides `spark-submit`)
+- JVM packages, downloaded automatically at start-up through `spark.jars.packages`:
+  - `com.microsoft.sqlserver:mssql-jdbc:12.8.1.jre11` (SQL Server JDBC driver)
+  - `com.crealytics:spark-excel_2.12:3.5.1_0.20.4` (`.xlsx` reader)
+
+  Offline, download the jars (plus spark-excel's dependencies) and set `SPARK_JARS=/path/mssql-jdbc.jar,/path/spark-excel.jar,...`. To resolve from a mirror instead of Maven Central, set `SPARK_JARS_REPOSITORIES`.
+- The `sample` source database restored from `data_sources/sample.bak`, and the `DWH` database created with `sql_scripts/01_create_tables.sql` (see "How to Run This Project" above).
+
+### Configuration
+
+All settings come from environment variables (`etl/config.py`):
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `MSSQL_HOST` / `MSSQL_PORT` | `localhost` / `1433` | Used to build the default JDBC URLs |
+| `MSSQL_USER` / `MSSQL_PASSWORD` | `sa` / *(empty)* | Default credentials for both databases |
+| `SAMPLE_JDBC_URL` | `jdbc:sqlserver://<host>:<port>;databaseName=sample;encrypt=true;trustServerCertificate=true` | Source database |
+| `SAMPLE_DB_USER` / `SAMPLE_DB_PASSWORD` | `MSSQL_USER` / `MSSQL_PASSWORD` | Source credentials |
+| `DWH_JDBC_URL` | same as above with `databaseName=DWH` | Target database |
+| `DWH_DB_USER` / `DWH_DB_PASSWORD` | `MSSQL_USER` / `MSSQL_PASSWORD` | Target credentials |
+| `SOURCE_TRANSACTION_TABLE` | `dbo.transaction_db` | SQL transaction source (also `SOURCE_BRANCH_TABLE`, `SOURCE_ACCOUNT_TABLE`, `SOURCE_CUSTOMER_TABLE`, `SOURCE_CITY_TABLE`, `SOURCE_STATE_TABLE`) |
+| `TRANSACTION_CSV_PATH` | `data_sources/transaction_csv.csv` | CSV transaction source |
+| `TRANSACTION_EXCEL_PATH` / `TRANSACTION_EXCEL_SHEET` | `data_sources/transaction_excel.xlsx` / `Sheet1` | Excel transaction source |
+| `ETL_WRITE_MODE` | `overwrite` | `overwrite` empties the DWH tables (`DELETE`, keeping PK/FK constraints) before loading; `append` only inserts |
+| `ETL_ENFORCE_FOREIGN_KEYS` | `true` | Reject fact rows with unknown `AccountID`/`BranchID` |
+| `SPARK_MASTER` | `local[*]` | Spark master URL |
+| `SPARK_JARS_PACKAGES` / `SPARK_JARS` / `SPARK_JARS_REPOSITORIES` | see Prerequisites | JVM dependency resolution |
+
+### Running
+
+```bash
+pip install -r etl/requirements.txt
+export MSSQL_HOST=localhost MSSQL_USER=sa MSSQL_PASSWORD='<password>'
+
+# full load
+python -m etl.main
+
+# or with spark-submit
+spark-submit \
+  --packages com.microsoft.sqlserver:mssql-jdbc:12.8.1.jre11,com.crealytics:spark-excel_2.12:3.5.1_0.20.4 \
+  etl/main.py
+
+# a single job
+python -m etl.jobs.load_fact_transaction
+```
+
+`spark-submit` takes its Spark version from the Python it launches, so if several PySpark versions are installed, point `PYSPARK_PYTHON`/`PYSPARK_DRIVER_PYTHON` at the interpreter that has PySpark 3.5 (spark-excel has no Spark 4 build).
+
+### Analytics
+
+`etl/analytics.py` has Spark SQL equivalents of the stored procedures, run against the loaded DWH tables:
+
+```bash
+python -m etl.analytics daily 2024-01-18 2024-01-20   # sp_DailyTransaction
+python -m etl.analytics balance shelly                 # sp_BalancePerCustomer
+```
+
+From Python, call `register_views(spark, cfg)` then `daily_transaction(spark, start_date, end_date)` or `balance_per_customer(spark, customer_name)`; both return DataFrames. The customer name match and the `Status = 'active'` filter are case-insensitive, matching SQL Server's default collation.
+
+### Tests
+
+```bash
+python -m pytest tests
+```
+
+The unit tests cover the transformations and analytics queries on in-memory DataFrames and need no database.
+
+---
+
 ## 🌟 Project Outcomes
 
 This project successfully demonstrates a complete data engineering lifecycle. The final solution transforms a chaotic, multi-source data environment into a clean, reliable, and high-performance Data Warehouse, ready to power business intelligence and analytics.
