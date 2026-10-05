@@ -1,0 +1,29 @@
+# Ticket 3: Auto Loader ingestion of the transaction CSV + Excel files into bronze.
+# Serverless notebook task (the dev workspace only allows serverless). Ticket 10 wires the
+# notebook into the end-to-end workflow.
+resources:
+  jobs:
+    bronze_ingest_transaction_files:
+      name: banking_etl_bronze_ingest_transaction_files
+      description: Auto Loader (availableNow) of landing/transactions/{csv,excel} into bronze.file_transaction_{csv,excel}.
+      max_concurrent_runs: 1
+      tags:
+        project: banking-etl-warehouse
+        ticket: "3"
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema_prefix
+          default: ${var.schema_prefix}
+        - name: sources
+          default: csv,excel
+        - name: land_from
+          default: ""
+      tasks:
+        - task_key: ingest_transaction_files
+          # Auto Loader stops the stream after addNewColumns records a new CSV column; the retry picks it up.
+          max_retries: 2
+          min_retry_interval_millis: 0
+          retry_on_timeout: false
+          notebook_task:
+            notebook_path: ../notebooks/bronze/ingest_transaction_files.py
