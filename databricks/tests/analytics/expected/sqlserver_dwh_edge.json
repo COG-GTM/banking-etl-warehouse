@@ -1,0 +1,494 @@
+{
+ "source": "SQL Server 16.0.4295.3 (SQL_Latin1_General_CP1_CI_AS) database DWH_EDGE",
+ "tables": {
+  "DimCustomer": [
+   {
+    "CustomerID": 1,
+    "CustomerName": "ALICE O'NEIL",
+    "Address": null,
+    "CityName": null,
+    "StateName": null,
+    "Age": 30,
+    "Gender": "FEMALE",
+    "Email": null
+   },
+   {
+    "CustomerID": 2,
+    "CustomerName": null,
+    "Address": null,
+    "CityName": null,
+    "StateName": null,
+    "Age": 31,
+    "Gender": "MALE",
+    "Email": null
+   },
+   {
+    "CustomerID": 3,
+    "CustomerName": "bob lower",
+    "Address": null,
+    "CityName": null,
+    "StateName": null,
+    "Age": 32,
+    "Gender": "male",
+    "Email": null
+   },
+   {
+    "CustomerID": 4,
+    "CustomerName": "50% OFF_GUY",
+    "Address": null,
+    "CityName": null,
+    "StateName": null,
+    "Age": 33,
+    "Gender": "MALE",
+    "Email": null
+   },
+   {
+    "CustomerID": 5,
+    "CustomerName": "BACK\\SLASH",
+    "Address": null,
+    "CityName": null,
+    "StateName": null,
+    "Age": 34,
+    "Gender": "MALE",
+    "Email": null
+   },
+   {
+    "CustomerID": 6,
+    "CustomerName": "TWO  SPACES",
+    "Address": null,
+    "CityName": null,
+    "StateName": null,
+    "Age": 35,
+    "Gender": "MALE",
+    "Email": null
+   }
+  ],
+  "DimAccount": [
+   {
+    "AccountID": 1,
+    "CustomerID": 1,
+    "AccountType": "saving",
+    "Balance": "100.1234",
+    "DateOpened": "2020-01-01",
+    "Status": "ACTIVE "
+   },
+   {
+    "AccountID": 2,
+    "CustomerID": 1,
+    "AccountType": "checking",
+    "Balance": "200.0000",
+    "DateOpened": "2020-01-01",
+    "Status": "Active"
+   },
+   {
+    "AccountID": 3,
+    "CustomerID": 1,
+    "AccountType": "saving",
+    "Balance": "5.0000",
+    "DateOpened": "2020-01-01",
+    "Status": "terminated"
+   },
+   {
+    "AccountID": 4,
+    "CustomerID": 2,
+    "AccountType": "saving",
+    "Balance": "300.0000",
+    "DateOpened": "2020-01-01",
+    "Status": "active"
+   },
+   {
+    "AccountID": 5,
+    "CustomerID": 3,
+    "AccountType": "saving",
+    "Balance": "400.0000",
+    "DateOpened": "2020-01-01",
+    "Status": "active"
+   },
+   {
+    "AccountID": 6,
+    "CustomerID": 3,
+    "AccountType": "loan",
+    "Balance": null,
+    "DateOpened": "2020-01-01",
+    "Status": "active"
+   },
+   {
+    "AccountID": 7,
+    "CustomerID": 4,
+    "AccountType": "saving",
+    "Balance": "10.0000",
+    "DateOpened": "2020-01-01",
+    "Status": "active"
+   },
+   {
+    "AccountID": 8,
+    "CustomerID": 5,
+    "AccountType": "saving",
+    "Balance": "10.0000",
+    "DateOpened": "2020-01-01",
+    "Status": "active"
+   },
+   {
+    "AccountID": 9,
+    "CustomerID": null,
+    "AccountType": "orphan",
+    "Balance": "1.0000",
+    "DateOpened": "2020-01-01",
+    "Status": "active"
+   },
+   {
+    "AccountID": 10,
+    "CustomerID": 6,
+    "AccountType": "saving",
+    "Balance": "0.0001",
+    "DateOpened": "2020-01-01",
+    "Status": null
+   },
+   {
+    "AccountID": 11,
+    "CustomerID": 6,
+    "AccountType": "checking",
+    "Balance": "7.5000",
+    "DateOpened": "2020-01-01",
+    "Status": " active"
+   }
+  ],
+  "FactTransaction": [
+   {
+    "TransactionID": 1,
+    "AccountID": 1,
+    "TransactionDate": "2024-01-01T00:00:00",
+    "Amount": "10.0001",
+    "TransactionType": "Deposit",
+    "BranchID": 1
+   },
+   {
+    "TransactionID": 2,
+    "AccountID": 1,
+    "TransactionDate": "2024-01-01T23:59:59",
+    "Amount": "0.0002",
+    "TransactionType": "deposit",
+    "BranchID": 1
+   },
+   {
+    "TransactionID": 3,
+    "AccountID": 1,
+    "TransactionDate": "2024-01-02T08:00:00",
+    "Amount": "1.5000",
+    "TransactionType": "DEPOSIT  ",
+    "BranchID": 1
+   },
+   {
+    "TransactionID": 4,
+    "AccountID": 1,
+    "TransactionDate": "2024-01-02T09:00:00",
+    "Amount": "3.2500",
+    "TransactionType": "Withdrawal",
+    "BranchID": 1
+   },
+   {
+    "TransactionID": 5,
+    "AccountID": 2,
+    "TransactionDate": "2024-01-02T10:00:00",
+    "Amount": "20.0000",
+    "TransactionType": null,
+    "BranchID": 1
+   },
+   {
+    "TransactionID": 6,
+    "AccountID": 2,
+    "TransactionDate": "2024-01-03T10:00:00",
+    "Amount": null,
+    "TransactionType": "Deposit",
+    "BranchID": 1
+   },
+   {
+    "TransactionID": 7,
+    "AccountID": 5,
+    "TransactionDate": null,
+    "Amount": "50.0000",
+    "TransactionType": "Deposit",
+    "BranchID": 1
+   },
+   {
+    "TransactionID": 8,
+    "AccountID": 5,
+    "TransactionDate": "2024-02-01T00:00:00",
+    "Amount": "0.1234",
+    "TransactionType": " Deposit",
+    "BranchID": 1
+   },
+   {
+    "TransactionID": 9,
+    "AccountID": 6,
+    "TransactionDate": "2024-01-31T23:59:59",
+    "Amount": "9.9999",
+    "TransactionType": "Deposit",
+    "BranchID": null
+   },
+   {
+    "TransactionID": 10,
+    "AccountID": null,
+    "TransactionDate": "2024-01-15T12:00:00",
+    "Amount": "100.0000",
+    "TransactionType": "Deposit",
+    "BranchID": 1
+   },
+   {
+    "TransactionID": 11,
+    "AccountID": 8,
+    "TransactionDate": "2023-12-31T23:59:59",
+    "Amount": "1.0000",
+    "TransactionType": "Payment",
+    "BranchID": 1
+   },
+   {
+    "TransactionID": 12,
+    "AccountID": 11,
+    "TransactionDate": "2024-01-15T12:00:00",
+    "Amount": "2.0000",
+    "TransactionType": "Transfer",
+    "BranchID": 1
+   }
+  ]
+ },
+ "cases": [
+  {
+   "procedure": "sp_DailyTransaction",
+   "params": [
+    "2024-01-01",
+    "2024-01-31"
+   ],
+   "rows": [
+    {
+     "Date": "2024-01-01",
+     "TotalTransactions": 2,
+     "TotalAmount": "10.0003"
+    },
+    {
+     "Date": "2024-01-02",
+     "TotalTransactions": 3,
+     "TotalAmount": "24.7500"
+    },
+    {
+     "Date": "2024-01-03",
+     "TotalTransactions": 1,
+     "TotalAmount": null
+    },
+    {
+     "Date": "2024-01-15",
+     "TotalTransactions": 2,
+     "TotalAmount": "102.0000"
+    },
+    {
+     "Date": "2024-01-31",
+     "TotalTransactions": 1,
+     "TotalAmount": "9.9999"
+    }
+   ]
+  },
+  {
+   "procedure": "sp_DailyTransaction",
+   "params": [
+    "2024-01-02",
+    "2024-01-02"
+   ],
+   "rows": [
+    {
+     "Date": "2024-01-02",
+     "TotalTransactions": 3,
+     "TotalAmount": "24.7500"
+    }
+   ]
+  },
+  {
+   "procedure": "sp_DailyTransaction",
+   "params": [
+    "2024-01-01",
+    null
+   ],
+   "rows": []
+  },
+  {
+   "procedure": "sp_BalancePerCustomer",
+   "params": [
+    ""
+   ],
+   "rows": [
+    {
+     "CustomerName": "50% OFF_GUY",
+     "AccountType": "saving",
+     "InitialBalance": "10.0000",
+     "CurrentBalance": "10.0000"
+    },
+    {
+     "CustomerName": "ALICE O'NEIL",
+     "AccountType": "checking",
+     "InitialBalance": "200.0000",
+     "CurrentBalance": "180.0000"
+    },
+    {
+     "CustomerName": "ALICE O'NEIL",
+     "AccountType": "saving",
+     "InitialBalance": "100.1234",
+     "CurrentBalance": "108.3737"
+    },
+    {
+     "CustomerName": "BACK\\SLASH",
+     "AccountType": "saving",
+     "InitialBalance": "10.0000",
+     "CurrentBalance": "9.0000"
+    },
+    {
+     "CustomerName": "bob lower",
+     "AccountType": "loan",
+     "InitialBalance": null,
+     "CurrentBalance": null
+    },
+    {
+     "CustomerName": "bob lower",
+     "AccountType": "saving",
+     "InitialBalance": "400.0000",
+     "CurrentBalance": "449.8766"
+    }
+   ]
+  },
+  {
+   "procedure": "sp_BalancePerCustomer",
+   "params": [
+    null
+   ],
+   "rows": []
+  },
+  {
+   "procedure": "sp_BalancePerCustomer",
+   "params": [
+    "alice"
+   ],
+   "rows": [
+    {
+     "CustomerName": "ALICE O'NEIL",
+     "AccountType": "checking",
+     "InitialBalance": "200.0000",
+     "CurrentBalance": "180.0000"
+    },
+    {
+     "CustomerName": "ALICE O'NEIL",
+     "AccountType": "saving",
+     "InitialBalance": "100.1234",
+     "CurrentBalance": "108.3737"
+    }
+   ]
+  },
+  {
+   "procedure": "sp_BalancePerCustomer",
+   "params": [
+    "O'NEIL"
+   ],
+   "rows": [
+    {
+     "CustomerName": "ALICE O'NEIL",
+     "AccountType": "checking",
+     "InitialBalance": "200.0000",
+     "CurrentBalance": "180.0000"
+    },
+    {
+     "CustomerName": "ALICE O'NEIL",
+     "AccountType": "saving",
+     "InitialBalance": "100.1234",
+     "CurrentBalance": "108.3737"
+    }
+   ]
+  },
+  {
+   "procedure": "sp_BalancePerCustomer",
+   "params": [
+    "lower"
+   ],
+   "rows": [
+    {
+     "CustomerName": "bob lower",
+     "AccountType": "loan",
+     "InitialBalance": null,
+     "CurrentBalance": null
+    },
+    {
+     "CustomerName": "bob lower",
+     "AccountType": "saving",
+     "InitialBalance": "400.0000",
+     "CurrentBalance": "449.8766"
+    }
+   ]
+  },
+  {
+   "procedure": "sp_BalancePerCustomer",
+   "params": [
+    "50%"
+   ],
+   "rows": [
+    {
+     "CustomerName": "50% OFF_GUY",
+     "AccountType": "saving",
+     "InitialBalance": "10.0000",
+     "CurrentBalance": "10.0000"
+    }
+   ]
+  },
+  {
+   "procedure": "sp_BalancePerCustomer",
+   "params": [
+    "0%_"
+   ],
+   "rows": [
+    {
+     "CustomerName": "50% OFF_GUY",
+     "AccountType": "saving",
+     "InitialBalance": "10.0000",
+     "CurrentBalance": "10.0000"
+    }
+   ]
+  },
+  {
+   "procedure": "sp_BalancePerCustomer",
+   "params": [
+    "K\\S"
+   ],
+   "rows": [
+    {
+     "CustomerName": "BACK\\SLASH",
+     "AccountType": "saving",
+     "InitialBalance": "10.0000",
+     "CurrentBalance": "9.0000"
+    }
+   ]
+  },
+  {
+   "procedure": "sp_BalancePerCustomer",
+   "params": [
+    "\\"
+   ],
+   "rows": [
+    {
+     "CustomerName": "BACK\\SLASH",
+     "AccountType": "saving",
+     "InitialBalance": "10.0000",
+     "CurrentBalance": "9.0000"
+    }
+   ]
+  },
+  {
+   "procedure": "sp_BalancePerCustomer",
+   "params": [
+    "  "
+   ],
+   "rows": []
+  },
+  {
+   "procedure": "sp_BalancePerCustomer",
+   "params": [
+    "nobody"
+   ],
+   "rows": []
+  }
+ ]
+}
