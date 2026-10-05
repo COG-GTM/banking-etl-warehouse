@@ -1,0 +1,26 @@
+# Ticket 5: Talend Load_DimBranch -> silver.branch -> gold.dim_branch (SCD-1).
+# Serverless notebook tasks (the dev workspace only allows serverless). Expects bronze.sqlserver_branch
+# (ticket 2). Ticket 10 wires these notebooks into the end-to-end workflow.
+resources:
+  jobs:
+    load_dim_branch:
+      name: banking_etl_load_dim_branch
+      description: bronze.sqlserver_branch -> silver.branch -> gold.dim_branch (SCD-1 merge on BranchID).
+      max_concurrent_runs: 1
+      tags:
+        project: banking-etl-warehouse
+        ticket: "5"
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema_prefix
+          default: ${var.schema_prefix}
+      tasks:
+        - task_key: silver_branch
+          notebook_task:
+            notebook_path: ../notebooks/silver/silver_branch.py
+        - task_key: load_dim_branch
+          depends_on:
+            - task_key: silver_branch
+          notebook_task:
+            notebook_path: ../notebooks/gold/load_dim_branch.py
