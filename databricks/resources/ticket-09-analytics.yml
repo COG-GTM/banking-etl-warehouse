@@ -1,0 +1,31 @@
+# Ticket 9: the DWH stored procedures as Unity Catalog SQL table functions in gold.
+# create_analytics_functions (re)creates them; the two query notebooks are their ad-hoc front ends
+# (run here as a smoke check with the widget defaults). Ticket 10 wires creation into the end-to-end workflow.
+resources:
+  jobs:
+    analytics_functions:
+      name: banking_etl_analytics_functions
+      description: CREATE OR REPLACE gold.fn_daily_transaction / gold.fn_balance_per_customer (ports of sp_DailyTransaction / sp_BalancePerCustomer).
+      max_concurrent_runs: 1
+      tags:
+        project: banking-etl-warehouse
+        ticket: "9"
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema_prefix
+          default: ${var.schema_prefix}
+      tasks:
+        - task_key: create_analytics_functions
+          notebook_task:
+            notebook_path: ../notebooks/analytics/create_analytics_functions.py
+        - task_key: daily_transaction
+          depends_on:
+            - task_key: create_analytics_functions
+          notebook_task:
+            notebook_path: ../notebooks/analytics/daily_transaction.py
+        - task_key: balance_per_customer
+          depends_on:
+            - task_key: create_analytics_functions
+          notebook_task:
+            notebook_path: ../notebooks/analytics/balance_per_customer.py
