@@ -1,0 +1,7 @@
+# Local test harness matching Databricks Runtime 17.3 LTS (Spark 4.0, Delta 4.0).
+pyspark==4.0.1
+delta-spark==4.0.0
+pytest>=8
+pandas>=2.2
+openpyxl>=3.1
+pyyaml>=6

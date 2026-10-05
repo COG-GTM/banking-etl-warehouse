@@ -1,0 +1,37 @@
+# Databricks Asset Bundle for the banking-etl-warehouse migration (Talend + SQL Server -> Databricks).
+# Ticket-owned resources live in resources/*.yml; do not add jobs inline here.
+bundle:
+  name: banking_etl_warehouse
+
+include:
+  - resources/*.yml
+
+variables:
+  catalog:
+    description: Unity Catalog catalog holding the bronze/silver/gold/ops schemas.
+    default: banking_etl_dev
+  schema_prefix:
+    description: Optional prefix for schema names (e.g. "banking_etl_" when sharing a catalog). Empty in normal use.
+    default: ""
+  secret_scope:
+    description: Secret scope holding SQL Server JDBC credentials (keys jdbc-host, jdbc-port, jdbc-database, jdbc-user, jdbc-password).
+    default: banking-etl-sqlserver
+  source_mode:
+    description: "SQL Server extract mode: jdbc (live SQL Server) or fixture (CSV exports of sample.bak landed in the landing volume)."
+    default: fixture
+  spark_version:
+    description: Databricks Runtime for job clusters.
+    default: 17.3.x-scala2.13
+  node_type_id:
+    description: Job cluster node type.
+    default: i3.xlarge
+
+targets:
+  dev:
+    mode: development
+    default: true
+  prod:
+    mode: production
+    variables:
+      catalog: banking_etl_prod
+      source_mode: jdbc
