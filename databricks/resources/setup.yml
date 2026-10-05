@@ -1,0 +1,34 @@
+# Ticket 1: one-off / re-runnable Unity Catalog provisioning job.
+# Runs on serverless jobs compute (the dev workspace only allows serverless; see README "Workspace facts").
+variables:
+  create_catalog:
+    description: Run CREATE CATALOG IF NOT EXISTS first (needs metastore CREATE CATALOG; failure is a warning).
+    default: "false"
+  data_engineers_group:
+    description: Group granted read (USE SCHEMA, SELECT, EXECUTE) on silver/gold. Empty = no grant.
+    default: ""
+  jobs_principal:
+    description: Principal (SP application id or group) granted ALL PRIVILEGES on all four schemas. Empty = no grant.
+    default: ""
+
+resources:
+  jobs:
+    banking_etl_setup:
+      name: banking_etl_setup
+      description: Idempotent UC provisioning (schemas, volumes, grants) for the banking DWH migration.
+      max_concurrent_runs: 1
+      tags:
+        project: banking-etl-warehouse
+        ticket: "1"
+      tasks:
+        - task_key: provision_uc
+          notebook_task:
+            notebook_path: ../notebooks/setup/provision_uc.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema_prefix: ${var.schema_prefix}
+              secret_scope: ${var.secret_scope}
+              source_mode: ${var.source_mode}
+              create_catalog: ${var.create_catalog}
+              data_engineers: ${var.data_engineers_group}
+              jobs_principal: ${var.jobs_principal}
