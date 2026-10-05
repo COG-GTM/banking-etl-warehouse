@@ -1,0 +1,16 @@
+# Ticket 4: gold star schema DDL. Standalone, idempotent setup job; ticket 10 wires the
+# create_star_schema notebook into the end-to-end workflow.
+resources:
+  jobs:
+    gold_create_star_schema:
+      name: banking_etl_gold_create_star_schema
+      max_concurrent_runs: 1
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema_prefix
+          default: ${var.schema_prefix}
+      tasks:
+        - task_key: create_star_schema
+          notebook_task:
+            notebook_path: ../notebooks/gold/create_star_schema.py
