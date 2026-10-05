@@ -75,3 +75,17 @@ Spark 4.0 needs **Java 17+** (`export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd
 | 8 | `Load_FactTransaction` → silver/gold | D |
 | 9 | `sp_DailyTransaction`, `sp_BalancePerCustomer` → Spark SQL | D |
 | 10 | Workflow, DQ expectations, reconciliation, bundle CI/CD | E |
+
+## Workspace facts
+Observed on the shared dev workspace (`dbc-8bc9474f-40ae.cloud.databricks.com`) with the jobs service principal `DE-shared` (`d9d1c4ec-29da-4ec7-9aa0-e932710d61e2`), ticket 1:
+
+| Fact | Consequence |
+|---|---|
+| Catalog `banking_etl_dev` does **not** exist and the SP has no `CREATE CATALOG` on the metastore (`PERMISSION_DENIED`). | Dev runs use **catalog `migration_demo` + `schema_prefix=banking_etl_`** → `migration_demo.banking_etl_{bronze,silver,gold,ops}`. Pass `--var catalog=migration_demo --var schema_prefix=banking_etl_` (or the matching notebook widgets). |
+| SP privileges on `migration_demo`: `USE_CATALOG, CREATE_SCHEMA, CREATE_TABLE, CREATE_VOLUME, CREATE_FUNCTION, CREATE_MATERIALIZED_VIEW, MODIFY, SELECT, READ/WRITE_VOLUME, …`; it owns the four `banking_etl_*` schemas it created (and `ALL_PRIVILEGES` on them). | Downstream tickets can create tables/views/volumes in those schemas freely. Do not touch other schemas in `migration_demo`. |
+| **Only serverless compute is allowed.** `jobs submit` with `new_cluster` fails: `Only serverless compute is supported in the workspace.` The SP has no `allow-cluster-create` entitlement; the only policy is the default `Personal Compute` (no CAN_USE for the SP). | Jobs/tasks must **omit `new_cluster`/`job_clusters`/`existing_cluster_id`** and run on serverless jobs compute (notebook tasks need nothing else; Python wheel/script tasks need an `environments` entry). Classic job clusters + the `banking-etl-job-cluster` policy only apply to workspaces that allow classic compute (e.g. prod). |
+| `cluster-policies create` → `Unauthorized Access` (needs workspace admin). | The policy is kept as JSON under `resources/policies/` and applied by an admin with `scripts/setup/apply_cluster_policies.py`, **not** as a bundle `cluster_policies` resource (that would make every `bundle deploy` by this SP fail). |
+| Serverless SQL warehouse `565cd2fd713738c4` (“Serverless Starter Warehouse”) is usable via the Statement Execution API. | `scripts/setup/provision_uc.py --warehouse-id …` and ad-hoc SQL validation. |
+| DBR `17.3.x-scala2.13` is listed; node types `i3.xlarge`, `i3.2xlarge`, `m5d.large`, `m5d.xlarge`, `r5d.large` exist. | Matches the policy allow-list. Serverless notebooks report the serverless client runtime, not DBR 17.3. |
+| UC grants need **account-level** principals: the workspace-local group `users` is rejected (`PRINCIPAL_DOES_NOT_EXIST`); `account users` works. | Use account groups / SP application ids for `data_engineers_group` / `jobs_principal`. Dev uses `account users` (read on silver/gold) and the SP app id. |
+| Secret scope `banking-etl-sqlserver` exists (Databricks-backed, SP has MANAGE) with placeholder values for all five `jdbc-*` keys; there is no reachable SQL Server. | JDBC mode can resolve secrets but cannot connect; use `source_mode=fixture` in dev. |
