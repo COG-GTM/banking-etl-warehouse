@@ -1,0 +1,27 @@
+# Ticket 8: Talend Load_FactTransaction -> silver.transaction -> gold.fact_transaction (full refresh).
+# Serverless notebook tasks (the dev workspace only allows serverless). Expects bronze (tickets 2, 3)
+# and gold.dim_account / gold.dim_branch (tickets 5, 6); ticket 10 wires these tasks into the
+# end-to-end workflow after the dim loads.
+resources:
+  jobs:
+    load_fact_transaction:
+      name: banking_etl_load_fact_transaction
+      description: bronze transactions (SQL Server, Excel, CSV) -> silver.transaction -> gold.fact_transaction + ops.fact_transaction_rejects.
+      max_concurrent_runs: 1
+      tags:
+        project: banking-etl-warehouse
+        ticket: "8"
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema_prefix
+          default: ${var.schema_prefix}
+      tasks:
+        - task_key: silver_transaction
+          notebook_task:
+            notebook_path: ../notebooks/silver/silver_transaction.py
+        - task_key: load_fact_transaction
+          depends_on:
+            - task_key: silver_transaction
+          notebook_task:
+            notebook_path: ../notebooks/gold/load_fact_transaction.py
