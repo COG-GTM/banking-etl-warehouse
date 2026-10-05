@@ -1,0 +1,26 @@
+# Ticket 7: Talend Load_DimCustomer -> silver.customer -> gold.dim_customer (SCD-1).
+# Serverless notebook tasks (the dev workspace only allows serverless). Expects the bronze
+# sqlserver_{customer,city,state} snapshots from ticket 2; ticket 10 wires this into the end-to-end job.
+resources:
+  jobs:
+    dim_customer:
+      name: banking_etl_dim_customer
+      description: Load_DimCustomer port - bronze customer x city x state -> silver.customer -> gold.dim_customer (SCD-1 MERGE).
+      max_concurrent_runs: 1
+      tags:
+        project: banking-etl-warehouse
+        ticket: "7"
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema_prefix
+          default: ${var.schema_prefix}
+      tasks:
+        - task_key: silver_customer
+          notebook_task:
+            notebook_path: ../notebooks/silver/silver_customer.py
+        - task_key: load_dim_customer
+          depends_on:
+            - task_key: silver_customer
+          notebook_task:
+            notebook_path: ../notebooks/gold/load_dim_customer.py
