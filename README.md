@@ -93,6 +93,33 @@ To replicate this solution, follow these steps:
 
 ---
 
+## ☁️ Databricks (PySpark) Migration
+
+The Talend dimension jobs are ported to PySpark under `databricks/` and write Delta tables to the Unity Catalog schema `<catalog>.dwh`:
+
+| Talend job | Databricks job | Target (merge key) |
+|---|---|---|
+| `Load_DimBranch` | `databricks/jobs/load_dim_branch.py` | `dwh.dim_branch` (`BranchID`) |
+| `Load_DimAccount` | `databricks/jobs/load_dim_account.py` | `dwh.dim_account` (`AccountID`) |
+| `Load_DimCustomer` | `databricks/jobs/load_dim_customer.py` | `dwh.dim_customer` (`CustomerID`) |
+
+Shared code lives in `databricks/common/` (`config.py` widgets/secrets/JDBC, `readers.py` JDBC + staged CSV/Excel, `writers.py` Delta merge).
+
+**Required secrets** — create a scope (default name `banking-etl`, override with the `secret_scope` widget):
+
+```bash
+databricks secrets create-scope banking-etl
+databricks secrets put-secret banking-etl sqlserver-user      # SQL Server login
+databricks secrets put-secret banking-etl sqlserver-password  # SQL Server password
+databricks secrets put-secret banking-etl sqlserver-host      # optional if the jdbc_host widget is set
+```
+
+**Widgets / job parameters** (defaults in `databricks/common/config.py`): `catalog` (`main`), `target_schema` (`dwh`), `secret_scope`, `jdbc_host`, `jdbc_port` (`1433`), `jdbc_database` (`sample`), `source_schema` (`dbo`), `jdbc_url_options`, `staging_path` (`/Volumes/main/dwh/staging`).
+
+Run order matches Talend: `load_dim_branch` → `load_dim_account` → `load_dim_customer`. Excel staged files use `com.crealytics.spark.excel` if installed on the cluster, otherwise pandas + `openpyxl`. Unit tests: `pip install pyspark pandas openpyxl pytest && pytest databricks/tests` (Java 17).
+
+---
+
 ## 🌟 Project Outcomes
 
 This project successfully demonstrates a complete data engineering lifecycle. The final solution transforms a chaotic, multi-source data environment into a clean, reliable, and high-performance Data Warehouse, ready to power business intelligence and analytics.
