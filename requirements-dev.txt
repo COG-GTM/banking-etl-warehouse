@@ -1,0 +1,7 @@
+# Local test harness for databricks/jobs (mirrors DBR 15.4 LTS: Spark 3.5 / Delta 3.2)
+pyspark==3.5.3
+delta-spark==3.2.1
+pandas
+openpyxl
+pytest
+setuptools  # distutils shim needed by pyspark 3.5 pandas interop on Python 3.12+
