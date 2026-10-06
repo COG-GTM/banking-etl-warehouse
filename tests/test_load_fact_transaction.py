@@ -130,3 +130,19 @@ def test_rerun_rewrites_nothing(spark, sql_df, config):
     )
     assert metrics["numTargetRowsUpdated"] == "0"
     assert metrics["numTargetRowsInserted"] == "0"
+
+
+def test_orphans_rejected_like_sqlserver_fk(spark, sql_df, config):
+    """sample.bak has accounts 1-21 and branches 1-5; tx 23-25 (accounts 22/23) violate the FK."""
+    schema = config.target_table.split(".")[0]
+    spark.sql(f"CREATE SCHEMA IF NOT EXISTS {schema}")
+    spark.range(1, 22).selectExpr("CAST(id AS INT) AS AccountID").write.saveAsTable(f"{schema}.dim_account")
+    spark.range(1, 6).selectExpr("CAST(id AS INT) AS BranchID").write.saveAsTable(f"{schema}.dim_branch")
+    config.dim_account_table = f"{schema}.dim_account"
+    config.dim_branch_table = f"{schema}.dim_branch"
+
+    stats = job.run(spark, config, sql_df=sql_df)
+
+    assert stats.fk_rejected == 3
+    ids = sorted(r.TransactionID for r in spark.table(config.target_table).collect())
+    assert ids == list(range(1, 23))

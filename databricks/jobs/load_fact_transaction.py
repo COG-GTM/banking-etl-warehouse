@@ -13,6 +13,10 @@
 # MAGIC | `tUniqRow`            | `dropDuplicates(["TransactionID"])`                        |
 # MAGIC | `tMap` + `tMSSqlOutput` | rename to DWH columns + Delta `MERGE` into `dwh.fact_transaction` |
 # MAGIC
+# MAGIC `FactTransaction` has FKs to `DimAccount`/`DimBranch`, and the Talend output runs with
+# MAGIC "die on error" off, so SQL Server silently drops orphan rows. Delta does not enforce FKs,
+# MAGIC so `reject_orphans` does the same filter explicitly against `dwh.dim_account`/`dwh.dim_branch`.
+# MAGIC
 # MAGIC Target schema mirrors `FactTransaction` in `sql_scripts/01_create_tables.sql`.
 
 # COMMAND ----------
@@ -78,6 +82,8 @@ class JobConfig:
     excel_path: str
     csv_path: str
     target_table: str
+    dim_account_table: str = "dwh.dim_account"
+    dim_branch_table: str = "dwh.dim_branch"
 
 
 def _get_dbutils(spark: SparkSession):
@@ -117,6 +123,8 @@ def load_config(spark: SparkSession) -> JobConfig:
         excel_path=_get_param(spark, "excel_path", "data_sources/transaction_excel.xlsx"),
         csv_path=_get_param(spark, "csv_path", "data_sources/transaction_csv.csv"),
         target_table=_get_param(spark, "target_table", "dwh.fact_transaction"),
+        dim_account_table=_get_param(spark, "dim_account_table", "dwh.dim_account"),
+        dim_branch_table=_get_param(spark, "dim_branch_table", "dwh.dim_branch"),
     )
 
 
@@ -239,6 +247,7 @@ class DedupStats:
     rows_before: int
     rows_after: int
     distinct_keys: int
+    fk_rejected: int = 0
 
     @property
     def duplicates_removed(self) -> int:
@@ -271,6 +280,33 @@ def validate_dedup(unioned: DataFrame, deduped: DataFrame) -> DedupStats:
     ), "Duplicate TransactionID survived dedup"
     assert rows_after <= rows_before
     return stats
+
+
+def reject_orphans(spark: SparkSession, deduped: DataFrame, config: JobConfig) -> tuple[DataFrame, int]:
+    """Emulate the FactTransaction FKs: drop rows whose AccountID/BranchID is not in the dimension.
+
+    NULL foreign keys are kept, as SQL Server allows them. A dimension table that does not
+    exist yet is skipped with a warning so the job can still run standalone.
+    """
+    valid = deduped
+    for fk_col, dim_table in (("AccountID", config.dim_account_table), ("BranchID", config.dim_branch_table)):
+        if not spark.catalog.tableExists(dim_table):
+            logger.warning("%s not found; skipping %s FK check", dim_table, fk_col)
+            continue
+        dim_keys = spark.table(dim_table).select(F.col(fk_col).alias("_fk")).distinct()
+        valid = (
+            valid.join(dim_keys, valid[fk_col] == dim_keys["_fk"], "left")
+            .filter(F.col(fk_col).isNull() | F.col("_fk").isNotNull())
+            .drop("_fk")
+        )
+
+    valid = valid.cache()
+    rejected = deduped.join(valid.select(KEY_COLUMN), KEY_COLUMN, "left_anti")
+    rejected_count = rejected.count()
+    if rejected_count:
+        ids = sorted(r[KEY_COLUMN] for r in rejected.select(KEY_COLUMN).collect())
+        logger.warning("Rejected %d rows with unknown AccountID/BranchID (FK): TransactionID %s", rejected_count, ids)
+    return valid, rejected_count
 
 
 # COMMAND ----------
@@ -329,14 +365,15 @@ def run(spark: SparkSession, config: Optional[JobConfig] = None, sql_df: Optiona
     deduped = deduplicate(unioned).cache()
 
     stats = validate_dedup(unioned, deduped)
-    merge_into_fact(spark, deduped, config.target_table)
+    loadable, stats.fk_rejected = reject_orphans(spark, deduped, config)
+    merge_into_fact(spark, loadable, config.target_table)
 
     target_count = spark.table(config.target_table).count()
     logger.info("%s now holds %d rows", config.target_table, target_count)
-    assert target_count >= stats.rows_after, "Target has fewer rows than the deduplicated batch"
+    assert target_count >= stats.rows_after - stats.fk_rejected, "Target has fewer rows than the loaded batch"
 
-    unioned.unpersist()
-    deduped.unpersist()
+    for df in (unioned, deduped, loadable):
+        df.unpersist()
     return stats
 
 
