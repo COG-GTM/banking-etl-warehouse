@@ -1,0 +1,96 @@
+{
+  "name": "banking-etl-warehouse",
+  "description": "Port of the Talend jobs: load the three dimensions in parallel, then FactTransaction once all of them succeed.",
+  "max_concurrent_runs": 1,
+  "timeout_seconds": 3600,
+  "git_source": {
+    "git_url": "https://github.com/COG-GTM/banking-etl-warehouse",
+    "git_provider": "gitHub",
+    "git_branch": "main"
+  },
+  "parameters": [
+    { "name": "catalog", "default": "main" },
+    { "name": "schema", "default": "dwh" },
+    { "name": "landing_path", "default": "/Volumes/main/dwh/landing" },
+    { "name": "secret_scope", "default": "banking-etl" }
+  ],
+  "job_clusters": [
+    {
+      "job_cluster_key": "etl_cluster",
+      "new_cluster": {
+        "spark_version": "15.4.x-scala2.12",
+        "node_type_id": "i3.xlarge",
+        "num_workers": 1,
+        "data_security_mode": "SINGLE_USER"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_key": "load_dim_branch",
+      "job_cluster_key": "etl_cluster",
+      "spark_python_task": {
+        "python_file": "databricks/jobs/load_dim_branch.py",
+        "source": "GIT",
+        "parameters": [
+          "--catalog", "{{job.parameters.catalog}}",
+          "--schema", "{{job.parameters.schema}}",
+          "--landing-path", "{{job.parameters.landing_path}}",
+          "--secret-scope", "{{job.parameters.secret_scope}}"
+        ]
+      },
+      "libraries": [{ "pypi": { "package": "openpyxl" } }]
+    },
+    {
+      "task_key": "load_dim_account",
+      "job_cluster_key": "etl_cluster",
+      "spark_python_task": {
+        "python_file": "databricks/jobs/load_dim_account.py",
+        "source": "GIT",
+        "parameters": [
+          "--catalog", "{{job.parameters.catalog}}",
+          "--schema", "{{job.parameters.schema}}",
+          "--landing-path", "{{job.parameters.landing_path}}",
+          "--secret-scope", "{{job.parameters.secret_scope}}"
+        ]
+      },
+      "libraries": [{ "pypi": { "package": "openpyxl" } }]
+    },
+    {
+      "task_key": "load_dim_customer",
+      "job_cluster_key": "etl_cluster",
+      "spark_python_task": {
+        "python_file": "databricks/jobs/load_dim_customer.py",
+        "source": "GIT",
+        "parameters": [
+          "--catalog", "{{job.parameters.catalog}}",
+          "--schema", "{{job.parameters.schema}}",
+          "--landing-path", "{{job.parameters.landing_path}}",
+          "--secret-scope", "{{job.parameters.secret_scope}}"
+        ]
+      },
+      "libraries": [{ "pypi": { "package": "openpyxl" } }]
+    },
+    {
+      "task_key": "load_fact_transaction",
+      "job_cluster_key": "etl_cluster",
+      "depends_on": [
+        { "task_key": "load_dim_branch" },
+        { "task_key": "load_dim_account" },
+        { "task_key": "load_dim_customer" }
+      ],
+      "run_if": "ALL_SUCCESS",
+      "spark_python_task": {
+        "python_file": "databricks/jobs/load_fact_transaction.py",
+        "source": "GIT",
+        "parameters": [
+          "--catalog", "{{job.parameters.catalog}}",
+          "--schema", "{{job.parameters.schema}}",
+          "--landing-path", "{{job.parameters.landing_path}}",
+          "--secret-scope", "{{job.parameters.secret_scope}}"
+        ]
+      },
+      "libraries": [{ "pypi": { "package": "openpyxl" } }]
+    }
+  ]
+}
