@@ -1,0 +1,5 @@
+__pycache__/
+local/.warehouse/
+metastore_db/
+spark-warehouse/
+derby.log
