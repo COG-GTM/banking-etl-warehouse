@@ -10,6 +10,7 @@ from pyspark.sql import types as T
 from banking_etl.facts.transaction import (
     BUSINESS_COLUMNS,
     FACT_SCHEMA,
+    _to_int,
     build_silver,
     merge_into_gold,
     normalize_source,
@@ -295,3 +296,49 @@ def test_auto_loader_rescued_rows_are_quarantined(spark, bronze_frames):
     assert silver.filter("transaction_id = 31").count() == 0
     rescued = rejects.filter("reject_reason = 'RESCUED_DATA'").first()
     assert rescued.transaction_id == 31 and "31-02-2024" in rescued.raw_record
+
+
+def test_ids_with_hidden_fractions_are_rejected(spark):
+    df = spark.createDataFrame(
+        [
+            ("6.0000001", "1", "01-01-2024 10:00:00", "1", "Deposit", "1"),
+            ("7.0", "1.00", "01-01-2024 10:00:00", "1", "Deposit", "1.0000000001"),
+            ("8", "1", "01-01-2024 10:00:00", "1", "Deposit", "1"),
+        ],
+        CSV_DDL,
+    )
+    out = normalize_source(df, "csv").fillna("OK", subset=["reject_reason"])
+    assert _rows(out, "reject_reason", "transaction_id") == [
+        ("INVALID_BRANCH_ID", 7),
+        ("INVALID_TRANSACTION_ID", None),
+        ("OK", 8),
+    ]
+    typed = spark.createDataFrame(
+        [(Decimal("9.0000001"), 1.0), (Decimal("10.0000000"), 1.5)], "transaction_id DECIMAL(20,7), account_id DOUBLE"
+    )
+    rows = typed.select(_to_int(typed, "transaction_id").alias("t"), _to_int(typed, "account_id").alias("a")).collect()
+    assert [(r.t, r.a) for r in rows] == [(None, 1), (10, None)]
+
+
+def test_tie_break_orders_row_numbers_numerically(spark):
+    sql = spark.createDataFrame(
+        [
+            (42, 1, datetime(2024, 1, 1), 2, "Deposit", 1, 2),
+            (42, 1, datetime(2024, 1, 1), 10, "Deposit", 1, 10),
+        ],
+        "transaction_id INT, account_id INT, transaction_date TIMESTAMP, amount INT, transaction_type STRING, "
+        "branch_id INT, _source_row_number INT",
+    )
+    silver, rejects = build_silver(sql, spark.createDataFrame([], EXCEL_DDL), spark.createDataFrame([], CSV_DDL))
+    assert silver.first().amount == Decimal("2.0000")
+    assert rejects.first().reject_reason == "DUPLICATE_TRANSACTION_ID"
+
+
+def test_parity_diff_does_not_round_away_extra_precision(spark):
+    row = (1, 1, datetime(2024, 1, 1), "Deposit", 1)
+    cols = "transaction_id INT, account_id INT, transaction_date TIMESTAMP, transaction_type STRING, branch_id INT"
+    actual = spark.createDataFrame([(*row, Decimal("1.23456"))], cols + ", amount DECIMAL(20,5)")
+    expected = spark.createDataFrame([(*row, Decimal("1.2346"))], cols + ", amount DECIMAL(19,4)")
+    assert parity_diff(actual, expected) == (1, 1)
+    same = spark.createDataFrame([(*row, Decimal("1.23460"))], cols + ", amount DECIMAL(20,5)")
+    assert parity_diff(same, expected) == (0, 0)

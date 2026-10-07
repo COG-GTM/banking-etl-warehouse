@@ -55,6 +55,7 @@ INGEST_ORDER_CANDIDATES = (
 )
 
 AMOUNT_TYPE = T.DecimalType(19, 4)
+PARITY_AMOUNT_TYPE = T.DecimalType(38, 18)
 
 FACT_SCHEMA = T.StructType(
     [
@@ -125,17 +126,24 @@ def _blank_to_null(c: Column) -> Column:
     return F.when(F.trim(c) == "", F.lit(None)).otherwise(c)
 
 
-def _to_decimal(df: DataFrame, name: str) -> Column:
-    dtype = df.schema[name].dataType
-    src = f"trim(`{name}`)" if isinstance(dtype, T.StringType) else f"`{name}`"
-    return F.expr(f"try_cast({src} AS DECIMAL(38,6))")
-
-
 def _to_int(df: DataFrame, name: str) -> Column:
-    """Whole numbers only (``6``, ``6.0``); ``6.5`` / ``abc`` / out of range -> NULL."""
-    d = _to_decimal(df, name)
-    ok = (d == F.floor(d)) & d.between(-2147483648, 2147483647)
-    return F.when(ok, d.cast("int"))
+    """Whole numbers only (``6``, ``6.0``); ``6.5`` / ``6.0000001`` / ``abc`` / out of range -> NULL.
+
+    Integrality is checked on the original value, never after a lossy rescale.
+    """
+    dtype = df.schema[name].dataType
+    c = F.col(name)
+    if isinstance(dtype, T.IntegralType):
+        whole = c.cast("long")
+    elif isinstance(dtype, (T.DecimalType, T.DoubleType, T.FloatType)):
+        whole = F.when(c == F.floor(c), F.expr(f"try_cast(`{name}` AS DECIMAL(38,0))")).cast("long")
+    else:
+        s = F.trim(c.cast("string"))
+        whole = F.when(
+            s.rlike("^[+-]?[0-9]+([.]0*)?$"),
+            F.expr(f"try_cast(regexp_extract(trim(CAST(`{name}` AS STRING)), '^([+-]?[0-9]+)', 1) AS BIGINT)"),
+        )
+    return F.when(whole.between(-2147483648, 2147483647), whole.cast("int"))
 
 
 def _to_amount(df: DataFrame, name: str) -> Column:
@@ -150,6 +158,21 @@ def _to_timestamp(df: DataFrame, name: str, formats: tuple[str, ...]) -> Column:
         return F.col(name).cast("timestamp")
     s = F.trim(F.col(name).cast("string"))
     return F.coalesce(*[F.call_function("try_to_timestamp", s, F.lit(fmt)) for fmt in formats])
+
+
+def _ingest_order_columns(df: DataFrame, order_col: str | None) -> list[Column]:
+    """Typed ordering keys so row ordinals sort numerically and timestamps chronologically after unionByName."""
+    dtype = df.schema[order_col].dataType if order_col else None
+    numeric = isinstance(dtype, T.NumericType)
+    temporal = isinstance(dtype, (T.TimestampType, T.TimestampNTZType, T.DateType))
+    col = F.col(order_col) if order_col else None
+    return [
+        (col.cast("decimal(38,10)") if numeric else F.lit(None).cast("decimal(38,10)")).alias("_ingest_order_num"),
+        (col.cast("timestamp") if temporal else F.lit(None).cast("timestamp")).alias("_ingest_order_ts"),
+        (col.cast("string") if order_col and not (numeric or temporal) else F.lit(None).cast("string")).alias(
+            "_ingest_order_str"
+        ),
+    ]
 
 
 def normalize_source(df: DataFrame, source_system: str) -> DataFrame:
@@ -167,7 +190,7 @@ def normalize_source(df: DataFrame, source_system: str) -> DataFrame:
     typed = df.select(
         F.lit(source_system).alias("source_system"),
         F.lit(SOURCES[source_system]).alias("source_rank"),
-        (F.col(order_col).cast("string") if order_col else F.lit(None).cast("string")).alias("_ingest_order"),
+        *_ingest_order_columns(df, order_col),
         _to_int(df, "transaction_id").alias("transaction_id"),
         _to_int(df, "account_id").alias("account_id"),
         _to_timestamp(df, "transaction_date", DATE_FORMATS[source_system]).alias("transaction_date"),
@@ -224,7 +247,9 @@ def build_silver(
 
     first = Window.partitionBy("transaction_id").orderBy(
         F.col("source_rank").asc(),
-        F.col("_ingest_order").asc_nulls_last(),
+        F.col("_ingest_order_num").asc_nulls_last(),
+        F.col("_ingest_order_ts").asc_nulls_last(),
+        F.col("_ingest_order_str").asc_nulls_last(),
         *[
             F.col(c).asc_nulls_last()
             for c in ("transaction_date", "amount", "account_id", "branch_id", "transaction_type")
@@ -340,8 +365,17 @@ def run_gold(
 
 def parity_diff(actual: DataFrame, expected: DataFrame) -> tuple[int, int]:
     """``(missing_from_actual, unexpected_in_actual)`` over the six business columns, exact match."""
-    a = actual.select(*[F.col(c).cast(FACT_SCHEMA[c].dataType) for c in BUSINESS_COLUMNS])
-    e = expected.select(*[F.col(c).cast(FACT_SCHEMA[c].dataType) for c in BUSINESS_COLUMNS])
+
+    def norm(df: DataFrame) -> DataFrame:
+        # amount is widened, not narrowed, so extra precision on either side shows up as a mismatch
+        return df.select(
+            *[
+                F.col(c).cast(PARITY_AMOUNT_TYPE if c == "amount" else FACT_SCHEMA[c].dataType).alias(c)
+                for c in BUSINESS_COLUMNS
+            ]
+        )
+
+    a, e = norm(actual), norm(expected)
     return e.exceptAll(a).count(), a.exceptAll(e).count()
 
 
