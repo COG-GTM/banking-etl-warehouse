@@ -153,3 +153,9 @@ def test_bundle_defaults_match_config():
     assert "notebook_path: ./setup/setup_unity_catalog_notebook.py" in text
     assert "new_cluster" not in text
     assert os.path.isfile(os.path.join(DATABRICKS_ROOT, "setup", "setup_unity_catalog_notebook.py"))
+
+
+def test_setup_with_spark_raises_when_mkdirs_reports_failure(spark, tmp_path):
+    cfg = EnvConfig(schema_prefix="t1_mkfail_")
+    with pytest.raises(RuntimeError, match="Failed to create landing directory"):
+        setup.setup_with_spark(spark, cfg, unity_catalog=False, mkdirs=lambda p: False, landing_base=str(tmp_path / "landing"))

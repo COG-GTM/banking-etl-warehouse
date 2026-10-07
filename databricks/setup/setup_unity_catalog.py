@@ -159,7 +159,8 @@ def setup_with_spark(
     dirs = []
     if mkdirs is not None:
         for d in landing_dirs(cfg, landing_base):
-            mkdirs(d)
+            if mkdirs(d) is False:
+                raise RuntimeError(f"Failed to create landing directory: {d}")
             dirs.append(d)
     if unity_catalog:
         rows = spark.sql(f"SHOW SCHEMAS IN {q(cfg.catalog)} LIKE '{cfg.schema_prefix}*'").collect()
