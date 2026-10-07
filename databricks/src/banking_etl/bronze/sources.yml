@@ -1,0 +1,56 @@
+# Bronze ingestion config for the legacy SQL Server `sample` database.
+#
+# Tables were discovered from data_sources/sample.bak (restored into SQL Server
+# 2022): INFORMATION_SCHEMA.TABLES lists 7 base tables in dbo; `sysdiagrams` is
+# SSMS diagram metadata and is excluded. `discover_tables()` re-checks this list
+# against the live source on every JDBC run.
+#
+# Each table lands in <catalog>.<schema_prefix>bronze.sqlserver_<name>.
+# mode:
+#   full         overwrite the bronze table with a full snapshot every run
+#   incremental  append only rows whose watermark_column is greater than the
+#                max already in bronze (first run = full load)
+
+connection:
+  # Resolution order per field: explicit override > Databricks secret scope > env var > default.
+  secret_scope: banking-etl-sqlserver
+  host:     {secret: jdbc-host,     env: SQLSERVER_HOST,     default: localhost}
+  port:     {secret: jdbc-port,     env: SQLSERVER_PORT,     default: "1433"}
+  database: {secret: jdbc-database, env: SQLSERVER_DATABASE, default: sample}
+  user:     {secret: jdbc-user,     env: SQLSERVER_USER}
+  password: {secret: jdbc-password, env: SQLSERVER_PASSWORD}
+  jdbc_options:
+    encrypt: "true"
+    trustServerCertificate: "true"
+  fetchsize: 10000
+
+source_system: sqlserver
+source_schema: dbo
+exclude_tables: [sysdiagrams]
+
+tables:
+  - name: branch
+    primary_key: [branch_id]
+    mode: full
+  - name: state
+    primary_key: [state_id]
+    mode: full
+  - name: city
+    primary_key: [city_id]
+    mode: full
+  - name: customer
+    primary_key: [customer_id]
+    mode: full
+  - name: account
+    primary_key: [account_id]
+    mode: full
+    # Accounts mutate (balance, status), so full snapshots; date_opened is the
+    # watermark if this table is ever switched to incremental.
+    watermark_column: date_opened
+  - name: transaction_db
+    primary_key: [transaction_id]
+    mode: incremental
+    # Insert-only ledger keyed by a monotonically increasing id.
+    watermark_column: transaction_id
+    partition_column: transaction_id
+    num_partitions: 4

@@ -1,0 +1,10 @@
+{"transaction_id": 1, "account_id": 1, "transaction_date": "2022-01-01 09:10:00", "amount": 100000, "transaction_type": "Deposit", "branch_id": 1}
+{"transaction_id": 2, "account_id": 2, "transaction_date": "2022-01-01 10:10:00", "amount": 1000000, "transaction_type": "Deposit", "branch_id": 1}
+{"transaction_id": 3, "account_id": 3, "transaction_date": "2022-01-11 08:30:00", "amount": 10000000, "transaction_type": "Transfer", "branch_id": 1}
+{"transaction_id": 4, "account_id": 3, "transaction_date": "2022-01-11 10:45:00", "amount": 1000000, "transaction_type": "Withdrawal", "branch_id": 1}
+{"transaction_id": 5, "account_id": 5, "transaction_date": "2022-02-21 11:10:00", "amount": 200000, "transaction_type": "Deposit", "branch_id": 1}
+{"transaction_id": 6, "account_id": 6, "transaction_date": "2022-02-21 13:10:00", "amount": 50000, "transaction_type": "Withdrawal", "branch_id": 1}
+{"transaction_id": 7, "account_id": 6, "transaction_date": "2022-02-21 14:00:00", "amount": 100000, "transaction_type": "Payment", "branch_id": 1}
+{"transaction_id": 8, "account_id": 7, "transaction_date": "2022-03-05 09:10:00", "amount": 5000000, "transaction_type": "Deposit", "branch_id": 1}
+{"transaction_id": 9, "account_id": 8, "transaction_date": "2022-03-15 10:40:00", "amount": 300000, "transaction_type": "Withdrawal", "branch_id": 2}
+{"transaction_id": 10, "account_id": 9, "transaction_date": "2022-03-24 12:10:00", "amount": 2000000, "transaction_type": "Deposit", "branch_id": 1}

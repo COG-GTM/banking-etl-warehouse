@@ -1,0 +1,20 @@
+{"customer_id": 1, "customer_name": "Shelly Juwita", "address": "Jl. Boulevard No. 31", "city_id": 2, "age": "25", "gender": "female", "email": "shelly@gmail.com"}
+{"customer_id": 2, "customer_name": "Bobi Rinaldo", "address": "Jl. Mangga No. 1", "city_id": 3, "age": "31", "gender": "male", "email": "Bobi@gmail.com"}
+{"customer_id": 3, "customer_name": "Adam Malik", "address": "Jl. Kincir Angin No. 50", "city_id": 5, "age": "23", "gender": "male", "email": "Adam@gmail.com"}
+{"customer_id": 4, "customer_name": "Susi Rahmawati", "address": "Jl. Kenanga No. 11", "city_id": 7, "age": "45", "gender": "female", "email": "Susi@gmail.com"}
+{"customer_id": 5, "customer_name": "Dimas Prasetyo", "address": "Jl. Niagara No. 69", "city_id": 8, "age": "32", "gender": "male", "email": "Dimas@gmail.com"}
+{"customer_id": 6, "customer_name": "Aji Pangestu", "address": "Jl. Sempurna No. 2", "city_id": 9, "age": "40", "gender": "male", "email": "Aji@gmail.com"}
+{"customer_id": 7, "customer_name": "Bunga Malika", "address": "Jl. Merak No. 10", "city_id": 33, "age": "27", "gender": "female", "email": "Bunga@gmail.com"}
+{"customer_id": 8, "customer_name": "Ria Addini", "address": "Jl. Arjuna No. 40", "city_id": 16, "age": "29", "gender": "female", "email": "Ria@gmail.com"}
+{"customer_id": 9, "customer_name": "Lisa Wulandari", "address": "Jl. Ampera No. 39", "city_id": 11, "age": "26", "gender": "female", "email": "Lisa@gmail.com"}
+{"customer_id": 10, "customer_name": "Rio Wijaya", "address": "Jl. Abdul Muis No. 70", "city_id": 13, "age": "52", "gender": "male", "email": "Rio@gmail.com"}
+{"customer_id": 11, "customer_name": "Ahmad Riyansah", "address": "Jl. Kecapi No. 5", "city_id": 48, "age": "27", "gender": "male", "email": "Ahmad@gmail.com"}
+{"customer_id": 12, "customer_name": "Mario Robert", "address": "Jl. Kebayoran No. 13", "city_id": 44, "age": "28", "gender": "male", "email": "Mario@gmail.com"}
+{"customer_id": 13, "customer_name": "Khansa Audya", "address": "Jl. Kedoya No. 50", "city_id": 39, "age": "32", "gender": "female", "email": "Khansa@gmail.com"}
+{"customer_id": 14, "customer_name": "Cintya Gabriela", "address": "Jl. Pintu Air No. 14", "city_id": 30, "age": "24", "gender": "female", "email": "Cintya@gmail.com"}
+{"customer_id": 15, "customer_name": "Ani Nuraini", "address": "Jl. Cimpedak No. 50", "city_id": 49, "age": "45", "gender": "female", "email": "Ani@gmail.com"}
+{"customer_id": 16, "customer_name": "Agung Mulyono", "address": "Jl. Daan Mogot No. 60", "city_id": 29, "age": "38", "gender": "male", "email": "Agung@gmail.com"}
+{"customer_id": 17, "customer_name": "Rian Wibowo", "address": "Jl. Batu No. 49", "city_id": 31, "age": "41", "gender": "male", "email": "Rian@gmail.com"}
+{"customer_id": 18, "customer_name": "Lutfi Aulia", "address": "Jl. Elang No. 2", "city_id": 32, "age": "30", "gender": "male", "email": "Lutfi@gmail.com"}
+{"customer_id": 19, "customer_name": "Malika Cantika", "address": "Jl. Imam Bonjol No. 30", "city_id": 43, "age": "38", "gender": "female", "email": "Malika@gmail.com"}
+{"customer_id": 20, "customer_name": "Ratna Sariasih", "address": "Jl. Jambore No. 41", "city_id": 52, "age": "53", "gender": "female", "email": "Ratna@gmail.com"}
