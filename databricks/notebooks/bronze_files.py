@@ -16,6 +16,7 @@
 
 dbutils.widgets.text("catalog", "migration_demo")
 dbutils.widgets.text("schema_prefix", "banking_mig_")
+dbutils.widgets.text("bronze_schema", "", "Bronze schema override (default: <prefix>bronze)")
 dbutils.widgets.text("landing_root", "", "Landing root (default: bronze landing volume)")
 dbutils.widgets.text("sources", "transaction_excel,transaction_csv")
 dbutils.widgets.text("src_root", "", "Path to databricks/src (default: ../src)")
@@ -36,9 +37,11 @@ loc = files.Locations(
     catalog=dbutils.widgets.get("catalog"),
     schema_prefix=dbutils.widgets.get("schema_prefix"),
     landing_root=dbutils.widgets.get("landing_root") or None,
+    schema=dbutils.widgets.get("bronze_schema") or None,
 )
 sources = [s.strip() for s in dbutils.widgets.get("sources").split(",") if s.strip()]
-files.ensure_objects(spark, loc)
+if loc.catalog:
+    files.ensure_objects(spark, loc)
 
 # COMMAND ----------
 

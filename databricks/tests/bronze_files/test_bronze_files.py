@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import itertools
+import json
 import shutil
 from datetime import datetime
 from decimal import Decimal
@@ -43,10 +44,24 @@ def excel_rows(path: Path) -> list[tuple]:
     return [(int(a), int(b), c, Decimal(d), e, int(f)) for a, b, c, d, e, f in rows]
 
 
+def as_excel_text(value) -> str | None:
+    """Cell text as the Databricks Excel reader returns it for a STRING hint (e.g. 1/18/24 13:10)."""
+    if isinstance(value, datetime):
+        return f"{value.month}/{value.day}/{value:%y} {value.hour}:{value:%M}"
+    return None if value is None else str(value)
+
+
 def stage_excel(spark, loc: Locations, xlsx: Path, name: str = "part-0") -> None:
-    """Parquet stand-in for the workbook: OSS Spark has no Excel reader."""
+    ws = openpyxl.load_workbook(xlsx, read_only=True).active
+    rows = [tuple(as_excel_text(v) for v in r) for r in list(ws.iter_rows(values_only=True))[1:]]
+    stage_excel_rows(spark, loc, rows, name)
+
+
+def stage_excel_rows(spark, loc: Locations, rows: list[tuple], name: str = "part-0") -> None:
+    """All-STRING parquet stand-in for the workbook: OSS Spark has no Excel reader."""
     out = Path(loc.source_path(EXCEL_SOURCE)) / name
-    spark.createDataFrame(excel_rows(xlsx), TRANSACTION_SCHEMA).coalesce(1).write.parquet(str(out))
+    schema = ", ".join(f"{c} STRING" for c in files.TRANSACTION_COLUMNS)
+    spark.createDataFrame(rows, schema).coalesce(1).write.parquet(str(out))
     # The file source treats each parquet file as a landed file; flatten into the folder.
     for f in out.glob("*.parquet"):
         f.rename(out.parent / f"{name}.parquet")
@@ -94,6 +109,9 @@ def test_autoloader_options_excel():
     assert opts["dataAddress"] == "Sheet1"
     assert opts["cloudFiles.schemaEvolutionMode"] == "none"
     assert opts["rescuedDataColumn"] == RESCUED_DATA_COLUMN
+    # Typed hints make the Excel reader fail the file on a bad cell; cast in to_bronze instead.
+    assert opts["cloudFiles.schemaHints"] == files.schema_hints(as_strings=True)
+    assert opts["cloudFiles.inferColumnTypes"] == "false"
 
 
 def test_bronze_table_schema(spark, loc, data_sources):
@@ -183,3 +201,74 @@ def test_malformed_values_land_in_rescued_data(spark, loc, tmp_path):
     assert rows[31].transaction_date == datetime(2024, 1, 22, 9, 0)
     assert rows[30].transaction_date is None
     assert "2024/01/22 09:00" in rows[30][RESCUED_DATA_COLUMN]
+
+
+def test_custom_landing_root_isolates_autoloader_state_per_target():
+    a = Locations(catalog="cat_a", landing_root="/Volumes/shared/landing")
+    b = Locations(catalog="cat_b", landing_root="/Volumes/shared/landing")
+    assert a.source_path(CSV_SOURCE) == b.source_path(CSV_SOURCE)
+    assert a.checkpoint_location(CSV_SOURCE) != b.checkpoint_location(CSV_SOURCE)
+    assert a.schema_location(CSV_SOURCE) != b.schema_location(CSV_SOURCE)
+    assert a.checkpoint_location(CSV_SOURCE) == (
+        "/Volumes/shared/landing/_autoloader/cat_a.banking_mig_bronze/checkpoints/file_transaction_csv"
+    )
+
+
+def test_shared_landing_root_fills_each_target(spark, tmp_path, data_sources):
+    root = str(tmp_path / "landing")
+    targets = [Locations(catalog=None, schema=f"t4_shared_{i}", landing_root=root) for i in (0, 1)]
+    stage_csv(targets[0], data_sources / "transaction_csv.csv")
+    for loc in targets:
+        spark.sql(f"CREATE DATABASE IF NOT EXISTS {loc.bronze_schema}")
+        assert run(spark, loc, ["transaction_csv"]) == {loc.table_name(CSV_SOURCE): 12}
+
+
+def test_schema_override():
+    loc = Locations(schema="banking_mig_t4")
+    assert loc.table_name(EXCEL_SOURCE) == "migration_demo.banking_mig_t4.file_transaction_excel"
+    assert loc.landing == "/Volumes/migration_demo/banking_mig_t4/landing"
+
+
+def test_empty_source_list_ingests_nothing(spark, loc, data_sources):
+    stage_csv(loc, data_sources / "transaction_csv.csv")
+    assert run(spark, loc, []) == {}
+    assert not spark.catalog.tableExists(loc.table_name(CSV_SOURCE))
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"catalog": "x; DROP SCHEMA y"},
+        {"schema_prefix": "a`b_"},
+        {"schema": "s.t"},
+    ],
+)
+def test_identifiers_are_validated(kwargs):
+    with pytest.raises(ValueError):
+        Locations(**kwargs)
+
+
+def test_excel_malformed_cells_land_in_rescued_data(spark, loc):
+    stage_excel_rows(
+        spark,
+        loc,
+        [
+            ("40", "1", "2024-01-22 9:00:00", "100", "Deposit", "1"),
+            ("41", "1", "not a date", "200", "Deposit", "1"),
+            ("42", "x", "1/22/24 10:00", "lots", "Payment", "2"),
+        ],
+    )
+    assert run(spark, loc, ["transaction_excel"]) == {loc.table_name(EXCEL_SOURCE): 3}
+    rows = {r.transaction_id: r for r in spark.table(loc.table_name(EXCEL_SOURCE)).collect()}
+    assert rows[40].transaction_date == datetime(2024, 1, 22, 9, 0)
+    assert rows[40][RESCUED_DATA_COLUMN] is None
+    assert rows[41].transaction_date is None
+    assert json.loads(rows[41][RESCUED_DATA_COLUMN]) == {
+        "transaction_date": "not a date",
+        "_file_path": rows[41][SOURCE_FILE_COLUMN],
+    }
+    assert (rows[42].account_id, rows[42].amount) == (None, None)
+    assert rows[42].transaction_date == datetime(2024, 1, 22, 10, 0)
+    rescued = json.loads(rows[42][RESCUED_DATA_COLUMN])
+    assert (rescued["account_id"], rescued["amount"]) == ("x", "lots")
+    assert "transaction_date" not in rescued
