@@ -160,8 +160,16 @@ def test_bronze_tasks_retry_for_auto_loader_restarts(tasks: dict[str, dict]) -> 
 
 def test_job_level_timeout_concurrency_and_schedule(job: dict, tasks: dict[str, dict]) -> None:
     assert job["max_concurrent_runs"] == 1
-    assert job["timeout_seconds"] >= max(t["timeout_seconds"] for t in tasks.values())
     assert job["schedule"]["pause_status"] == "PAUSED"
+
+
+def test_job_timeout_covers_critical_path_of_task_timeouts(job: dict, tasks: dict[str, dict], graph) -> None:
+    finish: dict[str, int] = {}
+    for key in TopologicalSorter(graph).static_order():
+        finish[key] = tasks[key]["timeout_seconds"] + max((finish[d] for d in graph[key]), default=0)
+    critical_path = max(finish.values())
+    assert critical_path == 4.5 * 3600
+    assert job["timeout_seconds"] >= critical_path
 
 
 def test_failure_notifications(bundle_doc: dict, job: dict) -> None:

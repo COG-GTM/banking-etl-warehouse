@@ -29,7 +29,8 @@ resources:
         layer: orchestration
         legacy_source: talend
       max_concurrent_runs: 1
-      timeout_seconds: 10800
+      # >= critical path of per-task timeouts (1h bronze + 4x30min + 1h fact = 4.5h) plus retry headroom.
+      timeout_seconds: 21600
       queue:
         enabled: true
 

@@ -46,7 +46,7 @@ Notes on the design:
   Override them per run with `databricks jobs run-now --json '{"job_id": ..., "job_parameters": {...}}'`.
 - **Failure notifications.** `email_notifications.on_failure` and `on_duration_warning_threshold_exceeded` go to the
   bundle variable `banking_etl_alert_email` (placeholder default; set it per target or with
-  `--var banking_etl_alert_email=...`). A health rule warns when a run exceeds 90 min. The job timeout is 3 h.
+  `--var banking_etl_alert_email=...`). A health rule warns when a run exceeds 90 min. The job timeout is 6 h: the critical path of per-task timeouts is 4.5 h, plus headroom for retries.
   Skipped and canceled runs don't alert.
 - **Concurrency and schedule.** `max_concurrent_runs: 1` with queueing, so overlapping triggers wait instead of
   racing on the same Delta tables. A daily 02:00 UTC schedule is declared but `PAUSED`; the legacy jobs had no
