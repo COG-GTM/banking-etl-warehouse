@@ -25,6 +25,7 @@ from banking_etl.validation.tables import Schemas, ensure_schemas, write_table
 
 RESULTS_TABLE = "reconciliation_results"
 CUTOVER_LOG_TABLE = "cutover_log"
+SHARED_LAYER_SUFFIXES = frozenset({"bronze", "silver", "gold"})  # never used as the dry-run work schema
 DEFAULT_HISTORICAL_CUTOFF = "2024-01-22 00:00:00"  # final CSV batch (22-01-2024) arrives as the "final incremental"
 
 TALEND_DECOMMISSION_CHECKLIST = [
@@ -77,13 +78,21 @@ class _Log:
 
     def step(self, name: str, fn: Callable[[], tuple[str, dict]]):
         started = _now()
-        status, details = fn()
+        try:
+            status, details = fn()
+        except Exception as exc:
+            status, details = "ERROR", {"error": f"{type(exc).__name__}: {exc}"}
+            self._append(name, status, details, started)
+            raise
+        self._append(name, status, details, started)
+        return status, details
+
+    def _append(self, name, status, details, started):
         self.report.steps.append({
             "cutover_id": self.report.cutover_id, "step_no": len(self.report.steps) + 1, "step": name,
             "status": status, "dry_run": self.report.dry_run, "started_at": started, "finished_at": _now(),
             "details": json.dumps(details, default=str, sort_keys=True),
         })
-        return status, details
 
 
 def point_consumers(spark: SparkSession, names: Schemas, at: str) -> None:
@@ -104,6 +113,7 @@ def consumers_target(spark: SparkSession, names: Schemas) -> str:
 
 def seed(spark: SparkSession, names: Schemas, fixtures_path: str) -> dict:
     """Materialise source snapshots as ``bronze_*`` tables and legacy DWH snapshots as ``legacy_*``."""
+    manifest = fixtures.verify_manifest(fixtures_path)
     counts = {}
     for name, df in fixtures.load_sources(spark, fixtures_path).items():
         write_table(df, names.work_table(f"bronze_{name}"))
@@ -114,7 +124,12 @@ def seed(spark: SparkSession, names: Schemas, fixtures_path: str) -> dict:
     for name, df in fixtures.load_legacy_procs(spark, fixtures_path).items():
         write_table(df, names.work_table(f"legacy_proc_{name.lower()}"))
     write_table(fixtures.load_talend_rejects(spark, fixtures_path), names.work_table("legacy_talend_rejects"))
-    return counts
+    expected = {f"legacy_{s.gold}": manifest["row_counts"][f"dwh/{s.legacy}"] for s in specs.GOLD_TABLES}
+    expected.update({f"bronze_{n}": manifest["row_counts"][f"source/{n}"] for n in specs.SOURCE_SCHEMAS})
+    drift = {k: (v, counts.get(k)) for k, v in expected.items() if counts.get(k) != v}
+    if drift:
+        raise fixtures.FixtureIntegrityError(f"seeded row counts differ from manifest.json: {drift}")
+    return {**counts, "manifest_verified": True}
 
 
 def _sources(spark: SparkSession, names: Schemas) -> dict[str, DataFrame]:
@@ -148,17 +163,21 @@ def freeze(spark: SparkSession, names: Schemas) -> dict:
 
 
 def final_incremental(spark: SparkSession, names: Schemas) -> dict:
-    """Refresh dims (SCD-1 overwrite) and MERGE fact rows newer than the Delta watermark."""
+    """Refresh dims (SCD-1 overwrite) and MERGE every fact row whose ``transaction_id`` is not in Delta yet.
+
+    Eligibility is by key, not by business timestamp, so late-arriving rows (older ``transaction_date``,
+    new id) are still picked up; the MERGE is idempotent.
+    """
     src = _sources(spark, names)
     gold, rejects = reference_transform.build_gold(src)
     for name in ("dim_branch", "dim_account", "dim_customer"):
         write_table(gold[name], names.work_table(name))
     fact_tbl = names.work_table("fact_transaction")
     watermark = spark.table(fact_tbl).agg(F.max("transaction_date")).first()[0]
-    increment = gold["fact_transaction"]
-    if watermark is not None:
-        increment = increment.filter(F.col("transaction_date") > F.lit(watermark))
+    existing = spark.table(fact_tbl).select("transaction_id")
+    increment = gold["fact_transaction"].join(existing, "transaction_id", "left_anti")
     n_incr = increment.count()
+    n_late = increment.filter(F.col("transaction_date") <= F.lit(watermark)).count() if watermark is not None else 0
     increment.createOrReplaceTempView("t10_final_increment")
     cols = specs.FACT_TRANSACTION.gold_columns
     spark.sql(
@@ -166,7 +185,7 @@ def final_incremental(spark: SparkSession, names: Schemas) -> dict:
         f"WHEN NOT MATCHED THEN INSERT ({', '.join(cols)}) VALUES ({', '.join('s.' + c for c in cols)})"
     )
     write_table(rejects, names.work_table("fact_transaction_rejects"))
-    return {"delta_watermark_before": watermark, "rows_in_increment": n_incr,
+    return {"delta_watermark_before": watermark, "rows_in_increment": n_incr, "late_arrivals": n_late,
             "fact_rows_after": spark.table(fact_tbl).count(), "rejects": rejects.count()}
 
 
@@ -206,9 +225,30 @@ def dry_run_cutover(
     before_gate: Callable[[SparkSession, Schemas], None] | None = None,
 ) -> CutoverReport:
     """Run every runbook step. ``before_gate`` lets tests corrupt gold to exercise rollback."""
+    if names.work_suffix in SHARED_LAYER_SUFFIXES:
+        raise ValueError(f"dry_run_cutover overwrites tables in the work schema; refusing shared schema {names.work}")
     report = CutoverReport(cutover_id or uuid.uuid4().hex, dry_run)
     log = _Log(report)
     ensure_schemas(spark, names.work, names.ops)
+    try:
+        _run_steps(spark, names, fixtures_path, historical_cutoff, report, log, before_gate)
+    finally:
+        _write_log(spark, names, report)
+    return report
+
+
+def _write_log(spark: SparkSession, names: Schemas, report: CutoverReport) -> None:
+    if report.steps:
+        write_table(spark.createDataFrame([tuple(s[f.name] for f in LOG_SCHEMA) for s in report.steps], LOG_SCHEMA),
+                    names.ops_table(CUTOVER_LOG_TABLE), mode="append")
+
+
+def _smoke_drift(smoke: dict) -> dict:
+    return {t: c for t, c in smoke.items() if c["consumer"] != c["legacy"]}
+
+
+def _run_steps(spark, names, fixtures_path, historical_cutoff, report, log, before_gate) -> None:
+    dry_run = report.dry_run
 
     log.step("seed_legacy_and_sources", lambda: ("OK", seed(spark, names, fixtures_path)))
     point_consumers(spark, names, "legacy")
@@ -226,36 +266,50 @@ def dry_run_cutover(
         return ("GREEN" if rec.green else "RED"), rec.summary()
 
     status, _ = log.step("reconcile_gate", gate)
-    if status == "GREEN":
-        def switch():
-            point_consumers(spark, names, "gold")
-            report.consumers_on = consumers_target(spark, names)
-            return "OK", {"consumers_on": report.consumers_on, "smoke": _consumer_smoke(spark, names)}
-        log.step("switch_consumers", switch)
 
-        def rehearse():
-            point_consumers(spark, names, "legacy")
-            on_legacy = consumers_target(spark, names)
-            smoke_legacy = _consumer_smoke(spark, names)
-            point_consumers(spark, names, "gold")
-            report.consumers_on = consumers_target(spark, names)
-            ok = on_legacy == "legacy" and report.consumers_on == "gold"
-            return ("OK" if ok else "FAILED"), {"rolled_back_to": on_legacy, "smoke_on_legacy": smoke_legacy,
-                                                "re_switched_to": report.consumers_on}
-        log.step("rollback_rehearsal", rehearse)
-        log.step("talend_decommission",
-                 lambda: ("SKIPPED_DRY_RUN" if dry_run else "PENDING_MANUAL",
-                          {"checklist": TALEND_DECOMMISSION_CHECKLIST}))
-    else:
-        def rollback():
-            point_consumers(spark, names, "legacy")
-            report.consumers_on = consumers_target(spark, names)
-            return "ROLLED_BACK", {"consumers_on": report.consumers_on,
-                                   "failed_checks": [(r["table_name"], r["check_type"], r["check_name"])
-                                                     for r in report.reconciliation.failed]}
-        log.step("rollback", rollback)
+    def rollback(reason: str, failed_checks=None):
+        point_consumers(spark, names, "legacy")
+        report.consumers_on = consumers_target(spark, names)
+        ok = report.consumers_on == "legacy"
+        return ("ROLLED_BACK" if ok else "ROLLBACK_FAILED"), {
+            "reason": reason, "consumers_on": report.consumers_on, "failed_checks": failed_checks or []}
+
+    if status != "GREEN":
+        log.step("rollback", lambda: rollback("reconcile gate red", [
+            (r["table_name"], r["check_type"], r["check_name"]) for r in report.reconciliation.failed]))
         log.step("talend_decommission", lambda: ("BLOCKED", {"reason": "reconcile gate red; Talend stays live"}))
+        return
 
-    write_table(spark.createDataFrame([tuple(s[f.name] for f in LOG_SCHEMA) for s in report.steps], LOG_SCHEMA),
-                names.ops_table(CUTOVER_LOG_TABLE), mode="append")
-    return report
+    def switch():
+        point_consumers(spark, names, "gold")
+        report.consumers_on = consumers_target(spark, names)
+        smoke = _consumer_smoke(spark, names)
+        drift = _smoke_drift(smoke)
+        ok = not drift and report.consumers_on == "gold"
+        return ("OK" if ok else "FAILED"), {"consumers_on": report.consumers_on, "smoke": smoke, "smoke_drift": drift}
+
+    def rehearse():
+        point_consumers(spark, names, "legacy")
+        on_legacy = consumers_target(spark, names)
+        smoke_legacy = _consumer_smoke(spark, names)
+        point_consumers(spark, names, "gold")
+        report.consumers_on = consumers_target(spark, names)
+        ok = on_legacy == "legacy" and report.consumers_on == "gold" and not _smoke_drift(smoke_legacy)
+        return ("OK" if ok else "FAILED"), {"rolled_back_to": on_legacy, "smoke_on_legacy": smoke_legacy,
+                                            "re_switched_to": report.consumers_on}
+
+    failure = None
+    try:
+        if log.step("switch_consumers", switch)[0] != "OK":
+            failure = "consumer smoke test failed after switch"
+        elif log.step("rollback_rehearsal", rehearse)[0] != "OK":
+            failure = "rollback rehearsal failed"
+    except Exception as exc:  # noqa: BLE001 - any failure mid-switch must restore every consumer view
+        failure = f"switch raised {type(exc).__name__}: {exc}"
+    if failure:
+        log.step("rollback", lambda: rollback(failure))
+        log.step("talend_decommission", lambda: ("BLOCKED", {"reason": failure}))
+        return
+    log.step("talend_decommission",
+             lambda: ("SKIPPED_DRY_RUN" if dry_run else "PENDING_MANUAL",
+                      {"checklist": TALEND_DECOMMISSION_CHECKLIST}))

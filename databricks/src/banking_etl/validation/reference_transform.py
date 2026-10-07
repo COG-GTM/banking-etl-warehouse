@@ -56,17 +56,21 @@ def transaction_candidates(src: dict[str, DataFrame]) -> DataFrame:
     cols = ["transaction_id", "account_id", "transaction_date", "amount", "transaction_type", "branch_id"]
     csv = src["file_transaction_csv"].withColumn(
         "transaction_date", F.call_function("try_to_timestamp", F.col("transaction_date"), F.lit(CSV_DATE_FORMAT)))
+    def tagged(df: DataFrame, source: str) -> DataFrame:
+        # Talend's tUniqRow keeps the first occurrence in read order, so capture the read order per source.
+        return df.select(*cols).withColumn("source", F.lit(source)).withColumn("_ord", F.monotonically_increasing_id())
+
     union = (
-        src["sqlserver_transaction_db"].select(*cols).withColumn("source", F.lit("sqlserver"))
-        .unionByName(src["file_transaction_excel"].select(*cols).withColumn("source", F.lit("excel")))
-        .unionByName(csv.select(*cols).withColumn("source", F.lit("csv")))
+        tagged(src["sqlserver_transaction_db"], "sqlserver")
+        .unionByName(tagged(src["file_transaction_excel"], "excel"))
+        .unionByName(tagged(csv, "csv"))
     )
     priority = F.create_map(*[x for k, v in SOURCE_PRIORITY.items() for x in (F.lit(k), F.lit(v))])
-    w = Window.partitionBy("transaction_id").orderBy(priority[F.col("source")])
+    w = Window.partitionBy("transaction_id").orderBy(priority[F.col("source")], F.col("_ord"))
     return (
         union.withColumn("_rn", F.row_number().over(w))
         .filter("_rn = 1")
-        .drop("_rn")
+        .drop("_rn", "_ord")
         .withColumn("amount", F.col("amount").cast(specs.MONEY))
     )
 

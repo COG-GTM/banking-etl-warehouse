@@ -120,7 +120,7 @@ def canonical(col: SparkColumn, dtype: T.DataType) -> SparkColumn:
     if isinstance(dtype, T.DecimalType):
         c = col.cast(T.DecimalType(38, 4)).cast("string")
     elif isinstance(dtype, T.TimestampType):
-        c = F.date_format(col, "yyyy-MM-dd HH:mm:ss.SSS")
+        c = F.date_format(col, "yyyy-MM-dd HH:mm:ss.SSSSSS")
     elif isinstance(dtype, T.DateType):
         c = F.date_format(col, "yyyy-MM-dd")
     else:
@@ -150,8 +150,9 @@ def _schema_check(rep, spec, target_raw: DataFrame):
     expected = {c.gold: c.dtype.simpleString() for c in spec.columns}
     type_diffs = {c: {"expected": expected[c], "actual": actual[c]}
                   for c in expected if c in actual and actual[c] != expected[c]}
-    rep.check(spec.gold, "schema", "columns_present", not missing, legacy=spec.gold_columns,
-              target=list(actual), mismatch_count=len(missing),
+    rep.check(spec.gold, "schema", "columns_and_types", not missing and not extra and not type_diffs,
+              legacy=spec.gold_columns, target=list(actual),
+              mismatch_count=len(missing) + len(extra) + len(type_diffs),
               details={"missing": missing, "extra": extra, "type_differences": type_diffs})
 
 

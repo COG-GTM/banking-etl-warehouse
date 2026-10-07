@@ -84,9 +84,23 @@ def test_fk_orphans_detected(spark, built, legacy):
 def test_schema_drift_and_missing_table(spark, built, legacy):
     gold = dict(built[0])
     gold["dim_branch"] = gold["dim_branch"].drop("branch_location")
+    gold["dim_account"] = gold["dim_account"].withColumn("extra_col", F.lit(1))
+    gold["fact_transaction"] = gold["fact_transaction"].withColumn("amount", F.col("amount").cast("double"))
     del gold["dim_customer"]
     rep = reconcile(spark, legacy, gold, run_label="test-schema")
-    assert {r["table_name"] for r in _failed(rep, "schema")} == {"dim_branch", "dim_customer"}
+    assert {r["table_name"] for r in _failed(rep, "schema")} == {
+        "dim_branch", "dim_customer", "dim_account", "fact_transaction"}
+
+
+def test_sub_millisecond_timestamp_change_detected(spark, built, legacy):
+    gold = dict(built[0])
+    gold["fact_transaction"] = gold["fact_transaction"].withColumn(
+        "transaction_date",
+        F.when(F.col("transaction_id") == 5, F.col("transaction_date") + F.expr("INTERVAL 1 MICROSECOND"))
+        .otherwise(F.col("transaction_date")))
+    rep = reconcile(spark, legacy, gold, run_label="test-micro")
+    diffs = [(m["pk_value"], m["column_name"]) for m in rep.mismatches if m["check_type"] == "value_mismatch"]
+    assert diffs == [("5", "transaction_date")]
 
 
 def test_proc_and_reject_parity_failures(spark, built, legacy):

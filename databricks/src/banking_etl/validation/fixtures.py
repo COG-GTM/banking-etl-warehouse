@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from pathlib import Path
 
 from pyspark.sql import DataFrame, SparkSession
@@ -19,6 +21,26 @@ CSV_OPTIONS = {
     "dateFormat": "yyyy-MM-dd",
     "encoding": "UTF-8",
 }
+
+
+class FixtureIntegrityError(RuntimeError):
+    pass
+
+
+def verify_manifest(base: str = DEFAULT_FIXTURES) -> dict:
+    """Check every snapshot file against ``manifest.json`` (SHA-256) before it is used as the baseline.
+
+    ``base`` must be a filesystem path (local checkout or a ``/Volumes/...`` FUSE path).
+    """
+    root = Path(base)
+    manifest = json.loads((root / "manifest.json").read_text())
+    bad = {rel: "missing" for rel in manifest["sha256"] if not (root / rel).is_file()}
+    for rel, digest in manifest["sha256"].items():
+        if rel not in bad and hashlib.sha256((root / rel).read_bytes()).hexdigest() != digest:
+            bad[rel] = "sha256 mismatch"
+    if bad:
+        raise FixtureIntegrityError(f"legacy baseline at {base} does not match manifest.json: {bad}")
+    return manifest
 
 
 def _path(base: str, rel: str) -> str:

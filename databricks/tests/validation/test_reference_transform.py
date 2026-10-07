@@ -47,3 +47,15 @@ def test_dedup_prefers_sqlserver_then_excel_then_csv(spark):
     assert out == {1: (1, "sqlserver", "2024-01-01 00:00:00"),
                    2: (2, "excel", "2024-01-01 00:00:00"),
                    3: (3, "csv", "2024-01-05 10:11:12")}
+
+
+def test_same_source_duplicates_keep_first_occurrence(spark):
+    cols = ["transaction_id", "account_id", "transaction_date", "amount", "transaction_type", "branch_id"]
+    empty = spark.createDataFrame([], "transaction_id int, account_id int, transaction_date timestamp, "
+                                      "amount double, transaction_type string, branch_id int")
+    csv_rows = [(26, 1, "05-01-2024 10:00:00", 100.0, "Deposit", 1),
+                (26, 2, "05-01-2024 10:00:00", 200.0, "Deposit", 1)]
+    src = {"sqlserver_transaction_db": empty, "file_transaction_excel": empty,
+           "file_transaction_csv": spark.createDataFrame(csv_rows, cols).coalesce(1)}
+    rows = reference_transform.transaction_candidates(src).collect()
+    assert [(r.transaction_id, r.account_id, float(r.amount)) for r in rows] == [(26, 1, 100.0)]

@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 from pyspark.sql import DataFrame, SparkSession
+
+_IDENT = re.compile(r"[A-Za-z0-9_]+")
 
 
 @dataclass(frozen=True)
@@ -18,6 +21,15 @@ class Schemas:
     schema_prefix: str = "banking_mig_"
     work_suffix: str = "t10"
     ops_suffix: str = "ops"
+
+    def __post_init__(self):
+        # Names are interpolated into SQL (CREATE SCHEMA / VIEW / MERGE), so only plain identifiers are allowed.
+        for field_name in ("catalog", "schema_prefix", "work_suffix", "ops_suffix"):
+            value = getattr(self, field_name)
+            if value is not None and not _IDENT.fullmatch(value):
+                raise ValueError(f"Schemas.{field_name}={value!r} is not a plain identifier [A-Za-z0-9_]")
+        if self.work_suffix == self.ops_suffix:
+            raise ValueError("work and ops schemas must differ")
 
     @property
     def work(self) -> str:
