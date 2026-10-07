@@ -1,0 +1,39 @@
+{
+  "dwh_collation": "SQL_Latin1_General_CP1_CI_AS",
+  "generated_by": "banking_etl.validation.legacy_baseline",
+  "row_counts": {
+    "dwh/DimAccount": 21,
+    "dwh/DimBranch": 5,
+    "dwh/DimCustomer": 20,
+    "dwh/FactTransaction": 22,
+    "procs/sp_BalancePerCustomer": 46,
+    "procs/sp_DailyTransaction": 11,
+    "source/file_transaction_csv": 12,
+    "source/file_transaction_excel": 7,
+    "source/sqlserver_account": 21,
+    "source/sqlserver_branch": 5,
+    "source/sqlserver_city": 52,
+    "source/sqlserver_customer": 20,
+    "source/sqlserver_state": 9,
+    "source/sqlserver_transaction_db": 10,
+    "talend_rejects": 3
+  },
+  "sha256": {
+    "dwh/DimAccount.csv": "56e23496a10e3fad906657f70117cef8c69e4bbe312ec8c00bf0c37935c78576",
+    "dwh/DimBranch.csv": "280c818a9541fdebcdd6fc4814554209f8a121b75b0d90ce8f2a34edaad3ea7c",
+    "dwh/DimCustomer.csv": "5d8602157e8259b3fa771183a81c4452e5e5cf4b616ca7de869bbaaa04a7e90d",
+    "dwh/FactTransaction.csv": "1665a90fdb58b77ab320277ce411ab4f4dacc9aa2274a417dcd8299d418ff491",
+    "procs/sp_BalancePerCustomer.csv": "3f6e379f97dad53aa2f9e00d44663b258fcb19c6723a9c2bede0cf67a3273b4f",
+    "procs/sp_DailyTransaction.csv": "10e9561041842f73d2082f7b2b7ca7760f2136b23bda9cef4e7253b88965d20e",
+    "source/file_transaction_csv.csv": "964985045eb47925fcba8ac57e4dfd1fdc0f03edfa86a268de564e437aa9a235",
+    "source/file_transaction_excel.csv": "e10dc36a810f65c7f17e1a38704007956914594118a284f95a91c6d658ea52c9",
+    "source/sqlserver_account.csv": "bc32803dfde857578b7aa269cdaafd93f0a96c81b06f82ea9cd564e84b06b8e2",
+    "source/sqlserver_branch.csv": "4863cc78fbb7cbfd9503f74066e3524443a8c33424d62f72b2a92a29b11c7e7b",
+    "source/sqlserver_city.csv": "740a856238d410ad1bf9741fb76122a3cea9ee1e0a6f11d2f357fd5bf4332ced",
+    "source/sqlserver_customer.csv": "b88c0d58489954df3cf7adcaf025b6ce9487828d0d3169d1dd0e31f9a59571d9",
+    "source/sqlserver_state.csv": "d0500106782162772d1921417b6794e485941b514512ff5db031d64bf6e15d59",
+    "source/sqlserver_transaction_db.csv": "8c888d01e29d6b4a6deab4e2f05087b825f92b417d4ab1a20c6a90b5b0ecf5e7",
+    "talend_rejects.csv": "63405e6079fa362a2d09dd75873a912720a279690c08558e750a7e47ab2287b6"
+  },
+  "sql_server_version": "Microsoft SQL Server 2022 (RTM-CU27) (KB5104824) - 16.0.4295.3 (X64) "
+}
