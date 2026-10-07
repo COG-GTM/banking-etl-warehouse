@@ -20,6 +20,7 @@ Both targets get the same columns, types, NOT NULL, comments, ``CHECK`` constrai
 from __future__ import annotations
 
 import argparse
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, Sequence
@@ -27,6 +28,7 @@ from typing import Iterable, Sequence
 DEFAULT_CATALOG = "migration_demo"
 DEFAULT_SCHEMA_PREFIX = "banking_mig_"
 LAYERS = ("silver", "gold")
+_IDENTIFIER = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 
 TABLE_PROPERTIES: dict[str, str] = {
     "delta.enableChangeDataFeed": "true",
@@ -216,8 +218,16 @@ def get_table(layer: str, name: str) -> Table:
     raise KeyError(f"{layer}.{name}")
 
 
+def _identifier(value: str, what: str) -> str:
+    if not _IDENTIFIER.fullmatch(value):
+        raise ValueError(f"invalid {what} {value!r}: expected [A-Za-z_][A-Za-z0-9_]*")
+    return value
+
+
 def schema_name(layer: str, catalog: str | None = DEFAULT_CATALOG, schema_prefix: str = DEFAULT_SCHEMA_PREFIX) -> str:
-    schema = f"{schema_prefix}{layer}"
+    schema = _identifier(f"{schema_prefix}{layer}", "schema name")
+    if catalog:
+        _identifier(catalog, "catalog")
     return f"{catalog}.{schema}" if catalog else schema
 
 
@@ -291,8 +301,9 @@ def render_statements(
     CHECK constraints are returned as plain ``ALTER TABLE ... ADD CONSTRAINT``; use
     :func:`apply_star_schema` for an idempotent apply.
     """
+    tables = tables_for(layers)
     stmts = [render_create_schema(layer, catalog, schema_prefix) for layer in layers] if create_schemas else []
-    for t in tables_for(layers):
+    for t in tables:
         stmts.append(render_create_table(t, catalog, schema_prefix, unity_catalog))
         stmts.extend(render_check_constraints(t, catalog, schema_prefix))
     return stmts
@@ -317,11 +328,12 @@ def apply_star_schema(
     Existing tables are left as-is (``CREATE TABLE IF NOT EXISTS``); missing CHECK
     constraints are added. Use ``unity_catalog=False`` with ``catalog=None`` locally.
     """
+    tables = tables_for(layers)
     if create_schemas:
         for layer in layers:
             spark.sql(render_create_schema(layer, catalog, schema_prefix))
     created = []
-    for t in tables_for(layers):
+    for t in tables:
         fqn = qualified_name(t, catalog, schema_prefix)
         spark.sql(render_create_table(t, catalog, schema_prefix, unity_catalog))
         existing = _existing_check_constraints(spark, fqn)

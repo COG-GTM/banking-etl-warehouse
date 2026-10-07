@@ -169,6 +169,26 @@ def test_render_is_parametrised_and_ordered():
         ddl.tables_for(["platinum"])
 
 
+
+@pytest.mark.parametrize("catalog, prefix", [("cat; DROP TABLE x", "p_"), ("cat", "p_`x"), ("cat", "p.q_"), ("", "1p_")])
+def test_unsafe_identifiers_are_rejected(catalog, prefix):
+    with pytest.raises(ValueError, match="invalid"):
+        ddl.render_statements(catalog=catalog or None, schema_prefix=prefix)
+
+
+def test_unknown_layer_fails_before_any_sql_runs():
+    class RecordingSpark:
+        def __init__(self):
+            self.statements = []
+
+        def sql(self, stmt):
+            self.statements.append(stmt)
+
+    spark = RecordingSpark()
+    with pytest.raises(ValueError, match="unknown layers"):
+        ddl.apply_star_schema(spark, layers=("silver", "platinum"))
+    assert spark.statements == []
+
 def test_generated_sql_files_are_in_sync():
     expected = ddl.render_sql_files()
     assert sorted(p.name for p in SQL_DIR.glob("*.sql")) == sorted(expected)
