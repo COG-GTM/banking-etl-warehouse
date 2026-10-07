@@ -1,0 +1,45 @@
+# Databricks Asset Bundle for the banking ETL migration (Talend + SQL Server -> Databricks).
+# Validate with `databricks bundle validate -t dev`. Other tickets add jobs under resources/.
+bundle:
+  name: banking_etl_migration
+
+include:
+  - resources/*.yml
+
+variables:
+  catalog:
+    description: Unity Catalog catalog that holds every banking ETL schema.
+    default: migration_demo
+  schema_prefix:
+    description: Prefix for the medallion schemas (<prefix>bronze, <prefix>silver, <prefix>gold, <prefix>ops).
+    default: banking_mig_
+  landing_volume:
+    description: Managed volume in the bronze schema that receives raw source files.
+    default: landing
+  grant_principal:
+    description: Account-level principal granted read access (workspace-local groups are rejected by UC).
+    default: account users
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://dbc-8bc9474f-40ae.cloud.databricks.com
+
+resources:
+  jobs:
+    uc_setup:
+      name: banking_etl_uc_setup
+      description: Idempotent Unity Catalog setup (schemas, landing volume, grants) for ${var.catalog}.${var.schema_prefix}*.
+      max_concurrent_runs: 1
+      tasks:
+        - task_key: setup_unity_catalog
+          # No cluster spec: runs on serverless (the dev workspace rejects classic job clusters).
+          notebook_task:
+            notebook_path: ./setup/setup_unity_catalog_notebook.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema_prefix: ${var.schema_prefix}
+              landing_volume: ${var.landing_volume}
+              grant_principal: ${var.grant_principal}
