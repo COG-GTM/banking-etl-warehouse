@@ -1,0 +1,4 @@
+job,transaction_id,account_id,branch_id,source,reason
+Load_FactTransaction,23,22,1,csv,FK_VIOLATION
+Load_FactTransaction,24,23,1,csv,FK_VIOLATION
+Load_FactTransaction,25,23,1,csv,FK_VIOLATION
