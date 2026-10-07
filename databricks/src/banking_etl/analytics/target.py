@@ -6,6 +6,7 @@ two-part names in the Spark session catalog.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 DEFAULT_CATALOG = "migration_demo"
@@ -15,6 +16,9 @@ GOLD_DIM_ACCOUNT = "dim_account"
 GOLD_DIM_CUSTOMER = "dim_customer"
 GOLD_FACT_TRANSACTION = "fact_transaction"
 GOLD_TABLES = (GOLD_FACT_TRANSACTION, GOLD_DIM_ACCOUNT, GOLD_DIM_CUSTOMER)
+
+_IDENTIFIER = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+_IDENTIFIER_PART = re.compile(r"[A-Za-z0-9_]*")
 
 
 @dataclass(frozen=True)
@@ -30,6 +34,15 @@ class AnalyticsTarget:
     schema_prefix: str = DEFAULT_SCHEMA_PREFIX
     layer: str = "gold"
     name_prefix: str = ""
+
+    def __post_init__(self) -> None:
+        # Values come from job parameters and are spliced into SQL identifiers: allow plain names only.
+        if self.catalog is not None and not _IDENTIFIER.fullmatch(self.catalog):
+            raise ValueError(f"invalid catalog name: {self.catalog!r}")
+        if not _IDENTIFIER.fullmatch(f"{self.schema_prefix}{self.layer}"):
+            raise ValueError(f"invalid schema name: {self.schema_prefix!r} + {self.layer!r}")
+        if not _IDENTIFIER_PART.fullmatch(self.name_prefix):
+            raise ValueError(f"invalid name prefix: {self.name_prefix!r}")
 
     @property
     def schema(self) -> str:

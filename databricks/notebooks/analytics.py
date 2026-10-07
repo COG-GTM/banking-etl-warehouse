@@ -70,6 +70,8 @@ print(json.dumps(report, indent=1, default=str))
 # COMMAND ----------
 
 failures = []
+if mode == "parity" and ticket_layer == "gold":
+    raise ValueError("ticket_layer must not be 'gold': parity mode overwrites the seeded tables")
 if mode == "parity":
     report["parity"] = {}
     for scenario in SCENARIOS:

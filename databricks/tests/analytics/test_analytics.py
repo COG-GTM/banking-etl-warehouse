@@ -179,3 +179,24 @@ def test_notebook_is_databricks_source():
     source = (DATABRICKS_ROOT / "notebooks" / "analytics.py").read_text(encoding="utf-8")
     assert source.startswith("# Databricks notebook source")
     ast.parse(source)
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"catalog": "migration_demo; DROP TABLE x"},
+        {"catalog": "a.b"},
+        {"schema_prefix": "banking_mig_`x"},
+        {"layer": "gold --"},
+        {"name_prefix": "edge.x_"},
+        {"schema_prefix": "", "layer": ""},
+    ],
+)
+def test_target_rejects_unsafe_identifiers(kwargs):
+    with pytest.raises(ValueError):
+        AnalyticsTarget(**kwargs)
+
+
+def test_seed_refuses_shared_gold():
+    with pytest.raises(ValueError, match="shared gold"):
+        seed_gold(None, AnalyticsTarget(), {})

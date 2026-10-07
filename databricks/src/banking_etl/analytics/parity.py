@@ -72,6 +72,8 @@ def seed_gold(spark, target: AnalyticsTarget, tables: dict) -> dict[str, int]:
     Values are loaded as strings and CAST in Spark SQL, so timestamps are interpreted in the session
     time zone exactly like ``CAST(transaction_date AS DATE)`` later reads them back.
     """
+    if target.unity_catalog and target.layer == "gold":
+        raise ValueError(f"refusing to overwrite shared gold tables in {target.schema} with parity fixtures")
     spark.sql(f"CREATE SCHEMA IF NOT EXISTS {target.schema}")
     counts = {}
     for gold, (legacy, columns) in GOLD_FROM_LEGACY.items():

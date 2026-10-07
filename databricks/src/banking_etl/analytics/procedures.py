@@ -1,7 +1,7 @@
 """PySpark DataFrame equivalents of ``sp_DailyTransaction`` / ``sp_BalancePerCustomer``.
 
-Same semantics as the SQL table functions in ``sql/analytics`` (see ``sql/analytics/README.md`` for the
-SQL Server parity rules); use these when composing the logic into DataFrame pipelines and local tests.
+Same semantics as the SQL table functions in ``sql/analytics`` (the SQL Server parity rules are documented
+in ``02_fn_balance_per_customer.sql``); use these when composing the logic into DataFrame pipelines and local tests.
 """
 from __future__ import annotations
 
