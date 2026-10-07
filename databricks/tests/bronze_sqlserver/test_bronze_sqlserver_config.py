@@ -66,7 +66,7 @@ def test_connection_defaults_and_env():
         "localhost", "1433", "sample", "etl", "pw",
     )
     assert conn.url.startswith("jdbc:sqlserver://localhost:1433;databaseName=sample;")
-    assert "encrypt=true" in conn.url and "trustServerCertificate=true" in conn.url
+    assert "encrypt=true" in conn.url and "trustServerCertificate=false" in conn.url
     assert conn.reader_options()["driver"] == "com.microsoft.sqlserver.jdbc.SQLServerDriver"
     assert "pw" not in repr(conn)
 
@@ -99,3 +99,30 @@ def test_check_coverage_flags_unconfigured_and_missing_tables():
     assert check_coverage(config, discovered) == {"unconfigured": [], "missing_in_source": []}
     result = check_coverage(config, sorted((SAMPLE_TABLES - {"city"}) | {"loan", "sysdiagrams"}))
     assert result == {"unconfigured": ["loan"], "missing_in_source": ["city"]}
+
+
+def test_trust_server_certificate_is_opt_in():
+    config = load_config()
+    conn = resolve_connection(config, env={"SQLSERVER_TRUST_SERVER_CERTIFICATE": "true"})
+    assert "trustServerCertificate=true" in conn.url
+    with pytest.raises(ValueError, match="trust_server_certificate"):
+        resolve_connection(config, env={"SQLSERVER_TRUST_SERVER_CERTIFICATE": "yes"})
+
+
+class BrokenSecrets:
+    def get(self, scope, key):
+        raise PermissionError("PERMISSION_DENIED: principal cannot READ scope")
+
+
+class BrokenDbutils:
+    secrets = BrokenSecrets()
+
+
+def test_secret_errors_fail_closed_but_missing_keys_fall_back():
+    config = load_config()
+    env = {"SQLSERVER_HOST": "env-host", "SQLSERVER_PASSWORD": "from-env"}
+    with pytest.raises(RuntimeError, match="reading secret banking-etl-sqlserver/jdbc-host failed") as e:
+        resolve_connection(config, dbutils=BrokenDbutils(), env=env)
+    assert "from-env" not in str(e.value)
+    conn = resolve_connection(config, dbutils=FakeDbutils({}), env=env)
+    assert (conn.host, conn.password) == ("env-host", "from-env")

@@ -4,7 +4,6 @@ Skipped unless SQLSERVER_PASSWORD is set and the server is reachable, e.g.:
     SQLSERVER_USER=sa SQLSERVER_PASSWORD=... pytest tests/bronze_sqlserver
 """
 
-import pytest
 from pyspark.sql import functions as F
 
 from banking_etl.bronze.sqlserver import (

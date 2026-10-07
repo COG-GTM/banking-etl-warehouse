@@ -19,9 +19,11 @@ connection:
   database: {secret: jdbc-database, env: SQLSERVER_DATABASE, default: sample}
   user:     {secret: jdbc-user,     env: SQLSERVER_USER}
   password: {secret: jdbc-password, env: SQLSERVER_PASSWORD}
+  # Certificate validation stays on unless explicitly disabled (local Docker uses a self-signed cert:
+  # SQLSERVER_TRUST_SERVER_CERTIFICATE=true).
+  trust_server_certificate: {secret: jdbc-trust-server-certificate, env: SQLSERVER_TRUST_SERVER_CERTIFICATE, default: "false"}
   jdbc_options:
     encrypt: "true"
-    trustServerCertificate: "true"
   fetchsize: 10000
 
 source_system: sqlserver

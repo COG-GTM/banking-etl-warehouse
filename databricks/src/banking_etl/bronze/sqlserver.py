@@ -29,7 +29,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterator, List, Mapping, Optional, Sequence
+from typing import Any, Callable, Dict, Iterator, List, Mapping, Optional, Sequence, Tuple
 
 import yaml
 from pyspark.sql import DataFrame, SparkSession
@@ -135,13 +135,24 @@ class Connection:
         return opts
 
 
+_MISSING_SECRET_MARKERS = ("does not exist", "not found", "RESOURCE_DOES_NOT_EXIST", "NOT_FOUND")
+
+
+def _is_missing_secret(exc: BaseException) -> bool:
+    msg = str(exc)
+    return isinstance(exc, KeyError) or any(m in msg for m in _MISSING_SECRET_MARKERS)
+
+
 def resolve_connection(
     config: SourcesConfig,
     dbutils: Any = None,
     env: Optional[Mapping[str, str]] = None,
     overrides: Optional[Mapping[str, Optional[str]]] = None,
 ) -> Connection:
-    """Resolve each field: override > secret scope (when ``dbutils`` given) > env > default."""
+    """Resolve each field: override > secret scope (when ``dbutils`` given) > env > default.
+
+    Only a missing scope/key falls through to env/default; any other secret error fails the run.
+    """
     env = os.environ if env is None else env
     overrides = overrides or {}
     conn = config.connection
@@ -154,8 +165,11 @@ def resolve_connection(
         if dbutils is not None and scope and spec.get("secret"):
             try:
                 return dbutils.secrets.get(scope=scope, key=spec["secret"])
-            except Exception:  # missing scope/key -> fall through to env/default
-                pass
+            except Exception as exc:
+                if not _is_missing_secret(exc):
+                    raise RuntimeError(
+                        f"reading secret {scope}/{spec['secret']} failed: {type(exc).__name__}"
+                    ) from None
         if spec.get("env") and env.get(spec["env"]):
             return env[spec["env"]]
         default = spec.get("default")
@@ -164,13 +178,19 @@ def resolve_connection(
     host, port, database = field_value("host"), field_value("port"), field_value("database")
     if not (host and port and database):
         raise ValueError("SQL Server host/port/database could not be resolved")
+    jdbc_options = {k: str(v) for k, v in (conn.get("jdbc_options") or {}).items()}
+    if conn.get("trust_server_certificate"):
+        trust = (field_value("trust_server_certificate") or "false").strip().lower()
+        if trust not in ("true", "false"):
+            raise ValueError(f"trust_server_certificate must be true/false, got {trust!r}")
+        jdbc_options["trustServerCertificate"] = trust
     return Connection(
         host=host,
         port=port,
         database=database,
         user=field_value("user"),
         password=field_value("password"),
-        jdbc_options={k: str(v) for k, v in (conn.get("jdbc_options") or {}).items()},
+        jdbc_options=jdbc_options,
         fetchsize=int(conn.get("fetchsize", 10000)),
     )
 
@@ -219,6 +239,14 @@ def check_coverage(config: SourcesConfig, discovered: Sequence[str]) -> Dict[str
     }
 
 
+def assert_source_coverage(spark: SparkSession, conn: Connection, config: SourcesConfig) -> Dict[str, List[str]]:
+    """Fail when the live source has tables that ``sources.yml`` does not configure."""
+    coverage = check_coverage(config, discover_tables(spark, conn, config.source_schema))
+    if coverage["unconfigured"]:
+        raise RuntimeError(f"source tables missing from sources.yml: {coverage['unconfigured']}")
+    return coverage
+
+
 def read_jdbc(
     spark: SparkSession, conn: Connection, config: SourcesConfig, table: TableConfig
 ) -> DataFrame:
@@ -262,8 +290,29 @@ def staged_reader(spark: SparkSession, staged_root: str) -> Reader:
 def load_manifest(staged_root: str) -> Dict[str, Any]:
     path = Path(staged_root.replace("dbfs:", "", 1)) / MANIFEST_FILE
     if not path.exists():
-        return {}
+        raise FileNotFoundError(f"staged extract has no {MANIFEST_FILE}: {staged_root}")
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def validate_staged_extract(
+    spark: SparkSession,
+    staged_root: str,
+    config: SourcesConfig,
+    manifest: Mapping[str, Any],
+    tables: Optional[Sequence[str]] = None,
+) -> List[str]:
+    """Pre-write completeness check: every selected table needs a manifest row count that its parquet matches."""
+    problems = []
+    entries = manifest.get("tables") or {}
+    for t in config.select(tables):
+        expected = (entries.get(t.name) or {}).get("row_count")
+        if expected is None:
+            problems.append(f"{t.name}: no row_count in {MANIFEST_FILE}")
+            continue
+        actual = read_staged(spark, staged_root, t).count()
+        if actual != expected:
+            problems.append(f"{t.name}: staged parquet has {actual} rows, manifest says {expected}")
+    return problems
 
 
 def staged_source_label(
@@ -303,6 +352,19 @@ def add_audit_columns(df: DataFrame, ingested_at: datetime, source: str, batch_i
 
 def _current_watermark(spark: SparkSession, target: str, column: str) -> Any:
     return spark.table(target).agg(F.max(column).alias("wm")).first()["wm"]
+
+
+def _last_commit(spark: SparkSession, target: str) -> Tuple[int, Dict[str, str]]:
+    row = spark.sql(f"DESCRIBE HISTORY {target} LIMIT 1").first()
+    return int(row["version"]), dict(row["operationMetrics"] or {})
+
+
+def _rows_written_since(spark: SparkSession, target: str, version_before: Optional[int]) -> int:
+    """Rows in the commit this write produced (Delta ``numOutputRows``); 0 if the write was a no-op."""
+    version, metrics = _last_commit(spark, target)
+    if version_before is not None and version == version_before:
+        return 0
+    return int(metrics.get("numOutputRows", 0))
 
 
 @dataclass
@@ -345,6 +407,7 @@ def ingest_table(
     target = f"{target_schema}.{table.bronze_name}"
     exists = spark.catalog.tableExists(target)
 
+    version_before = _last_commit(spark, target)[0] if exists else None
     df = reader(table)
     watermark_before = None
     if mode == "incremental" and exists:
@@ -359,8 +422,7 @@ def ingest_table(
     else:
         writer.mode("append").option("mergeSchema", "true").saveAsTable(target)
 
-    written = spark.table(target).filter(F.col("_batch_id") == batch_id)
-    rows_written = written.count()
+    rows_written = _rows_written_since(spark, target, version_before)
     return IngestResult(
         table=table.name,
         target=target,
@@ -392,6 +454,15 @@ def ingest_all(
     create_schema: bool = True,
 ) -> List[IngestResult]:
     """Ingest every configured table (or ``tables``) in one batch."""
+    selected = config.select(tables)
+    if mode == "incremental":
+        no_wm = [t.name for t in selected if not t.watermark_column]
+        if no_wm:
+            eligible = [t.name for t in config.tables if t.watermark_column]
+            raise ValueError(
+                f"mode=incremental needs a watermark_column; {no_wm} have none. "
+                f"Restrict tables to {eligible} or leave mode blank for per-table modes."
+            )
     ingested_at = datetime.now(timezone.utc).replace(tzinfo=None)
     batch_id = batch_id or new_batch_id()
     target_schema = bronze_schema(catalog, schema_prefix)
@@ -408,7 +479,7 @@ def ingest_all(
             ingested_at=ingested_at,
             mode=mode,
         )
-        for t in config.select(tables)
+        for t in selected
     ]
 
 
@@ -497,23 +568,36 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     config = load_config(args.config)
     tables = [t for t in args.tables.split(",") if t] or None
+    if args.command == "extract" and not args.out:
+        parser.error("extract requires --out")
     spark = local_spark(warehouse=args.warehouse)
+    try:
+        return _run_cli(spark, args, config, tables)
+    finally:
+        spark.stop()
 
+
+def _run_cli(spark: SparkSession, args: argparse.Namespace, config: SourcesConfig,
+             tables: Optional[List[str]]) -> int:
     if args.command == "ingest" and args.staged:
         manifest = load_manifest(args.staged)
+        problems = validate_staged_extract(spark, args.staged, config, manifest, tables)
+        if problems:
+            print("\n".join(problems))
+            return 1
         reader = staged_reader(spark, args.staged)
         label = staged_source_label(args.staged, manifest, config)
     else:
         conn = resolve_connection(config)
         manifest = {}
+        if args.command != "discover":
+            assert_source_coverage(spark, conn, config)
         reader, label = jdbc_reader(spark, conn, config), jdbc_source_label(conn, config)
 
     if args.command == "discover":
         found = discover_tables(spark, conn, config.source_schema)
         print(json.dumps({"tables": found, **check_coverage(config, found)}, indent=2))
     elif args.command == "extract":
-        if not args.out:
-            parser.error("extract requires --out")
         print(json.dumps(extract_to_parquet(spark, conn, config, args.out, tables), indent=2))
     else:
         results = ingest_all(

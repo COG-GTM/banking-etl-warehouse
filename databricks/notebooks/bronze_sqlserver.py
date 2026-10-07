@@ -13,7 +13,11 @@
 # MAGIC   (stand-in for a JDBC endpoint the workspace cannot reach). Same bronze writer.
 # MAGIC
 # MAGIC `mode` blank = per-table mode from `sources.yml` (dims `full`, `transaction_db` `incremental`
-# MAGIC on `transaction_id`).
+# MAGIC on `transaction_id`). `mode=incremental` applies only to tables with a `watermark_column`
+# MAGIC (`account`, `transaction_db`), so set `tables` accordingly.
+# MAGIC
+# MAGIC Staged runs require `_manifest.json` and check every selected table's parquet row count against it
+# MAGIC before anything is written.
 
 # COMMAND ----------
 
@@ -53,18 +57,16 @@ print(f"batch_id={batch_id} source={source} target={bronze_sqlserver.bronze_sche
 manifest = {}
 if source == "jdbc":
     conn = bronze_sqlserver.resolve_connection(config, dbutils=dbutils)
-    coverage = bronze_sqlserver.check_coverage(
-        config, bronze_sqlserver.discover_tables(spark, conn, config.source_schema)
-    )
-    print(f"source coverage: {coverage}")
-    if coverage["unconfigured"]:
-        raise RuntimeError(f"source tables missing from sources.yml: {coverage['unconfigured']}")
+    print(f"source coverage: {bronze_sqlserver.assert_source_coverage(spark, conn, config)}")
     reader = bronze_sqlserver.jdbc_reader(spark, conn, config)
     label = bronze_sqlserver.jdbc_source_label(conn, config)
 else:
     staged_path = dbutils.widgets.get("staged_path").strip()
     manifest = bronze_sqlserver.load_manifest(staged_path)
     print(f"staged extract: {staged_path} extracted_at={manifest.get('extracted_at')}")
+    problems = bronze_sqlserver.validate_staged_extract(spark, staged_path, config, manifest, tables)
+    if problems:
+        raise AssertionError("staged extract incomplete, nothing written: " + "; ".join(problems))
     reader = bronze_sqlserver.staged_reader(spark, staged_path)
     label = bronze_sqlserver.staged_source_label(staged_path, manifest, config)
 

@@ -61,7 +61,9 @@ def sqlserver_conn():
 
     if not os.environ.get("SQLSERVER_PASSWORD"):
         pytest.skip("SQLSERVER_PASSWORD not set (no local SQL Server with sample.bak)")
-    conn = resolve_connection(load_config())
+    # local Docker SQL Server presents a self-signed certificate
+    trust = os.environ.get("SQLSERVER_TRUST_SERVER_CERTIFICATE", "true")
+    conn = resolve_connection(load_config(), overrides={"trust_server_certificate": trust})
     if not _sqlserver_reachable(conn.host, int(conn.port)):
         pytest.skip(f"SQL Server not reachable at {conn.host}:{conn.port}")
     return conn

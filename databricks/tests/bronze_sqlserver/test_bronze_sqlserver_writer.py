@@ -15,6 +15,7 @@ from banking_etl.bronze.sqlserver import (
     new_batch_id,
     staged_reader,
     staged_source_label,
+    validate_staged_extract,
     verify_against_manifest,
 )
 
@@ -179,5 +180,38 @@ def test_manifest_mismatch_reported(spark, source_frames, fixture_meta, schema_p
     assert verify_against_manifest(results, manifest) == ["city: bronze has 52 rows, extract had 999"]
 
 
-def test_missing_manifest_is_empty(tmp_path):
-    assert load_manifest(str(tmp_path)) == {}
+def test_missing_manifest_rejected(tmp_path):
+    with pytest.raises(FileNotFoundError, match="_manifest.json"):
+        load_manifest(str(tmp_path))
+
+
+def test_staged_extract_validated_before_any_write(spark, source_frames, fixture_meta, tmp_path):
+    root = tmp_path / "extract"
+    manifest = write_staged_extract(source_frames, fixture_meta, root)
+    config = load_config()
+    assert validate_staged_extract(spark, str(root), config, manifest) == []
+
+    manifest["tables"]["branch"]["row_count"] = 6
+    del manifest["tables"]["city"]
+    assert validate_staged_extract(spark, str(root), config, manifest, ["branch", "city", "state"]) == [
+        "branch: staged parquet has 5 rows, manifest says 6",
+        "city: no row_count in _manifest.json",
+    ]
+
+
+def test_incremental_override_for_all_tables_explains_eligible_tables(spark, source_frames, schema_prefix):
+    with pytest.raises(ValueError, match=r"Restrict tables to \['account', 'transaction_db'\]"):
+        ingest_all(
+            spark, load_config(), frame_reader(source_frames), lambda t: t.name,
+            catalog=None, schema_prefix=schema_prefix, mode="incremental",
+        )
+    assert not spark.catalog.tableExists(f"{schema_prefix}bronze.sqlserver_branch")
+
+
+def test_rows_written_counts_this_write_even_when_batch_id_reused(spark, source_frames, schema_prefix):
+    tx = source_frames["transaction_db"]
+    first = ingest(spark, {"transaction_db": tx.filter("transaction_id <= 6")}, "transaction_db", schema_prefix, "same")
+    second = ingest(spark, {"transaction_db": tx}, "transaction_db", schema_prefix, "same")
+    rerun = ingest(spark, {"transaction_db": tx}, "transaction_db", schema_prefix, "same")
+    assert (first.rows_written, second.rows_written, rerun.rows_written) == (6, 4, 0)
+    assert rerun.target_rows == 10
