@@ -1,0 +1,19 @@
+{
+  "source": "data_sources/sample.bak restored in SQL Server 2022 (dbo)",
+  "schemas": {
+    "branch": "branch_id INT, branch_name STRING, branch_location STRING",
+    "state": "state_id INT, state_name STRING",
+    "city": "city_id INT, city_name STRING, state_id INT",
+    "customer": "customer_id INT, customer_name STRING, address STRING, city_id INT, age STRING, gender STRING, email STRING",
+    "account": "account_id INT, customer_id INT, account_type STRING, balance INT, date_opened TIMESTAMP, status STRING",
+    "transaction_db": "transaction_id INT, account_id INT, transaction_date TIMESTAMP, amount INT, transaction_type STRING, branch_id INT"
+  },
+  "row_counts": {
+    "branch": 5,
+    "state": 9,
+    "city": 52,
+    "customer": 20,
+    "account": 21,
+    "transaction_db": 10
+  }
+}
