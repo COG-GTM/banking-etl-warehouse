@@ -36,8 +36,8 @@ Notes on the design:
   retry because a parity failure is deterministic.
 - **Serverless only.** No `new_cluster` / `job_clusters` (the workspace rejects them). Notebook tasks run on
   serverless notebook compute. A job-level `environments` entry (`banking_etl_serverless`, environment version 2)
-  is declared for non-notebook tasks (e.g. a future `python_wheel_task` for `banking_etl`). Serverless notebook
-  tasks don't take an `environment_key`; notebooks install their dependencies themselves.
+  is declared for non-notebook tasks (e.g. a future `python_wheel_task` for `banking_etl`). The notebook tasks in this job
+  don't reference an `environment_key`; notebooks install their own dependencies.
 - **Job parameters** (pushed to every notebook as widgets):
   - `catalog`, default `migration_demo`
   - `schema_prefix`, default `banking_mig_`. Schemas are `<prefix>bronze|silver|gold|ops`.
