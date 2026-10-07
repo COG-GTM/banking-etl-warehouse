@@ -33,6 +33,7 @@ from banking_etl.dims.branch import (
     scd1_merge,
     trimmed,
     try_cast,
+    validate_steps,
     write_silver,
 )
 
@@ -86,6 +87,7 @@ def merge_gold_dim_account(spark: SparkSession, layers: Layers) -> Dict[str, int
 
 
 def run(spark: SparkSession, layers: Layers, steps: Sequence[str] = ("silver", "gold")) -> Dict:
+    validate_steps(steps)
     result: Dict = {"entity": "account"}
     if "silver" in steps:
         result["silver_rows"] = build_silver_account(spark, layers)

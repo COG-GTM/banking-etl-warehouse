@@ -19,6 +19,7 @@ SCD-1 MERGE) reused by :mod:`banking_etl.dims.account`.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Dict, Iterable, Optional, Sequence
 
@@ -27,6 +28,8 @@ from pyspark.sql import functions as F
 
 DEFAULT_CATALOG = "migration_demo"
 DEFAULT_SCHEMA_PREFIX = "banking_mig_"
+VALID_STEPS = ("silver", "gold")
+_IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 # Bronze ingestion metadata columns that, when present, order duplicates (latest wins).
 _INGEST_ORDER_CANDIDATES = (
@@ -59,6 +62,19 @@ class Layers:
         return f"{getattr(self, layer)}.{name}"
 
 
+def _identifier(name: str) -> str:
+    if not _IDENTIFIER.match(name):
+        raise ValueError(f"Invalid catalog/schema identifier: {name!r}")
+    return name
+
+
+def validate_steps(steps: Sequence[str]) -> Sequence[str]:
+    unknown = [s for s in steps if s not in VALID_STEPS]
+    if not steps or unknown:
+        raise ValueError(f"steps must be a non-empty subset of {VALID_STEPS}; got {list(steps)!r}")
+    return steps
+
+
 def resolve_layers(
     catalog: Optional[str] = DEFAULT_CATALOG,
     schema_prefix: str = DEFAULT_SCHEMA_PREFIX,
@@ -74,8 +90,8 @@ def resolve_layers(
     """
 
     def qualify(layer: str, override: Optional[str]) -> str:
-        schema = override or f"{schema_prefix}{layer}"
-        return f"{catalog}.{schema}" if catalog else schema
+        schema = _identifier(override or f"{schema_prefix}{layer}")
+        return f"{_identifier(catalog)}.{schema}" if catalog else schema
 
     return Layers(
         bronze=qualify("bronze", bronze_schema),
@@ -201,6 +217,7 @@ def merge_gold_dim_branch(spark: SparkSession, layers: Layers) -> Dict[str, int]
 
 
 def run(spark: SparkSession, layers: Layers, steps: Sequence[str] = ("silver", "gold")) -> Dict:
+    validate_steps(steps)
     result: Dict = {"entity": "branch"}
     if "silver" in steps:
         result["silver_rows"] = build_silver_branch(spark, layers)

@@ -1,8 +1,10 @@
 from datetime import date, datetime
 from decimal import Decimal
 
+import pytest
 from pyspark.sql import types as T
 
+from banking_etl.dims import account, branch
 from banking_etl.dims.account import transform_silver_account
 from banking_etl.dims.branch import resolve_layers, transform_silver_branch
 
@@ -23,6 +25,28 @@ def test_resolve_layers_defaults_and_overrides():
     scoped = resolve_layers(bronze_schema="banking_mig_t5", silver_schema="banking_mig_t5", gold_schema="banking_mig_t5")
     assert scoped.gold == "migration_demo.banking_mig_t5"
     assert resolve_layers(catalog=None, schema_prefix="x_").silver == "x_silver"
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"catalog": "migration_demo; DROP TABLE x"},
+        {"schema_prefix": "banking-mig_"},
+        {"gold_schema": "t5 (a INT); --"},
+        {"silver_schema": "`t5`"},
+    ],
+)
+def test_resolve_layers_rejects_unsafe_identifiers(kwargs):
+    with pytest.raises(ValueError, match="identifier"):
+        resolve_layers(**kwargs)
+
+
+@pytest.mark.parametrize("module", [branch, account])
+@pytest.mark.parametrize("steps", [[], ["sliver", "gold"], ["glod"]])
+def test_run_rejects_unknown_or_empty_steps(module, steps):
+    layers = resolve_layers(catalog=None, schema_prefix="t5_")
+    with pytest.raises(ValueError, match="steps"):
+        module.run(None, layers, steps)
 
 
 def test_branch_typed_trimmed_and_null_key_dropped(spark):
