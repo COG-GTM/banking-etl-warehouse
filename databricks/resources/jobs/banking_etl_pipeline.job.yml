@@ -1,0 +1,165 @@
+# Databricks Workflow (Lakeflow Job) for the Talend + SQL Server banking DWH migration.
+#
+# DAG (preserves the legacy Talend run order DimBranch -> DimAccount -> DimCustomer -> FactTransaction):
+#
+#   bronze_sqlserver ─┐
+#                     ├─> dim_branch -> dim_account -> dim_customer -> fact_transaction -> analytics -> validation
+#   bronze_files ─────┘
+#
+# Notebook paths are relative to this file (bundle root is databricks/). Every notebook receives the
+# job parameters catalog / schema_prefix / run_date as widgets.
+# See docs/orchestration.md for design notes and how to run.
+
+variables:
+  banking_etl_alert_email:
+    description: Address notified when a run of banking_etl_pipeline fails or exceeds its duration threshold.
+    default: data-platform-alerts@example.com
+
+resources:
+  jobs:
+    banking_etl_pipeline:
+      name: banking_etl_pipeline
+      description: >-
+        Medallion (bronze/silver/gold) port of the legacy Talend banking DWH load:
+        Load_DimBranch -> Load_DimAccount -> Load_DimCustomer -> Load_FactTransaction,
+        followed by the analytics refresh (sp_DailyTransaction / sp_BalancePerCustomer ports)
+        and parity validation.
+      tags:
+        project: banking_etl_migration
+        layer: orchestration
+        legacy_source: talend
+      max_concurrent_runs: 1
+      timeout_seconds: 10800
+      queue:
+        enabled: true
+
+      schedule:
+        quartz_cron_expression: "0 0 2 * * ?"
+        timezone_id: UTC
+        pause_status: PAUSED
+
+      parameters:
+        - name: catalog
+          default: migration_demo
+        - name: schema_prefix
+          default: banking_mig_
+        - name: run_date
+          default: "{{job.start_time.iso_date}}"
+
+      email_notifications:
+        on_failure:
+          - ${var.banking_etl_alert_email}
+        on_duration_warning_threshold_exceeded:
+          - ${var.banking_etl_alert_email}
+        no_alert_for_skipped_runs: true
+      notification_settings:
+        no_alert_for_skipped_runs: true
+        no_alert_for_canceled_runs: true
+
+      health:
+        rules:
+          - metric: RUN_DURATION_SECONDS
+            op: GREATER_THAN
+            value: 5400
+
+      environments:
+        - environment_key: banking_etl_serverless
+          spec:
+            environment_version: "2"
+
+      tasks:
+        # ---- Bronze: raw ingestion (independent, run in parallel) ----
+        - task_key: bronze_sqlserver
+          description: JDBC snapshot of the SQL Server `sample` DB into bronze.sqlserver_<table>.
+          notebook_task:
+            notebook_path: ../../notebooks/bronze_sqlserver.py
+            source: WORKSPACE
+          max_retries: 2
+          min_retry_interval_millis: 60000
+          retry_on_timeout: true
+          timeout_seconds: 3600
+
+        - task_key: bronze_files
+          description: Auto Loader ingestion of transaction_excel.xlsx / transaction_csv.csv into bronze.file_transaction_*.
+          notebook_task:
+            notebook_path: ../../notebooks/bronze_files.py
+            source: WORKSPACE
+          # Auto Loader stops the stream when schema evolution adds a column; a retry resumes it.
+          max_retries: 3
+          min_retry_interval_millis: 30000
+          retry_on_timeout: true
+          timeout_seconds: 3600
+
+        # ---- Dimensions (legacy Talend order: DimBranch -> DimAccount -> DimCustomer) ----
+        - task_key: dim_branch
+          description: Load_DimBranch port -> silver.branch, gold.dim_branch.
+          depends_on:
+            - task_key: bronze_sqlserver
+            - task_key: bronze_files
+          notebook_task:
+            notebook_path: ../../notebooks/dim_branch.py
+            source: WORKSPACE
+          max_retries: 1
+          min_retry_interval_millis: 60000
+          retry_on_timeout: false
+          timeout_seconds: 1800
+
+        - task_key: dim_account
+          description: Load_DimAccount port -> silver.account, gold.dim_account.
+          depends_on:
+            - task_key: dim_branch
+          notebook_task:
+            notebook_path: ../../notebooks/dim_account.py
+            source: WORKSPACE
+          max_retries: 1
+          min_retry_interval_millis: 60000
+          retry_on_timeout: false
+          timeout_seconds: 1800
+
+        - task_key: dim_customer
+          description: Load_DimCustomer port (customer x city x state, upper-cased) -> silver.customer, gold.dim_customer.
+          depends_on:
+            - task_key: dim_account
+          notebook_task:
+            notebook_path: ../../notebooks/dim_customer.py
+            source: WORKSPACE
+          max_retries: 1
+          min_retry_interval_millis: 60000
+          retry_on_timeout: false
+          timeout_seconds: 1800
+
+        # ---- Fact (after all dims, as in Talend) ----
+        - task_key: fact_transaction
+          description: Load_FactTransaction port (tUnite SQL+Excel+CSV, tUniqRow on transaction_id) -> silver.transaction, gold.fact_transaction.
+          depends_on:
+            - task_key: dim_customer
+          notebook_task:
+            notebook_path: ../../notebooks/fact_transaction.py
+            source: WORKSPACE
+          max_retries: 1
+          min_retry_interval_millis: 60000
+          retry_on_timeout: false
+          timeout_seconds: 3600
+
+        # ---- Analytics + validation ----
+        - task_key: analytics
+          description: Refresh gold.fn_daily_transaction / gold.fn_balance_per_customer (stored procedure ports).
+          depends_on:
+            - task_key: fact_transaction
+          notebook_task:
+            notebook_path: ../../notebooks/analytics.py
+            source: WORKSPACE
+          max_retries: 1
+          min_retry_interval_millis: 60000
+          retry_on_timeout: false
+          timeout_seconds: 1800
+
+        - task_key: validation
+          description: Row-count / key / totals parity checks against the legacy DWH baselines.
+          depends_on:
+            - task_key: analytics
+          notebook_task:
+            notebook_path: ../../notebooks/validation.py
+            source: WORKSPACE
+          max_retries: 0
+          timeout_seconds: 1800
