@@ -1,0 +1,21 @@
+customer_id,customer_name,address,city_id,age,gender,email
+1,Shelly Juwita,Jl. Boulevard No. 31,2,25,female,shelly@gmail.com
+2,Bobi Rinaldo,Jl. Mangga No. 1,3,31,male,Bobi@gmail.com
+3,Adam Malik,Jl. Kincir Angin No. 50,5,23,male,Adam@gmail.com
+4,Susi Rahmawati,Jl. Kenanga No. 11,7,45,female,Susi@gmail.com
+5,Dimas Prasetyo,Jl. Niagara No. 69,8,32,male,Dimas@gmail.com
+6,Aji Pangestu,Jl. Sempurna No. 2,9,40,male,Aji@gmail.com
+7,Bunga Malika,Jl. Merak No. 10,33,27,female,Bunga@gmail.com
+8,Ria Addini,Jl. Arjuna No. 40,16,29,female,Ria@gmail.com
+9,Lisa Wulandari,Jl. Ampera No. 39,11,26,female,Lisa@gmail.com
+10,Rio Wijaya,Jl. Abdul Muis No. 70,13,52,male,Rio@gmail.com
+11,Ahmad Riyansah,Jl. Kecapi No. 5,48,27,male,Ahmad@gmail.com
+12,Mario Robert,Jl. Kebayoran No. 13,44,28,male,Mario@gmail.com
+13,Khansa Audya,Jl. Kedoya No. 50,39,32,female,Khansa@gmail.com
+14,Cintya Gabriela,Jl. Pintu Air No. 14,30,24,female,Cintya@gmail.com
+15,Ani Nuraini,Jl. Cimpedak No. 50,49,45,female,Ani@gmail.com
+16,Agung Mulyono,Jl. Daan Mogot No. 60,29,38,male,Agung@gmail.com
+17,Rian Wibowo,Jl. Batu No. 49,31,41,male,Rian@gmail.com
+18,Lutfi Aulia,Jl. Elang No. 2,32,30,male,Lutfi@gmail.com
+19,Malika Cantika,Jl. Imam Bonjol No. 30,43,38,female,Malika@gmail.com
+20,Ratna Sariasih,Jl. Jambore No. 41,52,53,female,Ratna@gmail.com
