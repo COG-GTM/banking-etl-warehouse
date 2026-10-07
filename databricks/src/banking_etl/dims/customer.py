@@ -20,6 +20,7 @@ Here the join + cleansing produce ``silver.customer`` (full snapshot) and
 from __future__ import annotations
 
 import csv
+import re
 from dataclasses import dataclass
 from typing import Optional
 
@@ -65,6 +66,14 @@ GOLD_SCHEMA = T.StructType(
 )
 
 _INT_COLUMNS = {"customer_id", "city_id", "state_id", "age"}
+_INGESTED_AT = "_ingested_at"
+_IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _check_identifier(value: str, what: str) -> str:
+    if not _IDENTIFIER.match(value):
+        raise ValueError(f"invalid {what} {value!r}: only letters, digits and underscores are allowed")
+    return value
 
 
 @dataclass(frozen=True)
@@ -84,6 +93,13 @@ class Tables:
         schema_prefix: str = "banking_mig_",
         schema_override: Optional[str] = None,
     ) -> "Tables":
+        if catalog:
+            _check_identifier(catalog, "catalog")
+        if schema_override:
+            _check_identifier(schema_override, "schema_override")
+        else:
+            _check_identifier(f"{schema_prefix}bronze", "schema_prefix")
+
         def fq(layer: str, table: str) -> str:
             schema = schema_override or f"{schema_prefix}{layer}"
             return f"{catalog}.{schema}.{table}" if catalog else f"{schema}.{table}"
@@ -105,50 +121,53 @@ def _to_int(col_name: str) -> F.Column:
 def _latest_per_key(df: DataFrame, key: str) -> DataFrame:
     """Keep one row per key so the MERGE never sees duplicate source matches.
 
-    Prefers the most recent ``_ingested_at`` when bronze carries it, otherwise
-    falls back to a deterministic ordering over all columns.
+    Orders by the most recent ``_ingested_at`` when bronze carries it, with the
+    business columns as deterministic tie-breakers, then drops ``_ingested_at``.
     """
-    if "_ingested_at" in df.columns:
-        order = [F.col("_ingested_at").desc_nulls_last()]
-    else:
-        order = [F.col(c).desc_nulls_last() for c in sorted(df.columns) if c != key]
-    w = Window.partitionBy(key).orderBy(*order) if order else Window.partitionBy(key).orderBy(F.lit(1))
+    business = [c for c in sorted(df.columns) if c not in (key, _INGESTED_AT)]
+    order = [F.col(c).desc_nulls_last() for c in business]
+    if _INGESTED_AT in df.columns:
+        order = [F.col(_INGESTED_AT).desc_nulls_last()] + order
+    w = Window.partitionBy(key).orderBy(*(order or [F.lit(1)]))
     return (
         df.withColumn("_rn", F.row_number().over(w))
         .filter(F.col("_rn") == 1)
-        .drop("_rn")
+        .drop("_rn", _INGESTED_AT)
     )
+
+
+def _with_ingested_at(source: DataFrame, cols: list) -> list:
+    return cols + ([F.col(_INGESTED_AT)] if _INGESTED_AT in source.columns else [])
+
+
+def _dedup(source: DataFrame, cols: list, key: str) -> DataFrame:
+    projected = source.select(*_with_ingested_at(source, cols)).filter(F.col(key).isNotNull())
+    return _latest_per_key(projected, key)
 
 
 def build_silver_customer(customer: DataFrame, city: DataFrame, state: DataFrame) -> DataFrame:
     """customer LEFT JOIN city LEFT JOIN state + Talend's UPCASE cleansing."""
-    c = _latest_per_key(
-        customer.select(
-            _to_int("customer_id").alias("customer_id"),
-            F.col("customer_name").cast("string").alias("customer_name"),
-            F.col("address").cast("string").alias("address"),
-            _to_int("city_id").alias("city_id"),
-            _to_int("age").alias("age"),
-            F.col("gender").cast("string").alias("gender"),
-            F.col("email").cast("string").alias("email"),
-        ).filter(F.col("customer_id").isNotNull()),
-        "customer_id",
-    ).alias("c")
-    ci = _latest_per_key(
-        city.select(
-            _to_int("city_id").alias("city_id"),
-            F.col("city_name").cast("string").alias("city_name"),
-            _to_int("state_id").alias("state_id"),
-        ).filter(F.col("city_id").isNotNull()),
-        "city_id",
-    ).alias("ci")
-    s = _latest_per_key(
-        state.select(
-            _to_int("state_id").alias("state_id"),
-            F.col("state_name").cast("string").alias("state_name"),
-        ).filter(F.col("state_id").isNotNull()),
-        "state_id",
-    ).alias("s")
+    customer_cols = [
+        _to_int("customer_id").alias("customer_id"),
+        F.col("customer_name").cast("string").alias("customer_name"),
+        F.col("address").cast("string").alias("address"),
+        _to_int("city_id").alias("city_id"),
+        _to_int("age").alias("age"),
+        F.col("gender").cast("string").alias("gender"),
+        F.col("email").cast("string").alias("email"),
+    ]
+    city_cols = [
+        _to_int("city_id").alias("city_id"),
+        F.col("city_name").cast("string").alias("city_name"),
+        _to_int("state_id").alias("state_id"),
+    ]
+    state_cols = [
+        _to_int("state_id").alias("state_id"),
+        F.col("state_name").cast("string").alias("state_name"),
+    ]
+    c = _dedup(customer, customer_cols, "customer_id").alias("c")
+    ci = _dedup(city, city_cols, "city_id").alias("ci")
+    s = _dedup(state, state_cols, "state_id").alias("s")
 
     joined = c.join(ci, F.col("c.city_id") == F.col("ci.city_id"), "left").join(
         s, F.col("ci.state_id") == F.col("s.state_id"), "left"

@@ -201,3 +201,39 @@ def test_parity_check_detects_drift(spark, tables):
         dim_customer.assert_parity(drifted, expected)
     diff = dim_customer.parity_diff(drifted, expected)
     assert diff["missing_rows"] == diff["unexpected_rows"] == 1
+
+
+def test_latest_ingested_row_wins_over_lexical_order(spark):
+    customer = spark.createDataFrame(
+        [
+            (1, "Zed Old", "x", 1, "20", "m", "e", "2024-01-01 00:00:00"),
+            (1, "Alice New", "x", 1, "20", "m", "e", "2024-02-01 00:00:00"),
+        ],
+        "customer_id INT, customer_name STRING, address STRING, city_id INT, age STRING, gender STRING, email STRING, _ingested_at STRING",
+    ).withColumn("_ingested_at", F.to_timestamp("_ingested_at"))
+    city = spark.createDataFrame(
+        [(1, "Zzz Stale", 1, "2024-01-01 00:00:00"), (1, "Aaa Fresh", 1, "2024-03-01 00:00:00")],
+        "city_id INT, city_name STRING, state_id INT, _ingested_at STRING",
+    ).withColumn("_ingested_at", F.to_timestamp("_ingested_at"))
+    state = spark.createDataFrame(
+        [(1, "Zzz Stale", "2024-01-01 00:00:00"), (1, "Aaa Fresh", "2024-03-01 00:00:00")],
+        "state_id INT, state_name STRING, _ingested_at STRING",
+    ).withColumn("_ingested_at", F.to_timestamp("_ingested_at"))
+    out = dim_customer.build_silver_customer(customer, city, state)
+    assert out.columns == dim_customer.SILVER_COLUMNS
+    rows = out.collect()
+    assert len(rows) == 1
+    assert (rows[0].customer_name, rows[0].city_name, rows[0].state_name) == ("ALICE NEW", "Aaa Fresh", "Aaa Fresh")
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"catalog": "migration_demo; DROP SCHEMA x"},
+        {"catalog": "migration_demo", "schema_override": "t6 CASCADE"},
+        {"catalog": "migration_demo", "schema_prefix": "banking-mig."},
+    ],
+)
+def test_table_builder_rejects_unsafe_identifiers(kwargs):
+    with pytest.raises(ValueError, match="invalid"):
+        dim_customer.Tables.build(**kwargs)
