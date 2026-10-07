@@ -1,0 +1,1242 @@
+{
+ "source": "SQL Server 16.0.4295.3 (SQL_Latin1_General_CP1_CI_AS) database DWH",
+ "tables": {
+  "DimBranch": [
+   {
+    "BranchID": 1,
+    "BranchName": "KC Jakarta",
+    "BranchLocation": "Jl. Gatot Subroto No 13"
+   },
+   {
+    "BranchID": 2,
+    "BranchName": "KC Bogor",
+    "BranchLocation": "Jl. Padjajaran No 43"
+   },
+   {
+    "BranchID": 3,
+    "BranchName": "KC Depok",
+    "BranchLocation": "Jl. Raya Sawangan No 34"
+   },
+   {
+    "BranchID": 4,
+    "BranchName": "KC Tangerang",
+    "BranchLocation": "Jl. Cisauk No 50"
+   },
+   {
+    "BranchID": 5,
+    "BranchName": "KC Bekas",
+    "BranchLocation": "Jl. Ahmad Yani No 23"
+   }
+  ],
+  "DimCustomer": [
+   {
+    "CustomerID": 1,
+    "CustomerName": "SHELLY JUWITA",
+    "Address": "JL. BOULEVARD NO. 31",
+    "CityName": "Kelapa Gading",
+    "StateName": "Jakarta Utara",
+    "Age": 25,
+    "Gender": "FEMALE",
+    "Email": "shelly@gmail.com"
+   },
+   {
+    "CustomerID": 2,
+    "CustomerName": "BOBI RINALDO",
+    "Address": "JL. MANGGA NO. 1",
+    "CityName": "Tanjung Priok",
+    "StateName": "Jakarta Utara",
+    "Age": 31,
+    "Gender": "MALE",
+    "Email": "Bobi@gmail.com"
+   },
+   {
+    "CustomerID": 3,
+    "CustomerName": "ADAM MALIK",
+    "Address": "JL. KINCIR ANGIN NO. 50",
+    "CityName": "Pademangan",
+    "StateName": "Jakarta Utara",
+    "Age": 23,
+    "Gender": "MALE",
+    "Email": "Adam@gmail.com"
+   },
+   {
+    "CustomerID": 4,
+    "CustomerName": "SUSI RAHMAWATI",
+    "Address": "JL. KENANGA NO. 11",
+    "CityName": "Cilandak",
+    "StateName": "Jakarta Selatan",
+    "Age": 45,
+    "Gender": "FEMALE",
+    "Email": "Susi@gmail.com"
+   },
+   {
+    "CustomerID": 5,
+    "CustomerName": "DIMAS PRASETYO",
+    "Address": "JL. NIAGARA NO. 69",
+    "CityName": "Jagakarsa",
+    "StateName": "Jakarta Selatan",
+    "Age": 32,
+    "Gender": "MALE",
+    "Email": "Dimas@gmail.com"
+   },
+   {
+    "CustomerID": 6,
+    "CustomerName": "AJI PANGESTU",
+    "Address": "JL. SEMPURNA NO. 2",
+    "CityName": "Mampang Prapatan",
+    "StateName": "Jakarta Selatan",
+    "Age": 40,
+    "Gender": "MALE",
+    "Email": "Aji@gmail.com"
+   },
+   {
+    "CustomerID": 7,
+    "CustomerName": "BUNGA MALIKA",
+    "Address": "JL. MERAK NO. 10",
+    "CityName": "Cibinong",
+    "StateName": "Bogor",
+    "Age": 27,
+    "Gender": "FEMALE",
+    "Email": "Bunga@gmail.com"
+   },
+   {
+    "CustomerID": 8,
+    "CustomerName": "RIA ADDINI",
+    "Address": "JL. ARJUNA NO. 40",
+    "CityName": "Menteng",
+    "StateName": "Jakarta Pusat",
+    "Age": 29,
+    "Gender": "FEMALE",
+    "Email": "Ria@gmail.com"
+   },
+   {
+    "CustomerID": 9,
+    "CustomerName": "LISA WULANDARI",
+    "Address": "JL. AMPERA NO. 39",
+    "CityName": "Tebet",
+    "StateName": "Jakarta Selatan",
+    "Age": 26,
+    "Gender": "FEMALE",
+    "Email": "Lisa@gmail.com"
+   },
+   {
+    "CustomerID": 10,
+    "CustomerName": "RIO WIJAYA",
+    "Address": "JL. ABDUL MUIS NO. 70",
+    "CityName": "Gambir",
+    "StateName": "Jakarta Pusat",
+    "Age": 52,
+    "Gender": "MALE",
+    "Email": "Rio@gmail.com"
+   },
+   {
+    "CustomerID": 11,
+    "CustomerName": "AHMAD RIYANSAH",
+    "Address": "JL. KECAPI NO. 5",
+    "CityName": "Babelan",
+    "StateName": "Bekasi",
+    "Age": 27,
+    "Gender": "MALE",
+    "Email": "Ahmad@gmail.com"
+   },
+   {
+    "CustomerID": 12,
+    "CustomerName": "MARIO ROBERT",
+    "Address": "JL. KEBAYORAN NO. 13",
+    "CityName": "Cisauk",
+    "StateName": "Tangerang",
+    "Age": 28,
+    "Gender": "MALE",
+    "Email": "Mario@gmail.com"
+   },
+   {
+    "CustomerID": 13,
+    "CustomerName": "KHANSA AUDYA",
+    "Address": "JL. KEDOYA NO. 50",
+    "CityName": "Cinere",
+    "StateName": "Depok",
+    "Age": 32,
+    "Gender": "FEMALE",
+    "Email": "Khansa@gmail.com"
+   },
+   {
+    "CustomerID": 14,
+    "CustomerName": "CINTYA GABRIELA",
+    "Address": "JL. PINTU AIR NO. 14",
+    "CityName": "Kalideres",
+    "StateName": "Jakarta Barat",
+    "Age": 24,
+    "Gender": "FEMALE",
+    "Email": "Cintya@gmail.com"
+   },
+   {
+    "CustomerID": 15,
+    "CustomerName": "ANI NURAINI",
+    "Address": "JL. CIMPEDAK NO. 50",
+    "CityName": "Cibitung",
+    "StateName": "Bekasi",
+    "Age": 45,
+    "Gender": "FEMALE",
+    "Email": "Ani@gmail.com"
+   },
+   {
+    "CustomerID": 16,
+    "CustomerName": "AGUNG MULYONO",
+    "Address": "JL. DAAN MOGOT NO. 60",
+    "CityName": "Palmerah",
+    "StateName": "Jakarta Barat",
+    "Age": 38,
+    "Gender": "MALE",
+    "Email": "Agung@gmail.com"
+   },
+   {
+    "CustomerID": 17,
+    "CustomerName": "RIAN WIBOWO",
+    "Address": "JL. BATU NO. 49",
+    "CityName": "Bojonggede",
+    "StateName": "Bogor",
+    "Age": 41,
+    "Gender": "MALE",
+    "Email": "Rian@gmail.com"
+   },
+   {
+    "CustomerID": 18,
+    "CustomerName": "LUTFI AULIA",
+    "Address": "JL. ELANG NO. 2",
+    "CityName": "Ciawi",
+    "StateName": "Bogor",
+    "Age": 30,
+    "Gender": "MALE",
+    "Email": "Lutfi@gmail.com"
+   },
+   {
+    "CustomerID": 19,
+    "CustomerName": "MALIKA CANTIKA",
+    "Address": "JL. IMAM BONJOL NO. 30",
+    "CityName": "Balaraja",
+    "StateName": "Tangerang",
+    "Age": 38,
+    "Gender": "FEMALE",
+    "Email": "Malika@gmail.com"
+   },
+   {
+    "CustomerID": 20,
+    "CustomerName": "RATNA SARIASIH",
+    "Address": "JL. JAMBORE NO. 41",
+    "CityName": "Sukatani",
+    "StateName": "Bekasi",
+    "Age": 53,
+    "Gender": "FEMALE",
+    "Email": "Ratna@gmail.com"
+   }
+  ],
+  "DimAccount": [
+   {
+    "AccountID": 1,
+    "CustomerID": 1,
+    "AccountType": "saving",
+    "Balance": "1500000.0000",
+    "DateOpened": "2020-05-01",
+    "Status": "active"
+   },
+   {
+    "AccountID": 2,
+    "CustomerID": 2,
+    "AccountType": "saving",
+    "Balance": "500000.0000",
+    "DateOpened": "2020-06-01",
+    "Status": "active"
+   },
+   {
+    "AccountID": 3,
+    "CustomerID": 1,
+    "AccountType": "checking",
+    "Balance": "25000000.0000",
+    "DateOpened": "2020-06-21",
+    "Status": "active"
+   },
+   {
+    "AccountID": 4,
+    "CustomerID": 3,
+    "AccountType": "checking",
+    "Balance": "4500000.0000",
+    "DateOpened": "2021-06-24",
+    "Status": "terminated"
+   },
+   {
+    "AccountID": 5,
+    "CustomerID": 4,
+    "AccountType": "saving",
+    "Balance": "75000000.0000",
+    "DateOpened": "2020-06-29",
+    "Status": "active"
+   },
+   {
+    "AccountID": 6,
+    "CustomerID": 5,
+    "AccountType": "checking",
+    "Balance": "1500000.0000",
+    "DateOpened": "2020-07-01",
+    "Status": "active"
+   },
+   {
+    "AccountID": 7,
+    "CustomerID": 6,
+    "AccountType": "saving",
+    "Balance": "15000000.0000",
+    "DateOpened": "2020-07-14",
+    "Status": "terminated"
+   },
+   {
+    "AccountID": 8,
+    "CustomerID": 7,
+    "AccountType": "checking",
+    "Balance": "25000000.0000",
+    "DateOpened": "2020-07-15",
+    "Status": "active"
+   },
+   {
+    "AccountID": 9,
+    "CustomerID": 8,
+    "AccountType": "saving",
+    "Balance": "80000000.0000",
+    "DateOpened": "2020-07-15",
+    "Status": "active"
+   },
+   {
+    "AccountID": 10,
+    "CustomerID": 9,
+    "AccountType": "checking",
+    "Balance": "25000000.0000",
+    "DateOpened": "2020-07-16",
+    "Status": "active"
+   },
+   {
+    "AccountID": 11,
+    "CustomerID": 10,
+    "AccountType": "saving",
+    "Balance": "75000000.0000",
+    "DateOpened": "2020-07-24",
+    "Status": "active"
+   },
+   {
+    "AccountID": 12,
+    "CustomerID": 11,
+    "AccountType": "checking",
+    "Balance": "25000000.0000",
+    "DateOpened": "2020-08-08",
+    "Status": "active"
+   },
+   {
+    "AccountID": 13,
+    "CustomerID": 12,
+    "AccountType": "saving",
+    "Balance": "55000000.0000",
+    "DateOpened": "2020-08-15",
+    "Status": "active"
+   },
+   {
+    "AccountID": 14,
+    "CustomerID": 13,
+    "AccountType": "checking",
+    "Balance": "25000000.0000",
+    "DateOpened": "2020-08-15",
+    "Status": "active"
+   },
+   {
+    "AccountID": 15,
+    "CustomerID": 14,
+    "AccountType": "saving",
+    "Balance": "45000000.0000",
+    "DateOpened": "2020-09-25",
+    "Status": "terminated"
+   },
+   {
+    "AccountID": 16,
+    "CustomerID": 15,
+    "AccountType": "checking",
+    "Balance": "25000000.0000",
+    "DateOpened": "2020-09-26",
+    "Status": "active"
+   },
+   {
+    "AccountID": 17,
+    "CustomerID": 15,
+    "AccountType": "saving",
+    "Balance": "10000000.0000",
+    "DateOpened": "2020-10-19",
+    "Status": "active"
+   },
+   {
+    "AccountID": 18,
+    "CustomerID": 17,
+    "AccountType": "checking",
+    "Balance": "25000000.0000",
+    "DateOpened": "2020-10-21",
+    "Status": "active"
+   },
+   {
+    "AccountID": 19,
+    "CustomerID": 18,
+    "AccountType": "saving",
+    "Balance": "55000000.0000",
+    "DateOpened": "2020-11-11",
+    "Status": "active"
+   },
+   {
+    "AccountID": 20,
+    "CustomerID": 19,
+    "AccountType": "checking",
+    "Balance": "25000000.0000",
+    "DateOpened": "2020-11-19",
+    "Status": "active"
+   },
+   {
+    "AccountID": 21,
+    "CustomerID": 20,
+    "AccountType": "checking",
+    "Balance": "6000000.0000",
+    "DateOpened": "2020-11-29",
+    "Status": "active"
+   }
+  ],
+  "FactTransaction": [
+   {
+    "TransactionID": 1,
+    "AccountID": 1,
+    "TransactionDate": "2022-01-01T09:10:00",
+    "Amount": "100000.0000",
+    "TransactionType": "Deposit",
+    "BranchID": 1
+   },
+   {
+    "TransactionID": 2,
+    "AccountID": 2,
+    "TransactionDate": "2022-01-01T10:10:00",
+    "Amount": "1000000.0000",
+    "TransactionType": "Deposit",
+    "BranchID": 1
+   },
+   {
+    "TransactionID": 3,
+    "AccountID": 3,
+    "TransactionDate": "2022-01-11T08:30:00",
+    "Amount": "10000000.0000",
+    "TransactionType": "Transfer",
+    "BranchID": 1
+   },
+   {
+    "TransactionID": 4,
+    "AccountID": 3,
+    "TransactionDate": "2022-01-11T10:45:00",
+    "Amount": "1000000.0000",
+    "TransactionType": "Withdrawal",
+    "BranchID": 1
+   },
+   {
+    "TransactionID": 5,
+    "AccountID": 5,
+    "TransactionDate": "2022-02-21T11:10:00",
+    "Amount": "200000.0000",
+    "TransactionType": "Deposit",
+    "BranchID": 1
+   },
+   {
+    "TransactionID": 6,
+    "AccountID": 6,
+    "TransactionDate": "2022-02-21T13:10:00",
+    "Amount": "50000.0000",
+    "TransactionType": "Withdrawal",
+    "BranchID": 1
+   },
+   {
+    "TransactionID": 7,
+    "AccountID": 6,
+    "TransactionDate": "2022-02-21T14:00:00",
+    "Amount": "100000.0000",
+    "TransactionType": "Payment",
+    "BranchID": 1
+   },
+   {
+    "TransactionID": 8,
+    "AccountID": 7,
+    "TransactionDate": "2022-03-05T09:10:00",
+    "Amount": "5000000.0000",
+    "TransactionType": "Deposit",
+    "BranchID": 1
+   },
+   {
+    "TransactionID": 9,
+    "AccountID": 8,
+    "TransactionDate": "2022-03-15T10:40:00",
+    "Amount": "300000.0000",
+    "TransactionType": "Withdrawal",
+    "BranchID": 2
+   },
+   {
+    "TransactionID": 10,
+    "AccountID": 9,
+    "TransactionDate": "2022-03-24T12:10:00",
+    "Amount": "2000000.0000",
+    "TransactionType": "Deposit",
+    "BranchID": 1
+   },
+   {
+    "TransactionID": 11,
+    "AccountID": 10,
+    "TransactionDate": "2024-01-20T15:00:00",
+    "Amount": "1000000.0000",
+    "TransactionType": "Transfer",
+    "BranchID": 1
+   },
+   {
+    "TransactionID": 12,
+    "AccountID": 11,
+    "TransactionDate": "2024-01-20T10:00:00",
+    "Amount": "500000.0000",
+    "TransactionType": "Deposit",
+    "BranchID": 1
+   },
+   {
+    "TransactionID": 13,
+    "AccountID": 12,
+    "TransactionDate": "2024-01-20T12:10:00",
+    "Amount": "500000.0000",
+    "TransactionType": "Withdrawal",
+    "BranchID": 5
+   },
+   {
+    "TransactionID": 14,
+    "AccountID": 13,
+    "TransactionDate": "2024-01-21T14:00:00",
+    "Amount": "1500000.0000",
+    "TransactionType": "Deposit",
+    "BranchID": 4
+   },
+   {
+    "TransactionID": 15,
+    "AccountID": 14,
+    "TransactionDate": "2024-01-21T08:00:00",
+    "Amount": "500000.0000",
+    "TransactionType": "Transfer",
+    "BranchID": 3
+   },
+   {
+    "TransactionID": 16,
+    "AccountID": 15,
+    "TransactionDate": "2024-01-22T09:00:00",
+    "Amount": "100000.0000",
+    "TransactionType": "Deposit",
+    "BranchID": 1
+   },
+   {
+    "TransactionID": 17,
+    "AccountID": 16,
+    "TransactionDate": "2024-01-22T13:10:00",
+    "Amount": "100000.0000",
+    "TransactionType": "Withdrawal",
+    "BranchID": 5
+   },
+   {
+    "TransactionID": 18,
+    "AccountID": 17,
+    "TransactionDate": "2024-01-22T10:20:00",
+    "Amount": "700000.0000",
+    "TransactionType": "Deposit",
+    "BranchID": 5
+   },
+   {
+    "TransactionID": 19,
+    "AccountID": 18,
+    "TransactionDate": "2024-01-22T11:00:00",
+    "Amount": "30000.0000",
+    "TransactionType": "Payment",
+    "BranchID": 2
+   },
+   {
+    "TransactionID": 20,
+    "AccountID": 19,
+    "TransactionDate": "2024-01-22T15:00:00",
+    "Amount": "2500000.0000",
+    "TransactionType": "Deposit",
+    "BranchID": 2
+   },
+   {
+    "TransactionID": 21,
+    "AccountID": 20,
+    "TransactionDate": "2024-01-22T11:30:00",
+    "Amount": "150000.0000",
+    "TransactionType": "Payment",
+    "BranchID": 4
+   },
+   {
+    "TransactionID": 22,
+    "AccountID": 21,
+    "TransactionDate": "2024-01-22T10:45:00",
+    "Amount": "800000.0000",
+    "TransactionType": "Withdrawal",
+    "BranchID": 5
+   }
+  ]
+ },
+ "cases": [
+  {
+   "procedure": "sp_DailyTransaction",
+   "params": [
+    "2024-01-18",
+    "2024-01-20"
+   ],
+   "rows": [
+    {
+     "Date": "2024-01-20",
+     "TotalTransactions": 3,
+     "TotalAmount": "2000000.0000"
+    }
+   ]
+  },
+  {
+   "procedure": "sp_DailyTransaction",
+   "params": [
+    "2022-01-01",
+    "2024-12-31"
+   ],
+   "rows": [
+    {
+     "Date": "2022-01-01",
+     "TotalTransactions": 2,
+     "TotalAmount": "1100000.0000"
+    },
+    {
+     "Date": "2022-01-11",
+     "TotalTransactions": 2,
+     "TotalAmount": "11000000.0000"
+    },
+    {
+     "Date": "2022-02-21",
+     "TotalTransactions": 3,
+     "TotalAmount": "350000.0000"
+    },
+    {
+     "Date": "2022-03-05",
+     "TotalTransactions": 1,
+     "TotalAmount": "5000000.0000"
+    },
+    {
+     "Date": "2022-03-15",
+     "TotalTransactions": 1,
+     "TotalAmount": "300000.0000"
+    },
+    {
+     "Date": "2022-03-24",
+     "TotalTransactions": 1,
+     "TotalAmount": "2000000.0000"
+    },
+    {
+     "Date": "2024-01-20",
+     "TotalTransactions": 3,
+     "TotalAmount": "2000000.0000"
+    },
+    {
+     "Date": "2024-01-21",
+     "TotalTransactions": 2,
+     "TotalAmount": "2000000.0000"
+    },
+    {
+     "Date": "2024-01-22",
+     "TotalTransactions": 7,
+     "TotalAmount": "4380000.0000"
+    }
+   ]
+  },
+  {
+   "procedure": "sp_DailyTransaction",
+   "params": [
+    "2024-01-22",
+    "2024-01-22"
+   ],
+   "rows": [
+    {
+     "Date": "2024-01-22",
+     "TotalTransactions": 7,
+     "TotalAmount": "4380000.0000"
+    }
+   ]
+  },
+  {
+   "procedure": "sp_DailyTransaction",
+   "params": [
+    "2024-01-20",
+    "2024-01-18"
+   ],
+   "rows": []
+  },
+  {
+   "procedure": "sp_DailyTransaction",
+   "params": [
+    null,
+    "2024-01-20"
+   ],
+   "rows": []
+  },
+  {
+   "procedure": "sp_DailyTransaction",
+   "params": [
+    "2023-01-01",
+    "2023-12-31"
+   ],
+   "rows": []
+  },
+  {
+   "procedure": "sp_BalancePerCustomer",
+   "params": [
+    "SHELLY"
+   ],
+   "rows": [
+    {
+     "CustomerName": "SHELLY JUWITA",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "14000000.0000"
+    },
+    {
+     "CustomerName": "SHELLY JUWITA",
+     "AccountType": "saving",
+     "InitialBalance": "1500000.0000",
+     "CurrentBalance": "1600000.0000"
+    }
+   ]
+  },
+  {
+   "procedure": "sp_BalancePerCustomer",
+   "params": [
+    "shelly juwita"
+   ],
+   "rows": [
+    {
+     "CustomerName": "SHELLY JUWITA",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "14000000.0000"
+    },
+    {
+     "CustomerName": "SHELLY JUWITA",
+     "AccountType": "saving",
+     "InitialBalance": "1500000.0000",
+     "CurrentBalance": "1600000.0000"
+    }
+   ]
+  },
+  {
+   "procedure": "sp_BalancePerCustomer",
+   "params": [
+    "ma"
+   ],
+   "rows": [
+    {
+     "CustomerName": "AHMAD RIYANSAH",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24500000.0000"
+    },
+    {
+     "CustomerName": "BUNGA MALIKA",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24700000.0000"
+    },
+    {
+     "CustomerName": "DIMAS PRASETYO",
+     "AccountType": "checking",
+     "InitialBalance": "1500000.0000",
+     "CurrentBalance": "1350000.0000"
+    },
+    {
+     "CustomerName": "MALIKA CANTIKA",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24850000.0000"
+    },
+    {
+     "CustomerName": "MARIO ROBERT",
+     "AccountType": "saving",
+     "InitialBalance": "55000000.0000",
+     "CurrentBalance": "56500000.0000"
+    },
+    {
+     "CustomerName": "SUSI RAHMAWATI",
+     "AccountType": "saving",
+     "InitialBalance": "75000000.0000",
+     "CurrentBalance": "75200000.0000"
+    }
+   ]
+  },
+  {
+   "procedure": "sp_BalancePerCustomer",
+   "params": [
+    "Ani"
+   ],
+   "rows": [
+    {
+     "CustomerName": "ANI NURAINI",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24900000.0000"
+    },
+    {
+     "CustomerName": "ANI NURAINI",
+     "AccountType": "saving",
+     "InitialBalance": "10000000.0000",
+     "CurrentBalance": "10700000.0000"
+    }
+   ]
+  },
+  {
+   "procedure": "sp_BalancePerCustomer",
+   "params": [
+    "ria"
+   ],
+   "rows": [
+    {
+     "CustomerName": "RATNA SARIASIH",
+     "AccountType": "checking",
+     "InitialBalance": "6000000.0000",
+     "CurrentBalance": "5200000.0000"
+    },
+    {
+     "CustomerName": "RIA ADDINI",
+     "AccountType": "saving",
+     "InitialBalance": "80000000.0000",
+     "CurrentBalance": "82000000.0000"
+    },
+    {
+     "CustomerName": "RIAN WIBOWO",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24970000.0000"
+    }
+   ]
+  },
+  {
+   "procedure": "sp_BalancePerCustomer",
+   "params": [
+    "adam"
+   ],
+   "rows": []
+  },
+  {
+   "procedure": "sp_BalancePerCustomer",
+   "params": [
+    "agung"
+   ],
+   "rows": []
+  },
+  {
+   "procedure": "sp_BalancePerCustomer",
+   "params": [
+    ""
+   ],
+   "rows": [
+    {
+     "CustomerName": "AHMAD RIYANSAH",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24500000.0000"
+    },
+    {
+     "CustomerName": "ANI NURAINI",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24900000.0000"
+    },
+    {
+     "CustomerName": "ANI NURAINI",
+     "AccountType": "saving",
+     "InitialBalance": "10000000.0000",
+     "CurrentBalance": "10700000.0000"
+    },
+    {
+     "CustomerName": "BOBI RINALDO",
+     "AccountType": "saving",
+     "InitialBalance": "500000.0000",
+     "CurrentBalance": "1500000.0000"
+    },
+    {
+     "CustomerName": "BUNGA MALIKA",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24700000.0000"
+    },
+    {
+     "CustomerName": "DIMAS PRASETYO",
+     "AccountType": "checking",
+     "InitialBalance": "1500000.0000",
+     "CurrentBalance": "1350000.0000"
+    },
+    {
+     "CustomerName": "KHANSA AUDYA",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24500000.0000"
+    },
+    {
+     "CustomerName": "LISA WULANDARI",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24000000.0000"
+    },
+    {
+     "CustomerName": "LUTFI AULIA",
+     "AccountType": "saving",
+     "InitialBalance": "55000000.0000",
+     "CurrentBalance": "57500000.0000"
+    },
+    {
+     "CustomerName": "MALIKA CANTIKA",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24850000.0000"
+    },
+    {
+     "CustomerName": "MARIO ROBERT",
+     "AccountType": "saving",
+     "InitialBalance": "55000000.0000",
+     "CurrentBalance": "56500000.0000"
+    },
+    {
+     "CustomerName": "RATNA SARIASIH",
+     "AccountType": "checking",
+     "InitialBalance": "6000000.0000",
+     "CurrentBalance": "5200000.0000"
+    },
+    {
+     "CustomerName": "RIA ADDINI",
+     "AccountType": "saving",
+     "InitialBalance": "80000000.0000",
+     "CurrentBalance": "82000000.0000"
+    },
+    {
+     "CustomerName": "RIAN WIBOWO",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24970000.0000"
+    },
+    {
+     "CustomerName": "RIO WIJAYA",
+     "AccountType": "saving",
+     "InitialBalance": "75000000.0000",
+     "CurrentBalance": "75500000.0000"
+    },
+    {
+     "CustomerName": "SHELLY JUWITA",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "14000000.0000"
+    },
+    {
+     "CustomerName": "SHELLY JUWITA",
+     "AccountType": "saving",
+     "InitialBalance": "1500000.0000",
+     "CurrentBalance": "1600000.0000"
+    },
+    {
+     "CustomerName": "SUSI RAHMAWATI",
+     "AccountType": "saving",
+     "InitialBalance": "75000000.0000",
+     "CurrentBalance": "75200000.0000"
+    }
+   ]
+  },
+  {
+   "procedure": "sp_BalancePerCustomer",
+   "params": [
+    null
+   ],
+   "rows": []
+  },
+  {
+   "procedure": "sp_BalancePerCustomer",
+   "params": [
+    "zzz"
+   ],
+   "rows": []
+  },
+  {
+   "procedure": "sp_BalancePerCustomer",
+   "params": [
+    "_A_"
+   ],
+   "rows": [
+    {
+     "CustomerName": "AHMAD RIYANSAH",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24500000.0000"
+    },
+    {
+     "CustomerName": "ANI NURAINI",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24900000.0000"
+    },
+    {
+     "CustomerName": "ANI NURAINI",
+     "AccountType": "saving",
+     "InitialBalance": "10000000.0000",
+     "CurrentBalance": "10700000.0000"
+    },
+    {
+     "CustomerName": "BOBI RINALDO",
+     "AccountType": "saving",
+     "InitialBalance": "500000.0000",
+     "CurrentBalance": "1500000.0000"
+    },
+    {
+     "CustomerName": "BUNGA MALIKA",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24700000.0000"
+    },
+    {
+     "CustomerName": "DIMAS PRASETYO",
+     "AccountType": "checking",
+     "InitialBalance": "1500000.0000",
+     "CurrentBalance": "1350000.0000"
+    },
+    {
+     "CustomerName": "KHANSA AUDYA",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24500000.0000"
+    },
+    {
+     "CustomerName": "LISA WULANDARI",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24000000.0000"
+    },
+    {
+     "CustomerName": "LUTFI AULIA",
+     "AccountType": "saving",
+     "InitialBalance": "55000000.0000",
+     "CurrentBalance": "57500000.0000"
+    },
+    {
+     "CustomerName": "MALIKA CANTIKA",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24850000.0000"
+    },
+    {
+     "CustomerName": "MARIO ROBERT",
+     "AccountType": "saving",
+     "InitialBalance": "55000000.0000",
+     "CurrentBalance": "56500000.0000"
+    },
+    {
+     "CustomerName": "RATNA SARIASIH",
+     "AccountType": "checking",
+     "InitialBalance": "6000000.0000",
+     "CurrentBalance": "5200000.0000"
+    },
+    {
+     "CustomerName": "RIA ADDINI",
+     "AccountType": "saving",
+     "InitialBalance": "80000000.0000",
+     "CurrentBalance": "82000000.0000"
+    },
+    {
+     "CustomerName": "RIAN WIBOWO",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24970000.0000"
+    },
+    {
+     "CustomerName": "RIO WIJAYA",
+     "AccountType": "saving",
+     "InitialBalance": "75000000.0000",
+     "CurrentBalance": "75500000.0000"
+    },
+    {
+     "CustomerName": "SUSI RAHMAWATI",
+     "AccountType": "saving",
+     "InitialBalance": "75000000.0000",
+     "CurrentBalance": "75200000.0000"
+    }
+   ]
+  },
+  {
+   "procedure": "sp_BalancePerCustomer",
+   "params": [
+    "%"
+   ],
+   "rows": [
+    {
+     "CustomerName": "AHMAD RIYANSAH",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24500000.0000"
+    },
+    {
+     "CustomerName": "ANI NURAINI",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24900000.0000"
+    },
+    {
+     "CustomerName": "ANI NURAINI",
+     "AccountType": "saving",
+     "InitialBalance": "10000000.0000",
+     "CurrentBalance": "10700000.0000"
+    },
+    {
+     "CustomerName": "BOBI RINALDO",
+     "AccountType": "saving",
+     "InitialBalance": "500000.0000",
+     "CurrentBalance": "1500000.0000"
+    },
+    {
+     "CustomerName": "BUNGA MALIKA",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24700000.0000"
+    },
+    {
+     "CustomerName": "DIMAS PRASETYO",
+     "AccountType": "checking",
+     "InitialBalance": "1500000.0000",
+     "CurrentBalance": "1350000.0000"
+    },
+    {
+     "CustomerName": "KHANSA AUDYA",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24500000.0000"
+    },
+    {
+     "CustomerName": "LISA WULANDARI",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24000000.0000"
+    },
+    {
+     "CustomerName": "LUTFI AULIA",
+     "AccountType": "saving",
+     "InitialBalance": "55000000.0000",
+     "CurrentBalance": "57500000.0000"
+    },
+    {
+     "CustomerName": "MALIKA CANTIKA",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24850000.0000"
+    },
+    {
+     "CustomerName": "MARIO ROBERT",
+     "AccountType": "saving",
+     "InitialBalance": "55000000.0000",
+     "CurrentBalance": "56500000.0000"
+    },
+    {
+     "CustomerName": "RATNA SARIASIH",
+     "AccountType": "checking",
+     "InitialBalance": "6000000.0000",
+     "CurrentBalance": "5200000.0000"
+    },
+    {
+     "CustomerName": "RIA ADDINI",
+     "AccountType": "saving",
+     "InitialBalance": "80000000.0000",
+     "CurrentBalance": "82000000.0000"
+    },
+    {
+     "CustomerName": "RIAN WIBOWO",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24970000.0000"
+    },
+    {
+     "CustomerName": "RIO WIJAYA",
+     "AccountType": "saving",
+     "InitialBalance": "75000000.0000",
+     "CurrentBalance": "75500000.0000"
+    },
+    {
+     "CustomerName": "SHELLY JUWITA",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "14000000.0000"
+    },
+    {
+     "CustomerName": "SHELLY JUWITA",
+     "AccountType": "saving",
+     "InitialBalance": "1500000.0000",
+     "CurrentBalance": "1600000.0000"
+    },
+    {
+     "CustomerName": "SUSI RAHMAWATI",
+     "AccountType": "saving",
+     "InitialBalance": "75000000.0000",
+     "CurrentBalance": "75200000.0000"
+    }
+   ]
+  },
+  {
+   "procedure": "sp_BalancePerCustomer",
+   "params": [
+    "R%O"
+   ],
+   "rows": [
+    {
+     "CustomerName": "BOBI RINALDO",
+     "AccountType": "saving",
+     "InitialBalance": "500000.0000",
+     "CurrentBalance": "1500000.0000"
+    },
+    {
+     "CustomerName": "DIMAS PRASETYO",
+     "AccountType": "checking",
+     "InitialBalance": "1500000.0000",
+     "CurrentBalance": "1350000.0000"
+    },
+    {
+     "CustomerName": "MARIO ROBERT",
+     "AccountType": "saving",
+     "InitialBalance": "55000000.0000",
+     "CurrentBalance": "56500000.0000"
+    },
+    {
+     "CustomerName": "RIAN WIBOWO",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24970000.0000"
+    },
+    {
+     "CustomerName": "RIO WIJAYA",
+     "AccountType": "saving",
+     "InitialBalance": "75000000.0000",
+     "CurrentBalance": "75500000.0000"
+    }
+   ]
+  },
+  {
+   "procedure": "sp_BalancePerCustomer",
+   "params": [
+    "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%SHELLQ"
+   ],
+   "rows": [
+    {
+     "CustomerName": "SHELLY JUWITA",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "14000000.0000"
+    },
+    {
+     "CustomerName": "SHELLY JUWITA",
+     "AccountType": "saving",
+     "InitialBalance": "1500000.0000",
+     "CurrentBalance": "1600000.0000"
+    }
+   ]
+  }
+ ]
+}
