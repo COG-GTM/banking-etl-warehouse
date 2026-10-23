@@ -1,0 +1,1132 @@
+{
+ "generated_by": "databricks/fixtures/t9_legacy_parity/build_expected.py",
+ "sql_server": "Microsoft SQL Server 2022 (RTM-CU27-GDR) (KB5126934) - 16.0.4305.5 (X64)",
+ "collation": "SQL_Latin1_General_CP1_CI_AS",
+ "cases": [
+  {
+   "dataset": "legacy",
+   "proc": "sp_DailyTransaction",
+   "params": {
+    "start_date": "2024-01-01",
+    "end_date": "2024-01-31"
+   },
+   "rows": [
+    {
+     "Date": "2024-01-20",
+     "TotalTransactions": 3,
+     "TotalAmount": "2000000.0000"
+    },
+    {
+     "Date": "2024-01-21",
+     "TotalTransactions": 2,
+     "TotalAmount": "2000000.0000"
+    },
+    {
+     "Date": "2024-01-22",
+     "TotalTransactions": 7,
+     "TotalAmount": "4380000.0000"
+    }
+   ]
+  },
+  {
+   "dataset": "legacy",
+   "proc": "sp_DailyTransaction",
+   "params": {
+    "start_date": "2022-01-01",
+    "end_date": "2022-12-31"
+   },
+   "rows": [
+    {
+     "Date": "2022-01-01",
+     "TotalTransactions": 2,
+     "TotalAmount": "1100000.0000"
+    },
+    {
+     "Date": "2022-01-11",
+     "TotalTransactions": 2,
+     "TotalAmount": "11000000.0000"
+    },
+    {
+     "Date": "2022-02-21",
+     "TotalTransactions": 3,
+     "TotalAmount": "350000.0000"
+    },
+    {
+     "Date": "2022-03-05",
+     "TotalTransactions": 1,
+     "TotalAmount": "5000000.0000"
+    },
+    {
+     "Date": "2022-03-15",
+     "TotalTransactions": 1,
+     "TotalAmount": "300000.0000"
+    },
+    {
+     "Date": "2022-03-24",
+     "TotalTransactions": 1,
+     "TotalAmount": "2000000.0000"
+    }
+   ]
+  },
+  {
+   "dataset": "legacy",
+   "proc": "sp_DailyTransaction",
+   "params": {
+    "start_date": "1900-01-01",
+    "end_date": "9999-12-31"
+   },
+   "rows": [
+    {
+     "Date": "2022-01-01",
+     "TotalTransactions": 2,
+     "TotalAmount": "1100000.0000"
+    },
+    {
+     "Date": "2022-01-11",
+     "TotalTransactions": 2,
+     "TotalAmount": "11000000.0000"
+    },
+    {
+     "Date": "2022-02-21",
+     "TotalTransactions": 3,
+     "TotalAmount": "350000.0000"
+    },
+    {
+     "Date": "2022-03-05",
+     "TotalTransactions": 1,
+     "TotalAmount": "5000000.0000"
+    },
+    {
+     "Date": "2022-03-15",
+     "TotalTransactions": 1,
+     "TotalAmount": "300000.0000"
+    },
+    {
+     "Date": "2022-03-24",
+     "TotalTransactions": 1,
+     "TotalAmount": "2000000.0000"
+    },
+    {
+     "Date": "2024-01-20",
+     "TotalTransactions": 3,
+     "TotalAmount": "2000000.0000"
+    },
+    {
+     "Date": "2024-01-21",
+     "TotalTransactions": 2,
+     "TotalAmount": "2000000.0000"
+    },
+    {
+     "Date": "2024-01-22",
+     "TotalTransactions": 7,
+     "TotalAmount": "4380000.0000"
+    }
+   ]
+  },
+  {
+   "dataset": "legacy",
+   "proc": "sp_DailyTransaction",
+   "params": {
+    "start_date": "2024-01-22",
+    "end_date": "2024-01-22"
+   },
+   "rows": [
+    {
+     "Date": "2024-01-22",
+     "TotalTransactions": 7,
+     "TotalAmount": "4380000.0000"
+    }
+   ]
+  },
+  {
+   "dataset": "legacy",
+   "proc": "sp_DailyTransaction",
+   "params": {
+    "start_date": "2024-01-31",
+    "end_date": "2024-01-01"
+   },
+   "rows": []
+  },
+  {
+   "dataset": "legacy",
+   "proc": "sp_BalancePerCustomer",
+   "params": {
+    "customer_name": "shelly"
+   },
+   "rows": [
+    {
+     "CustomerName": "SHELLY JUWITA",
+     "AccountType": "saving",
+     "InitialBalance": "1500000.0000",
+     "CurrentBalance": "1600000.0000"
+    },
+    {
+     "CustomerName": "SHELLY JUWITA",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "14000000.0000"
+    }
+   ]
+  },
+  {
+   "dataset": "legacy",
+   "proc": "sp_BalancePerCustomer",
+   "params": {
+    "customer_name": "SHELLY"
+   },
+   "rows": [
+    {
+     "CustomerName": "SHELLY JUWITA",
+     "AccountType": "saving",
+     "InitialBalance": "1500000.0000",
+     "CurrentBalance": "1600000.0000"
+    },
+    {
+     "CustomerName": "SHELLY JUWITA",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "14000000.0000"
+    }
+   ]
+  },
+  {
+   "dataset": "legacy",
+   "proc": "sp_BalancePerCustomer",
+   "params": {
+    "customer_name": "Ma"
+   },
+   "rows": [
+    {
+     "CustomerName": "SUSI RAHMAWATI",
+     "AccountType": "saving",
+     "InitialBalance": "75000000.0000",
+     "CurrentBalance": "75200000.0000"
+    },
+    {
+     "CustomerName": "DIMAS PRASETYO",
+     "AccountType": "checking",
+     "InitialBalance": "1500000.0000",
+     "CurrentBalance": "1350000.0000"
+    },
+    {
+     "CustomerName": "BUNGA MALIKA",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24700000.0000"
+    },
+    {
+     "CustomerName": "AHMAD RIYANSAH",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24500000.0000"
+    },
+    {
+     "CustomerName": "MARIO ROBERT",
+     "AccountType": "saving",
+     "InitialBalance": "55000000.0000",
+     "CurrentBalance": "56500000.0000"
+    },
+    {
+     "CustomerName": "MALIKA CANTIKA",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24850000.0000"
+    }
+   ]
+  },
+  {
+   "dataset": "legacy",
+   "proc": "sp_BalancePerCustomer",
+   "params": {
+    "customer_name": "an"
+   },
+   "rows": [
+    {
+     "CustomerName": "LISA WULANDARI",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24000000.0000"
+    },
+    {
+     "CustomerName": "AHMAD RIYANSAH",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24500000.0000"
+    },
+    {
+     "CustomerName": "KHANSA AUDYA",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24500000.0000"
+    },
+    {
+     "CustomerName": "ANI NURAINI",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24900000.0000"
+    },
+    {
+     "CustomerName": "ANI NURAINI",
+     "AccountType": "saving",
+     "InitialBalance": "10000000.0000",
+     "CurrentBalance": "10700000.0000"
+    },
+    {
+     "CustomerName": "RIAN WIBOWO",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24970000.0000"
+    },
+    {
+     "CustomerName": "MALIKA CANTIKA",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24850000.0000"
+    }
+   ]
+  },
+  {
+   "dataset": "legacy",
+   "proc": "sp_BalancePerCustomer",
+   "params": {
+    "customer_name": "cintya"
+   },
+   "rows": []
+  },
+  {
+   "dataset": "legacy",
+   "proc": "sp_BalancePerCustomer",
+   "params": {
+    "customer_name": ""
+   },
+   "rows": [
+    {
+     "CustomerName": "SHELLY JUWITA",
+     "AccountType": "saving",
+     "InitialBalance": "1500000.0000",
+     "CurrentBalance": "1600000.0000"
+    },
+    {
+     "CustomerName": "BOBI RINALDO",
+     "AccountType": "saving",
+     "InitialBalance": "500000.0000",
+     "CurrentBalance": "1500000.0000"
+    },
+    {
+     "CustomerName": "SHELLY JUWITA",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "14000000.0000"
+    },
+    {
+     "CustomerName": "SUSI RAHMAWATI",
+     "AccountType": "saving",
+     "InitialBalance": "75000000.0000",
+     "CurrentBalance": "75200000.0000"
+    },
+    {
+     "CustomerName": "DIMAS PRASETYO",
+     "AccountType": "checking",
+     "InitialBalance": "1500000.0000",
+     "CurrentBalance": "1350000.0000"
+    },
+    {
+     "CustomerName": "BUNGA MALIKA",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24700000.0000"
+    },
+    {
+     "CustomerName": "RIA ADDINI",
+     "AccountType": "saving",
+     "InitialBalance": "80000000.0000",
+     "CurrentBalance": "82000000.0000"
+    },
+    {
+     "CustomerName": "LISA WULANDARI",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24000000.0000"
+    },
+    {
+     "CustomerName": "RIO WIJAYA",
+     "AccountType": "saving",
+     "InitialBalance": "75000000.0000",
+     "CurrentBalance": "75500000.0000"
+    },
+    {
+     "CustomerName": "AHMAD RIYANSAH",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24500000.0000"
+    },
+    {
+     "CustomerName": "MARIO ROBERT",
+     "AccountType": "saving",
+     "InitialBalance": "55000000.0000",
+     "CurrentBalance": "56500000.0000"
+    },
+    {
+     "CustomerName": "KHANSA AUDYA",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24500000.0000"
+    },
+    {
+     "CustomerName": "ANI NURAINI",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24900000.0000"
+    },
+    {
+     "CustomerName": "ANI NURAINI",
+     "AccountType": "saving",
+     "InitialBalance": "10000000.0000",
+     "CurrentBalance": "10700000.0000"
+    },
+    {
+     "CustomerName": "RIAN WIBOWO",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24970000.0000"
+    },
+    {
+     "CustomerName": "LUTFI AULIA",
+     "AccountType": "saving",
+     "InitialBalance": "55000000.0000",
+     "CurrentBalance": "57500000.0000"
+    },
+    {
+     "CustomerName": "MALIKA CANTIKA",
+     "AccountType": "checking",
+     "InitialBalance": "25000000.0000",
+     "CurrentBalance": "24850000.0000"
+    },
+    {
+     "CustomerName": "RATNA SARIASIH",
+     "AccountType": "checking",
+     "InitialBalance": "6000000.0000",
+     "CurrentBalance": "5200000.0000"
+    }
+   ]
+  },
+  {
+   "dataset": "legacy",
+   "proc": "sp_BalancePerCustomer",
+   "params": {
+    "customer_name": "nobody"
+   },
+   "rows": []
+  },
+  {
+   "dataset": "edge",
+   "proc": "sp_DailyTransaction",
+   "params": {
+    "start_date": "2024-01-01",
+    "end_date": "2024-01-31"
+   },
+   "rows": [
+    {
+     "Date": "2024-01-01",
+     "TotalTransactions": 2,
+     "TotalAmount": "140.2500"
+    },
+    {
+     "Date": "2024-01-02",
+     "TotalTransactions": 2,
+     "TotalAmount": "11.1111"
+    },
+    {
+     "Date": "2024-01-03",
+     "TotalTransactions": 2,
+     "TotalAmount": "500.0000"
+    },
+    {
+     "Date": "2024-01-31",
+     "TotalTransactions": 1,
+     "TotalAmount": "3.0000"
+    }
+   ]
+  },
+  {
+   "dataset": "edge",
+   "proc": "sp_DailyTransaction",
+   "params": {
+    "start_date": "2023-01-01",
+    "end_date": "2024-12-31"
+   },
+   "rows": [
+    {
+     "Date": "2023-12-31",
+     "TotalTransactions": 1,
+     "TotalAmount": "1.0000"
+    },
+    {
+     "Date": "2024-01-01",
+     "TotalTransactions": 2,
+     "TotalAmount": "140.2500"
+    },
+    {
+     "Date": "2024-01-02",
+     "TotalTransactions": 2,
+     "TotalAmount": "11.1111"
+    },
+    {
+     "Date": "2024-01-03",
+     "TotalTransactions": 2,
+     "TotalAmount": "500.0000"
+    },
+    {
+     "Date": "2024-01-31",
+     "TotalTransactions": 1,
+     "TotalAmount": "3.0000"
+    },
+    {
+     "Date": "2024-02-01",
+     "TotalTransactions": 2,
+     "TotalAmount": "13.0000"
+    },
+    {
+     "Date": "2024-02-29",
+     "TotalTransactions": 1,
+     "TotalAmount": "12.3400"
+    },
+    {
+     "Date": "2024-03-01",
+     "TotalTransactions": 1,
+     "TotalAmount": null
+    }
+   ]
+  },
+  {
+   "dataset": "edge",
+   "proc": "sp_DailyTransaction",
+   "params": {
+    "start_date": "2024-02-29",
+    "end_date": "2024-03-01"
+   },
+   "rows": [
+    {
+     "Date": "2024-02-29",
+     "TotalTransactions": 1,
+     "TotalAmount": "12.3400"
+    },
+    {
+     "Date": "2024-03-01",
+     "TotalTransactions": 1,
+     "TotalAmount": null
+    }
+   ]
+  },
+  {
+   "dataset": "edge",
+   "proc": "sp_DailyTransaction",
+   "params": {
+    "start_date": null,
+    "end_date": "2024-12-31"
+   },
+   "rows": []
+  },
+  {
+   "dataset": "edge",
+   "proc": "sp_BalancePerCustomer",
+   "params": {
+    "customer_name": "ana"
+   },
+   "rows": [
+    {
+     "CustomerName": "Ana Maria",
+     "AccountType": "saving",
+     "InitialBalance": "2000.0000",
+     "CurrentBalance": "1500.0000"
+    },
+    {
+     "CustomerName": "ANA_LIA",
+     "AccountType": "saving",
+     "InitialBalance": "10.0000",
+     "CurrentBalance": "3.0000"
+    },
+    {
+     "CustomerName": "ANAXLIA",
+     "AccountType": "saving",
+     "InitialBalance": "20.0000",
+     "CurrentBalance": "20.0000"
+    }
+   ]
+  },
+  {
+   "dataset": "edge",
+   "proc": "sp_BalancePerCustomer",
+   "params": {
+    "customer_name": "aNa MaRiA"
+   },
+   "rows": [
+    {
+     "CustomerName": "Ana Maria",
+     "AccountType": "saving",
+     "InitialBalance": "2000.0000",
+     "CurrentBalance": "1500.0000"
+    }
+   ]
+  },
+  {
+   "dataset": "edge",
+   "proc": "sp_BalancePerCustomer",
+   "params": {
+    "customer_name": "shelly"
+   },
+   "rows": [
+    {
+     "CustomerName": "SHELLY JUWITA",
+     "AccountType": "saving",
+     "InitialBalance": "1500000.0000",
+     "CurrentBalance": "1500059.7500"
+    },
+    {
+     "CustomerName": "SHELLY JUWITA",
+     "AccountType": "checking",
+     "InitialBalance": "100.5000",
+     "CurrentBalance": "111.6111"
+    },
+    {
+     "CustomerName": "SHELLY JUWITA",
+     "AccountType": "saving",
+     "InitialBalance": null,
+     "CurrentBalance": null
+    }
+   ]
+  },
+  {
+   "dataset": "edge",
+   "proc": "sp_BalancePerCustomer",
+   "params": {
+    "customer_name": "ana_lia"
+   },
+   "rows": [
+    {
+     "CustomerName": "ANA_LIA",
+     "AccountType": "saving",
+     "InitialBalance": "10.0000",
+     "CurrentBalance": "3.0000"
+    },
+    {
+     "CustomerName": "ANAXLIA",
+     "AccountType": "saving",
+     "InitialBalance": "20.0000",
+     "CurrentBalance": "20.0000"
+    }
+   ]
+  },
+  {
+   "dataset": "edge",
+   "proc": "sp_BalancePerCustomer",
+   "params": {
+    "customer_name": "_"
+   },
+   "rows": [
+    {
+     "CustomerName": "SHELLY JUWITA",
+     "AccountType": "saving",
+     "InitialBalance": "1500000.0000",
+     "CurrentBalance": "1500059.7500"
+    },
+    {
+     "CustomerName": "SHELLY JUWITA",
+     "AccountType": "checking",
+     "InitialBalance": "100.5000",
+     "CurrentBalance": "111.6111"
+    },
+    {
+     "CustomerName": "Ana Maria",
+     "AccountType": "saving",
+     "InitialBalance": "2000.0000",
+     "CurrentBalance": "1500.0000"
+    },
+    {
+     "CustomerName": "ANA_LIA",
+     "AccountType": "saving",
+     "InitialBalance": "10.0000",
+     "CurrentBalance": "3.0000"
+    },
+    {
+     "CustomerName": "ANAXLIA",
+     "AccountType": "saving",
+     "InitialBalance": "20.0000",
+     "CurrentBalance": "20.0000"
+    },
+    {
+     "CustomerName": "100% SAVER",
+     "AccountType": "saving",
+     "InitialBalance": "30.0000",
+     "CurrentBalance": "30.0000"
+    },
+    {
+     "CustomerName": "O'BRIEN",
+     "AccountType": "saving",
+     "InitialBalance": "40.0000",
+     "CurrentBalance": "40.0000"
+    },
+    {
+     "CustomerName": "MULLER\\TEST",
+     "AccountType": "saving",
+     "InitialBalance": "50.0000",
+     "CurrentBalance": "50.0000"
+    },
+    {
+     "CustomerName": "JOSÉ RIZAL",
+     "AccountType": "saving",
+     "InitialBalance": "60.0000",
+     "CurrentBalance": "60.0000"
+    },
+    {
+     "CustomerName": "BUDI ",
+     "AccountType": "saving",
+     "InitialBalance": "70.0000",
+     "CurrentBalance": "70.0000"
+    },
+    {
+     "CustomerName": "[VIP] TONO",
+     "AccountType": "saving",
+     "InitialBalance": "90.0000",
+     "CurrentBalance": "90.0000"
+    },
+    {
+     "CustomerName": "SHELLY JUWITA",
+     "AccountType": "saving",
+     "InitialBalance": null,
+     "CurrentBalance": null
+    }
+   ]
+  },
+  {
+   "dataset": "edge",
+   "proc": "sp_BalancePerCustomer",
+   "params": {
+    "customer_name": "%"
+   },
+   "rows": [
+    {
+     "CustomerName": "SHELLY JUWITA",
+     "AccountType": "saving",
+     "InitialBalance": "1500000.0000",
+     "CurrentBalance": "1500059.7500"
+    },
+    {
+     "CustomerName": "SHELLY JUWITA",
+     "AccountType": "checking",
+     "InitialBalance": "100.5000",
+     "CurrentBalance": "111.6111"
+    },
+    {
+     "CustomerName": "Ana Maria",
+     "AccountType": "saving",
+     "InitialBalance": "2000.0000",
+     "CurrentBalance": "1500.0000"
+    },
+    {
+     "CustomerName": "ANA_LIA",
+     "AccountType": "saving",
+     "InitialBalance": "10.0000",
+     "CurrentBalance": "3.0000"
+    },
+    {
+     "CustomerName": "ANAXLIA",
+     "AccountType": "saving",
+     "InitialBalance": "20.0000",
+     "CurrentBalance": "20.0000"
+    },
+    {
+     "CustomerName": "100% SAVER",
+     "AccountType": "saving",
+     "InitialBalance": "30.0000",
+     "CurrentBalance": "30.0000"
+    },
+    {
+     "CustomerName": "O'BRIEN",
+     "AccountType": "saving",
+     "InitialBalance": "40.0000",
+     "CurrentBalance": "40.0000"
+    },
+    {
+     "CustomerName": "MULLER\\TEST",
+     "AccountType": "saving",
+     "InitialBalance": "50.0000",
+     "CurrentBalance": "50.0000"
+    },
+    {
+     "CustomerName": "JOSÉ RIZAL",
+     "AccountType": "saving",
+     "InitialBalance": "60.0000",
+     "CurrentBalance": "60.0000"
+    },
+    {
+     "CustomerName": "BUDI ",
+     "AccountType": "saving",
+     "InitialBalance": "70.0000",
+     "CurrentBalance": "70.0000"
+    },
+    {
+     "CustomerName": "[VIP] TONO",
+     "AccountType": "saving",
+     "InitialBalance": "90.0000",
+     "CurrentBalance": "90.0000"
+    },
+    {
+     "CustomerName": "SHELLY JUWITA",
+     "AccountType": "saving",
+     "InitialBalance": null,
+     "CurrentBalance": null
+    }
+   ]
+  },
+  {
+   "dataset": "edge",
+   "proc": "sp_BalancePerCustomer",
+   "params": {
+    "customer_name": "100%"
+   },
+   "rows": [
+    {
+     "CustomerName": "100% SAVER",
+     "AccountType": "saving",
+     "InitialBalance": "30.0000",
+     "CurrentBalance": "30.0000"
+    }
+   ]
+  },
+  {
+   "dataset": "edge",
+   "proc": "sp_BalancePerCustomer",
+   "params": {
+    "customer_name": "0% s"
+   },
+   "rows": [
+    {
+     "CustomerName": "100% SAVER",
+     "AccountType": "saving",
+     "InitialBalance": "30.0000",
+     "CurrentBalance": "30.0000"
+    }
+   ]
+  },
+  {
+   "dataset": "edge",
+   "proc": "sp_BalancePerCustomer",
+   "params": {
+    "customer_name": "o'brien"
+   },
+   "rows": [
+    {
+     "CustomerName": "O'BRIEN",
+     "AccountType": "saving",
+     "InitialBalance": "40.0000",
+     "CurrentBalance": "40.0000"
+    }
+   ]
+  },
+  {
+   "dataset": "edge",
+   "proc": "sp_BalancePerCustomer",
+   "params": {
+    "customer_name": "muller\\test"
+   },
+   "rows": [
+    {
+     "CustomerName": "MULLER\\TEST",
+     "AccountType": "saving",
+     "InitialBalance": "50.0000",
+     "CurrentBalance": "50.0000"
+    }
+   ]
+  },
+  {
+   "dataset": "edge",
+   "proc": "sp_BalancePerCustomer",
+   "params": {
+    "customer_name": "\\"
+   },
+   "rows": [
+    {
+     "CustomerName": "MULLER\\TEST",
+     "AccountType": "saving",
+     "InitialBalance": "50.0000",
+     "CurrentBalance": "50.0000"
+    }
+   ]
+  },
+  {
+   "dataset": "edge",
+   "proc": "sp_BalancePerCustomer",
+   "params": {
+    "customer_name": "jose"
+   },
+   "rows": []
+  },
+  {
+   "dataset": "edge",
+   "proc": "sp_BalancePerCustomer",
+   "params": {
+    "customer_name": "josé"
+   },
+   "rows": [
+    {
+     "CustomerName": "JOSÉ RIZAL",
+     "AccountType": "saving",
+     "InitialBalance": "60.0000",
+     "CurrentBalance": "60.0000"
+    }
+   ]
+  },
+  {
+   "dataset": "edge",
+   "proc": "sp_BalancePerCustomer",
+   "params": {
+    "customer_name": "budi "
+   },
+   "rows": [
+    {
+     "CustomerName": "BUDI ",
+     "AccountType": "saving",
+     "InitialBalance": "70.0000",
+     "CurrentBalance": "70.0000"
+    }
+   ]
+  },
+  {
+   "dataset": "edge",
+   "proc": "sp_BalancePerCustomer",
+   "params": {
+    "customer_name": "budi  "
+   },
+   "rows": []
+  },
+  {
+   "dataset": "edge",
+   "proc": "sp_BalancePerCustomer",
+   "params": {
+    "customer_name": ""
+   },
+   "rows": [
+    {
+     "CustomerName": "SHELLY JUWITA",
+     "AccountType": "saving",
+     "InitialBalance": "1500000.0000",
+     "CurrentBalance": "1500059.7500"
+    },
+    {
+     "CustomerName": "SHELLY JUWITA",
+     "AccountType": "checking",
+     "InitialBalance": "100.5000",
+     "CurrentBalance": "111.6111"
+    },
+    {
+     "CustomerName": "Ana Maria",
+     "AccountType": "saving",
+     "InitialBalance": "2000.0000",
+     "CurrentBalance": "1500.0000"
+    },
+    {
+     "CustomerName": "ANA_LIA",
+     "AccountType": "saving",
+     "InitialBalance": "10.0000",
+     "CurrentBalance": "3.0000"
+    },
+    {
+     "CustomerName": "ANAXLIA",
+     "AccountType": "saving",
+     "InitialBalance": "20.0000",
+     "CurrentBalance": "20.0000"
+    },
+    {
+     "CustomerName": "100% SAVER",
+     "AccountType": "saving",
+     "InitialBalance": "30.0000",
+     "CurrentBalance": "30.0000"
+    },
+    {
+     "CustomerName": "O'BRIEN",
+     "AccountType": "saving",
+     "InitialBalance": "40.0000",
+     "CurrentBalance": "40.0000"
+    },
+    {
+     "CustomerName": "MULLER\\TEST",
+     "AccountType": "saving",
+     "InitialBalance": "50.0000",
+     "CurrentBalance": "50.0000"
+    },
+    {
+     "CustomerName": "JOSÉ RIZAL",
+     "AccountType": "saving",
+     "InitialBalance": "60.0000",
+     "CurrentBalance": "60.0000"
+    },
+    {
+     "CustomerName": "BUDI ",
+     "AccountType": "saving",
+     "InitialBalance": "70.0000",
+     "CurrentBalance": "70.0000"
+    },
+    {
+     "CustomerName": "[VIP] TONO",
+     "AccountType": "saving",
+     "InitialBalance": "90.0000",
+     "CurrentBalance": "90.0000"
+    },
+    {
+     "CustomerName": "SHELLY JUWITA",
+     "AccountType": "saving",
+     "InitialBalance": null,
+     "CurrentBalance": null
+    }
+   ]
+  },
+  {
+   "dataset": "edge",
+   "proc": "sp_BalancePerCustomer",
+   "params": {
+    "customer_name": null
+   },
+   "rows": []
+  },
+  {
+   "dataset": "edge",
+   "proc": "sp_BalancePerCustomer",
+   "params": {
+    "customer_name": "no accounts"
+   },
+   "rows": []
+  },
+  {
+   "dataset": "edge",
+   "proc": "sp_BalancePerCustomer",
+   "params": {
+    "customer_name": "%%%%%%%%ana%%%%%%%%"
+   },
+   "rows": [
+    {
+     "CustomerName": "Ana Maria",
+     "AccountType": "saving",
+     "InitialBalance": "2000.0000",
+     "CurrentBalance": "1500.0000"
+    },
+    {
+     "CustomerName": "ANA_LIA",
+     "AccountType": "saving",
+     "InitialBalance": "10.0000",
+     "CurrentBalance": "3.0000"
+    },
+    {
+     "CustomerName": "ANAXLIA",
+     "AccountType": "saving",
+     "InitialBalance": "20.0000",
+     "CurrentBalance": "20.0000"
+    }
+   ]
+  },
+  {
+   "dataset": "edge",
+   "proc": "sp_BalancePerCustomer",
+   "params": {
+    "customer_name": "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%ZZZ_NOT_A_NAME"
+   },
+   "rows": [
+    {
+     "CustomerName": "SHELLY JUWITA",
+     "AccountType": "saving",
+     "InitialBalance": "1500000.0000",
+     "CurrentBalance": "1500059.7500"
+    },
+    {
+     "CustomerName": "SHELLY JUWITA",
+     "AccountType": "checking",
+     "InitialBalance": "100.5000",
+     "CurrentBalance": "111.6111"
+    },
+    {
+     "CustomerName": "Ana Maria",
+     "AccountType": "saving",
+     "InitialBalance": "2000.0000",
+     "CurrentBalance": "1500.0000"
+    },
+    {
+     "CustomerName": "ANA_LIA",
+     "AccountType": "saving",
+     "InitialBalance": "10.0000",
+     "CurrentBalance": "3.0000"
+    },
+    {
+     "CustomerName": "ANAXLIA",
+     "AccountType": "saving",
+     "InitialBalance": "20.0000",
+     "CurrentBalance": "20.0000"
+    },
+    {
+     "CustomerName": "100% SAVER",
+     "AccountType": "saving",
+     "InitialBalance": "30.0000",
+     "CurrentBalance": "30.0000"
+    },
+    {
+     "CustomerName": "O'BRIEN",
+     "AccountType": "saving",
+     "InitialBalance": "40.0000",
+     "CurrentBalance": "40.0000"
+    },
+    {
+     "CustomerName": "MULLER\\TEST",
+     "AccountType": "saving",
+     "InitialBalance": "50.0000",
+     "CurrentBalance": "50.0000"
+    },
+    {
+     "CustomerName": "JOSÉ RIZAL",
+     "AccountType": "saving",
+     "InitialBalance": "60.0000",
+     "CurrentBalance": "60.0000"
+    },
+    {
+     "CustomerName": "BUDI ",
+     "AccountType": "saving",
+     "InitialBalance": "70.0000",
+     "CurrentBalance": "70.0000"
+    },
+    {
+     "CustomerName": "[VIP] TONO",
+     "AccountType": "saving",
+     "InitialBalance": "90.0000",
+     "CurrentBalance": "90.0000"
+    },
+    {
+     "CustomerName": "SHELLY JUWITA",
+     "AccountType": "saving",
+     "InitialBalance": null,
+     "CurrentBalance": null
+    }
+   ]
+  },
+  {
+   "dataset": "edge",
+   "proc": "sp_BalancePerCustomer",
+   "params": {
+    "customer_name": "%A%A%A%A%A%A%A%A%A%A%A%A%A%A%A%A%A%A%A%A%A%A%A%A%A%A%A%A%A%A%A%A%A%A%A%A%A%A%A%A%Q"
+   },
+   "rows": []
+  },
+  {
+   "dataset": "edge",
+   "proc": "sp_BalancePerCustomer",
+   "params": {
+    "customer_name": "VIP"
+   },
+   "rows": [
+    {
+     "CustomerName": "[VIP] TONO",
+     "AccountType": "saving",
+     "InitialBalance": "90.0000",
+     "CurrentBalance": "90.0000"
+    }
+   ]
+  }
+ ]
+}

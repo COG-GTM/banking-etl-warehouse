@@ -1,0 +1,122 @@
+[
+ {
+  "CustomerID": 1,
+  "CustomerName": "SHELLY JUWITA",
+  "Address": null,
+  "CityName": null,
+  "StateName": null,
+  "Age": null,
+  "Gender": null,
+  "Email": null
+ },
+ {
+  "CustomerID": 2,
+  "CustomerName": "Ana Maria",
+  "Address": null,
+  "CityName": null,
+  "StateName": null,
+  "Age": null,
+  "Gender": null,
+  "Email": null
+ },
+ {
+  "CustomerID": 3,
+  "CustomerName": "ANA_LIA",
+  "Address": null,
+  "CityName": null,
+  "StateName": null,
+  "Age": null,
+  "Gender": null,
+  "Email": null
+ },
+ {
+  "CustomerID": 4,
+  "CustomerName": "ANAXLIA",
+  "Address": null,
+  "CityName": null,
+  "StateName": null,
+  "Age": null,
+  "Gender": null,
+  "Email": null
+ },
+ {
+  "CustomerID": 5,
+  "CustomerName": "100% SAVER",
+  "Address": null,
+  "CityName": null,
+  "StateName": null,
+  "Age": null,
+  "Gender": null,
+  "Email": null
+ },
+ {
+  "CustomerID": 6,
+  "CustomerName": "O'BRIEN",
+  "Address": null,
+  "CityName": null,
+  "StateName": null,
+  "Age": null,
+  "Gender": null,
+  "Email": null
+ },
+ {
+  "CustomerID": 7,
+  "CustomerName": "MULLER\\TEST",
+  "Address": null,
+  "CityName": null,
+  "StateName": null,
+  "Age": null,
+  "Gender": null,
+  "Email": null
+ },
+ {
+  "CustomerID": 8,
+  "CustomerName": "JOSÉ RIZAL",
+  "Address": null,
+  "CityName": null,
+  "StateName": null,
+  "Age": null,
+  "Gender": null,
+  "Email": null
+ },
+ {
+  "CustomerID": 9,
+  "CustomerName": "BUDI ",
+  "Address": null,
+  "CityName": null,
+  "StateName": null,
+  "Age": null,
+  "Gender": null,
+  "Email": null
+ },
+ {
+  "CustomerID": 10,
+  "CustomerName": null,
+  "Address": null,
+  "CityName": null,
+  "StateName": null,
+  "Age": null,
+  "Gender": null,
+  "Email": null
+ },
+ {
+  "CustomerID": 11,
+  "CustomerName": "NO ACCOUNTS",
+  "Address": null,
+  "CityName": null,
+  "StateName": null,
+  "Age": null,
+  "Gender": null,
+  "Email": null
+ },
+ {
+  "CustomerID": 12,
+  "CustomerName": "[VIP] TONO",
+  "Address": null,
+  "CityName": null,
+  "StateName": null,
+  "Age": null,
+  "Gender": null,
+  "Email": null
+ }
+]

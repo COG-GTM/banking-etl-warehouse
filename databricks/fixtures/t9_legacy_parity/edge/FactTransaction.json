@@ -1,0 +1,98 @@
+[
+ {
+  "TransactionID": 1,
+  "AccountID": 1,
+  "TransactionDate": "2024-01-01T00:00:00",
+  "Amount": "100.0000",
+  "TransactionType": "Deposit",
+  "BranchID": 1
+ },
+ {
+  "TransactionID": 2,
+  "AccountID": 1,
+  "TransactionDate": "2024-01-01T23:59:59.997",
+  "Amount": "40.2500",
+  "TransactionType": "Withdrawal",
+  "BranchID": 1
+ },
+ {
+  "TransactionID": 3,
+  "AccountID": 2,
+  "TransactionDate": "2024-01-02T12:00:00",
+  "Amount": "10.0000",
+  "TransactionType": "deposit",
+  "BranchID": 1
+ },
+ {
+  "TransactionID": 4,
+  "AccountID": 2,
+  "TransactionDate": "2024-01-02T13:00:00",
+  "Amount": "1.1111",
+  "TransactionType": "DEPOSIT   ",
+  "BranchID": 1
+ },
+ {
+  "TransactionID": 5,
+  "AccountID": 3,
+  "TransactionDate": "2024-01-03T08:00:00",
+  "Amount": "500.0000",
+  "TransactionType": null,
+  "BranchID": 1
+ },
+ {
+  "TransactionID": 6,
+  "AccountID": 3,
+  "TransactionDate": "2024-01-03T09:00:00",
+  "Amount": null,
+  "TransactionType": "Deposit",
+  "BranchID": 1
+ },
+ {
+  "TransactionID": 7,
+  "AccountID": 5,
+  "TransactionDate": "2024-01-31T23:59:59.997",
+  "Amount": "3.0000",
+  "TransactionType": "Transfer",
+  "BranchID": 1
+ },
+ {
+  "TransactionID": 8,
+  "AccountID": 5,
+  "TransactionDate": "2024-02-01T00:00:00",
+  "Amount": "4.0000",
+  "TransactionType": "Payment",
+  "BranchID": 1
+ },
+ {
+  "TransactionID": 9,
+  "AccountID": 14,
+  "TransactionDate": "2024-02-01T10:00:00",
+  "Amount": "9.0000",
+  "TransactionType": "Deposit",
+  "BranchID": 1
+ },
+ {
+  "TransactionID": 10,
+  "AccountID": 16,
+  "TransactionDate": "2023-12-31T23:59:59.997",
+  "Amount": "1.0000",
+  "TransactionType": " Deposit",
+  "BranchID": 1
+ },
+ {
+  "TransactionID": 11,
+  "AccountID": 4,
+  "TransactionDate": "2024-02-29T12:00:00",
+  "Amount": "12.3400",
+  "TransactionType": "Deposit",
+  "BranchID": 1
+ },
+ {
+  "TransactionID": 12,
+  "AccountID": 6,
+  "TransactionDate": "2024-03-01T00:00:00",
+  "Amount": null,
+  "TransactionType": null,
+  "BranchID": 1
+ }
+]

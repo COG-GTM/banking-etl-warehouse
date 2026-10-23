@@ -1,0 +1,202 @@
+[
+ {
+  "CustomerID": 1,
+  "CustomerName": "SHELLY JUWITA",
+  "Address": "JL. BOULEVARD NO. 31",
+  "CityName": "Kelapa Gading",
+  "StateName": "Jakarta Utara",
+  "Age": 25,
+  "Gender": "FEMALE",
+  "Email": "shelly@gmail.com"
+ },
+ {
+  "CustomerID": 2,
+  "CustomerName": "BOBI RINALDO",
+  "Address": "JL. MANGGA NO. 1",
+  "CityName": "Tanjung Priok",
+  "StateName": "Jakarta Utara",
+  "Age": 31,
+  "Gender": "MALE",
+  "Email": "Bobi@gmail.com"
+ },
+ {
+  "CustomerID": 3,
+  "CustomerName": "ADAM MALIK",
+  "Address": "JL. KINCIR ANGIN NO. 50",
+  "CityName": "Pademangan",
+  "StateName": "Jakarta Utara",
+  "Age": 23,
+  "Gender": "MALE",
+  "Email": "Adam@gmail.com"
+ },
+ {
+  "CustomerID": 4,
+  "CustomerName": "SUSI RAHMAWATI",
+  "Address": "JL. KENANGA NO. 11",
+  "CityName": "Cilandak",
+  "StateName": "Jakarta Selatan",
+  "Age": 45,
+  "Gender": "FEMALE",
+  "Email": "Susi@gmail.com"
+ },
+ {
+  "CustomerID": 5,
+  "CustomerName": "DIMAS PRASETYO",
+  "Address": "JL. NIAGARA NO. 69",
+  "CityName": "Jagakarsa",
+  "StateName": "Jakarta Selatan",
+  "Age": 32,
+  "Gender": "MALE",
+  "Email": "Dimas@gmail.com"
+ },
+ {
+  "CustomerID": 6,
+  "CustomerName": "AJI PANGESTU",
+  "Address": "JL. SEMPURNA NO. 2",
+  "CityName": "Mampang Prapatan",
+  "StateName": "Jakarta Selatan",
+  "Age": 40,
+  "Gender": "MALE",
+  "Email": "Aji@gmail.com"
+ },
+ {
+  "CustomerID": 7,
+  "CustomerName": "BUNGA MALIKA",
+  "Address": "JL. MERAK NO. 10",
+  "CityName": "Cibinong",
+  "StateName": "Bogor",
+  "Age": 27,
+  "Gender": "FEMALE",
+  "Email": "Bunga@gmail.com"
+ },
+ {
+  "CustomerID": 8,
+  "CustomerName": "RIA ADDINI",
+  "Address": "JL. ARJUNA NO. 40",
+  "CityName": "Menteng",
+  "StateName": "Jakarta Pusat",
+  "Age": 29,
+  "Gender": "FEMALE",
+  "Email": "Ria@gmail.com"
+ },
+ {
+  "CustomerID": 9,
+  "CustomerName": "LISA WULANDARI",
+  "Address": "JL. AMPERA NO. 39",
+  "CityName": "Tebet",
+  "StateName": "Jakarta Selatan",
+  "Age": 26,
+  "Gender": "FEMALE",
+  "Email": "Lisa@gmail.com"
+ },
+ {
+  "CustomerID": 10,
+  "CustomerName": "RIO WIJAYA",
+  "Address": "JL. ABDUL MUIS NO. 70",
+  "CityName": "Gambir",
+  "StateName": "Jakarta Pusat",
+  "Age": 52,
+  "Gender": "MALE",
+  "Email": "Rio@gmail.com"
+ },
+ {
+  "CustomerID": 11,
+  "CustomerName": "AHMAD RIYANSAH",
+  "Address": "JL. KECAPI NO. 5",
+  "CityName": "Babelan",
+  "StateName": "Bekasi",
+  "Age": 27,
+  "Gender": "MALE",
+  "Email": "Ahmad@gmail.com"
+ },
+ {
+  "CustomerID": 12,
+  "CustomerName": "MARIO ROBERT",
+  "Address": "JL. KEBAYORAN NO. 13",
+  "CityName": "Cisauk",
+  "StateName": "Tangerang",
+  "Age": 28,
+  "Gender": "MALE",
+  "Email": "Mario@gmail.com"
+ },
+ {
+  "CustomerID": 13,
+  "CustomerName": "KHANSA AUDYA",
+  "Address": "JL. KEDOYA NO. 50",
+  "CityName": "Cinere",
+  "StateName": "Depok",
+  "Age": 32,
+  "Gender": "FEMALE",
+  "Email": "Khansa@gmail.com"
+ },
+ {
+  "CustomerID": 14,
+  "CustomerName": "CINTYA GABRIELA",
+  "Address": "JL. PINTU AIR NO. 14",
+  "CityName": "Kalideres",
+  "StateName": "Jakarta Barat",
+  "Age": 24,
+  "Gender": "FEMALE",
+  "Email": "Cintya@gmail.com"
+ },
+ {
+  "CustomerID": 15,
+  "CustomerName": "ANI NURAINI",
+  "Address": "JL. CIMPEDAK NO. 50",
+  "CityName": "Cibitung",
+  "StateName": "Bekasi",
+  "Age": 45,
+  "Gender": "FEMALE",
+  "Email": "Ani@gmail.com"
+ },
+ {
+  "CustomerID": 16,
+  "CustomerName": "AGUNG MULYONO",
+  "Address": "JL. DAAN MOGOT NO. 60",
+  "CityName": "Palmerah",
+  "StateName": "Jakarta Barat",
+  "Age": 38,
+  "Gender": "MALE",
+  "Email": "Agung@gmail.com"
+ },
+ {
+  "CustomerID": 17,
+  "CustomerName": "RIAN WIBOWO",
+  "Address": "JL. BATU NO. 49",
+  "CityName": "Bojonggede",
+  "StateName": "Bogor",
+  "Age": 41,
+  "Gender": "MALE",
+  "Email": "Rian@gmail.com"
+ },
+ {
+  "CustomerID": 18,
+  "CustomerName": "LUTFI AULIA",
+  "Address": "JL. ELANG NO. 2",
+  "CityName": "Ciawi",
+  "StateName": "Bogor",
+  "Age": 30,
+  "Gender": "MALE",
+  "Email": "Lutfi@gmail.com"
+ },
+ {
+  "CustomerID": 19,
+  "CustomerName": "MALIKA CANTIKA",
+  "Address": "JL. IMAM BONJOL NO. 30",
+  "CityName": "Balaraja",
+  "StateName": "Tangerang",
+  "Age": 38,
+  "Gender": "FEMALE",
+  "Email": "Malika@gmail.com"
+ },
+ {
+  "CustomerID": 20,
+  "CustomerName": "RATNA SARIASIH",
+  "Address": "JL. JAMBORE NO. 41",
+  "CityName": "Sukatani",
+  "StateName": "Bekasi",
+  "Age": 53,
+  "Gender": "FEMALE",
+  "Email": "Ratna@gmail.com"
+ }
+]
