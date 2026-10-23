@@ -94,4 +94,4 @@ The original plan assumed some inputs were missing. They are committed:
 
 * 2026-10-23: T1 and T2 implemented on the foundation branch. Local suite 29/29. Live serverless run on
   `migration_demo.bdwh_*` created the namespace, volumes and star schema (all 13 tables, PK/FK constraints visible in `information_schema`), and the DQ gate passed. Run: `jobs submit` 932701605587220.
-* 2026-10-23: T5 PR #79 opened. Excel to Bronze `file_transaction_excel` via openpyxl and native readers, with rescue and idempotent replaceWhere. Local suite 58/58. Live `bdwh_t5_`: native 1005343801059338 and openpyxl 866635124252464 each wrote 7 rows; rerun 398675530172680 left the table at 7 rows.
+* 2026-10-23: T5 PR #79 opened. Excel to Bronze `file_transaction_excel` via openpyxl and native readers, with rescue and idempotent replaceWhere. Local suite 63/63. Live `bdwh_t5_`: native 23699238829144 and openpyxl 174100661601874 each wrote 7 rows; rerun 628125090276655 left the table at 7 rows.
