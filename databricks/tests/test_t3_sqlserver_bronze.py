@@ -373,6 +373,30 @@ def test_failed_snapshot_publish_keeps_scratch_for_recovery(spark, local_schemas
     assert not (landing / "_incoming").exists()
 
 
+def test_recover_subset_batch_discovers_scratch_tables(spark, local_schemas, tmp_path, monkeypatch):
+    cfg, landing = local_schemas, tmp_path / "sqlserver"
+    _seed_previous_snapshot(spark, landing)
+    monkeypatch.setattr(ss, "list_source_tables", lambda *a, **k: sorted(ss.CONTRACTS))
+    monkeypatch.setattr(ss, "read_jdbc", _FakeJdbc(spark).read)
+    real_stage = ss.stage_parquet
+    monkeypatch.setattr(ss, "stage_parquet", lambda df, path: (_ for _ in ()).throw(OSError("disk full"))
+                        if path == str(landing / "city") else real_stage(df, path))
+    with pytest.raises(RuntimeError, match="tables='branch,city'"):
+        ss.ingest(spark, cfg, source="jdbc", jdbc={"url": "jdbc:sqlserver://fake"}, staged_root=str(landing),
+                  tables="branch,city", batch_id="sub-fail", unity_catalog=False)
+    monkeypatch.setattr(ss, "stage_parquet", real_stage)
+    scratch = str(landing / "_incoming" / "sub-fail")
+    with pytest.raises(Exception):  # explicit selection with a table that isn't in scratch: nothing published
+        ss.recover_batch(spark, cfg, scratch, staged_root=str(landing), tables="branch,account", unity_catalog=False)
+    assert spark.read.parquet(str(landing / "account")).count() == 2
+    s = ss.recover_batch(spark, cfg, scratch, staged_root=str(landing), batch_id="sub-recover",
+                         unity_catalog=False)
+    assert list(s["row_counts"]) == ["branch", "city"] and s["counts_ok"]
+    assert spark.read.parquet(str(landing / "city")).count() == ss.EXPECTED_ROW_COUNTS["city"]
+    assert spark.read.parquet(str(landing / "account")).count() == 2
+    assert not (landing / "_incoming").exists()
+
+
 def test_remove_tree_handles_uris_and_callbacks(spark, tmp_path):
     uri_dir = tmp_path / "remote" / "_incoming" / "b1"
     spark.range(3).write.parquet(str(uri_dir / "t"))

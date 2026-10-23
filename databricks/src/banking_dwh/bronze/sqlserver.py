@@ -408,7 +408,8 @@ def ingest(
                         keep_scratch = True
                         raise RuntimeError(
                             f"Publishing the staged snapshot of {table} failed; batch {batch_id} is intact in "
-                            f"{scratch} (finish it with recover_batch(spark, cfg, '{scratch}'))"
+                            f"{scratch} (finish it with recover_batch(spark, cfg, '{scratch}', "
+                            f"tables='{','.join(names)}'))"
                         ) from e
             for table, contract, location, df, _, exp in prepared:
                 name = write_bronze(spark, cfg, contract, df, unity_catalog=unity_catalog)
@@ -436,12 +437,32 @@ def ingest(
 def recover_batch(spark, cfg: EnvConfig, scratch: str, *, staged_root: str | None = None,
                   remove_path: Callable[[str], Any] | None = None, **ingest_kwargs: Any) -> dict[str, Any]:
     """Finish a JDBC batch whose snapshot publication failed: publish every table kept in
-    ``scratch`` to the landing folders, load Bronze from them (staged ingest), then drop scratch."""
+    ``scratch`` to the landing folders, load Bronze from them (staged ingest), then drop scratch.
+    ``tables`` defaults to the configured tables present in ``scratch`` (configured order); all
+    of them are read before anything is published."""
     root = staged_root.rstrip("/") if staged_root else None
-    tables = resolve_tables(cfg, ingest_kwargs.pop("tables", None))
+    scratch = scratch.rstrip("/")
+    requested = ingest_kwargs.pop("tables", None)
+
+    def readable(table: str) -> bool:
+        try:
+            read_staged(spark, f"{scratch}/{table}").schema
+            return True
+        except Exception:
+            return False
+
+    if requested is None:
+        tables = [t for t in resolve_tables(cfg) if readable(t)]
+        if not tables:
+            raise ValueError(f"No staged source tables found in {scratch}")
+    else:
+        tables = resolve_tables(cfg, requested)
+    frames = {t: read_staged(spark, f"{scratch}/{t}") for t in tables}
+    for table in tables:
+        frames[table].schema  # fail on a missing folder before publishing anything
     for table in tables:
         dest = f"{root}/{table}" if root else cfg.landing_path("sqlserver", table)
-        stage_parquet(read_staged(spark, f"{scratch.rstrip('/')}/{table}"), dest)
+        stage_parquet(frames[table], dest)
     summary = ingest(spark, cfg, source="staged", staged_root=staged_root, tables=tables, **ingest_kwargs)
     remove_tree(scratch, spark, remove_path)
     summary["recovered_from"] = scratch
