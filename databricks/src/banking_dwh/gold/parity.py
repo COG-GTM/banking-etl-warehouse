@@ -29,12 +29,28 @@ PROC_TO_FUNCTION = {"sp_DailyTransaction": FN_DAILY_TRANSACTION, "sp_BalancePerC
 _T9_PREFIX = re.compile(r"(^|_)t9(_[a-z0-9]+)?_$")
 
 
+LOCAL_TEST_CATALOG = "spark_catalog"  # OSS Spark session catalog used by the local pytest suite
+
+
 def assert_t9_scratch(cfg: EnvConfig) -> None:
-    """Refuse to seed anything but a Ticket 9 scratch namespace (e.g. prefix ``bdwh_t9_``)."""
-    if cfg.target == "prod" or not _T9_PREFIX.search(cfg.schema_prefix or ""):
+    """Refuse to seed anything but a Ticket 9 scratch namespace (e.g. ``migration_demo.bdwh_t9_*``).
+
+    The catalog must be the configured dev catalog (or the local test session catalog) and never the
+    prod catalog, whatever ``catalog`` override was passed; the schema prefix must end in ``t9_``.
+    """
+    dev_catalog = EnvConfig.from_target("dev").catalog
+    prod_catalog = EnvConfig.from_target("prod").catalog
+    ok = (
+        cfg.target != "prod"
+        and cfg.catalog != prod_catalog
+        and cfg.catalog in (dev_catalog, LOCAL_TEST_CATALOG)
+        and bool(_T9_PREFIX.search(cfg.schema_prefix or ""))
+    )
+    if not ok:
         raise PermissionError(
-            f"Refusing to seed fixtures into target={cfg.target!r} schema_prefix={cfg.schema_prefix!r}: "
-            "only Ticket 9 scratch prefixes ending in 't9_' (e.g. 'bdwh_t9_') are allowed."
+            f"Refusing to seed fixtures into target={cfg.target!r} catalog={cfg.catalog!r} "
+            f"schema_prefix={cfg.schema_prefix!r}: only the dev catalog {dev_catalog!r} with a Ticket 9 "
+            "scratch prefix ending in 't9_' (e.g. 'bdwh_t9_') is allowed."
         )
 
 

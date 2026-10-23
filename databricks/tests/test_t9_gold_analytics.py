@@ -69,7 +69,9 @@ def test_ddl_uses_cfg_names_only():
 
 def test_seed_guard_refuses_non_t9_namespaces(spark):
     for cfg in (EnvConfig.from_target("prod"), EnvConfig.from_target("dev"),
-                EnvConfig.from_target("dev", schema_prefix="bdwh_t8_")):
+                EnvConfig.from_target("dev", schema_prefix="bdwh_t8_"),
+                EnvConfig.from_target("dev", catalog="banking_dwh", schema_prefix="t9_"),
+                EnvConfig.from_target("dev", catalog="other_catalog", schema_prefix="bdwh_t9_")):
         with pytest.raises(PermissionError):
             parity.seed_silver(spark, cfg, "legacy")
     parity.assert_t9_scratch(EnvConfig.from_target("dev", schema_prefix="bdwh_t9_"))
