@@ -7,7 +7,8 @@
 # MAGIC with no new files appends 0 rows. Replaces `tFileInputDelimited_1` in Talend `Load_FactTransaction`.
 # MAGIC
 # MAGIC Widgets: `land_sample=true` first copies the sample CSV (`sample_source`, default the repo's
-# MAGIC `data_sources/transaction_csv.csv`) into the landing folder.
+# MAGIC `data_sources/transaction_csv.csv` resolved next to `src/`) into the landing folder. For a workspace import,
+# MAGIC also import the repo's `data_sources/` folder under the same root as `src/`, or set `sample_source`.
 
 # COMMAND ----------
 
@@ -25,7 +26,8 @@ dbutils.widgets.text("sample_source", "", "Sample CSV path (blank = repo data_so
 landing = cfg.landing_path(*t4.LANDING)  # noqa: F821
 landed = None
 if dbutils.widgets.get("land_sample") == "true":  # noqa: F821
-    landed = t4.land_sample_csv(landing, dbutils.widgets.get("sample_source") or t4.SAMPLE_CSV)  # noqa: F821
+    source = t4.resolve_sample_source(dbutils.widgets.get("sample_source"))  # noqa: F821
+    landed = t4.land_sample_csv(landing, source)
     print("landed", landed)
 
 # COMMAND ----------

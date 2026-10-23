@@ -2,8 +2,8 @@
 
 Ports the ``tFileInputDelimited_1`` component of Talend ``Load_FactTransaction``
 (``talend_jobs/Load_FactTransaction.zip``): header row 1, field separator ``,``, no
-quote handling, empty rows removed, ``transaction_date`` pattern ``dd-MM-yyyy HH:mm:ss``,
-``DIE_ON_ERROR=false``. Talend's encoding ISO-8859-15 is rejected by Spark 4, so the reader
+quote handling (``CSV_OPTION=false``: quotes stay literal), empty rows removed,
+``transaction_date`` pattern ``dd-MM-yyyy HH:mm:ss``, ``DIE_ON_ERROR=false``. Talend's encoding ISO-8859-15 is rejected by Spark 4, so the reader
 uses ISO-8859-1 (identical for the committed, ASCII-only file).
 
 Talend sent unparsable rows to a REJECT flow and dropped them. Bronze keeps every row
@@ -54,6 +54,8 @@ SAMPLE_CSV = Path(__file__).resolve().parents[4] / "data_sources" / "transaction
 CSV_OPTIONS: dict[str, str] = {
     "header": "true",
     "sep": FIELD_SEPARATOR,
+    # Talend CSV_OPTION=false: quotes are literal text, not field delimiters ("" disables quoting).
+    "quote": "",
     # transaction_date is parsed in to_bronze with the same pattern (see module docstring).
     "timestampFormat": TIMESTAMP_FORMAT,
     "encoding": "ISO-8859-1",
@@ -278,6 +280,21 @@ def land_sample_csv(dest_dir: str, source: str | Path = SAMPLE_CSV, *, overwrite
         return {"copied": False, "path": str(target)}
     shutil.copyfile(src, target)
     return {"copied": True, "path": str(target)}
+
+
+def resolve_sample_source(sample_source: str | Path | None = None) -> Path:
+    """Sample CSV to land: an explicit path, else ``data_sources/transaction_csv.csv`` next to ``src/``.
+
+    In a workspace import that means ``<root>/data_sources/transaction_csv.csv`` (import the
+    repo's ``data_sources`` folder alongside ``src``/``config``/``notebooks``, or use a Git folder).
+    """
+    src = Path(sample_source) if sample_source else SAMPLE_CSV
+    if not src.is_file():
+        raise FileNotFoundError(
+            f"Sample CSV not found: {src}. Set the sample_source widget to the CSV path, or import "
+            f"data_sources/transaction_csv.csv to {SAMPLE_CSV.parent}."
+        )
+    return src
 
 
 def land_sample_commands(cfg: EnvConfig, source: str | Path = SAMPLE_CSV, *, overwrite: bool = False) -> list[list[str]]:
