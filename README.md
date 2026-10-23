@@ -121,8 +121,9 @@ retry. Every task has a timeout, and the run has a 3 h cap plus a 90 min duratio
 | `target` | bundle target (`dev`/`prod`) | Which `environments.yml` target to resolve names from. |
 | `catalog` | blank (from config) | Catalog override. |
 | `schema_prefix` | blank (from config) | Schema prefix override (`-` = no prefix). |
+| `parity_gate` | `true` | Whether a reconciliation mismatch fails the run. The fixtures are the legacy output for the `sample.bak` snapshot, so keep this `true` while validating the migration and cut-over. Once live sources move past that snapshot, set it to `false` (results are still recorded) or regenerate the fixtures from a new legacy snapshot. |
 
-All three are job-level parameters, and every task receives them explicitly as notebook parameters. This matters because
+`target`, `catalog` and `schema_prefix` are job-level parameters, and every task receives them explicitly as notebook parameters. This matters because
 the notebooks' `target` widget defaults to `dev`. Widget values that end up in SQL are validated as plain identifiers.
 
 ### 6. Data quality and reconciliation
@@ -131,7 +132,8 @@ the notebooks' `target` widget defaults to `dev`. Widget values that end up in S
 - **`reconcile`** compares every Silver table and Gold object with the legacy SQL Server output captured in
   `databricks/fixtures/parity/`. It checks row count, distinct keys, SUM of every money column (`amount`, `balance`,
   `total_amount`, `current_balance`, ...), and a full-row diff. Comparisons are exact. One row per metric goes to
-  `<ops>.reconciliation_results` and one row per object to `<ops>.dq_results`. The task fails on any mismatch.
+  `<ops>.reconciliation_results` and one row per object to `<ops>.dq_results`. The task fails on any mismatch
+  while `parity_gate=true`.
 ```sql
 SELECT check_name, expected, actual, passed
 FROM migration_demo.bdwh_ops.reconciliation_results

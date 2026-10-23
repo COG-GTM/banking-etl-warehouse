@@ -65,7 +65,7 @@ def test_dependency_order_matches_runbook(doc, tasks):
 def test_job_parameters_default_to_bundle_variables(job):
     params = {p["name"]: p["default"] for p in job["parameters"]}
     assert params == {"target": "${var.target_env}", "catalog": "${var.catalog}",
-                      "schema_prefix": "${var.schema_prefix}"}
+                      "schema_prefix": "${var.schema_prefix}", "parity_gate": "true"}
 
 
 @pytest.mark.parametrize("key", [k for k, _, _ in ORDER])
@@ -97,7 +97,8 @@ def test_retries_timeouts_and_alerts(job, tasks):
         assert tasks[key]["max_retries"] >= 1 and tasks[key]["retry_on_timeout"] is True
     for gate in ("dq_star_schema", "reconcile"):
         assert tasks[gate]["max_retries"] == 0
-        assert tasks[gate]["notebook_task"]["base_parameters"]["fail_on_error"] == "true"
+    assert tasks["dq_star_schema"]["notebook_task"]["base_parameters"]["fail_on_error"] == "true"
+    assert tasks["reconcile"]["notebook_task"]["base_parameters"]["fail_on_error"] == "{{job.parameters.parity_gate}}"
 
 
 def test_owned_notebooks_exist(doc, tasks):

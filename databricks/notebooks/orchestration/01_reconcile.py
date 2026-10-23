@@ -28,6 +28,8 @@ dbutils.widgets.dropdown("fail_on_error", "true", ["true", "false"], "Fail on mi
 
 run_id = dbutils.widgets.get("run_id") or str(uuid.uuid4())  # noqa: F821
 layers = [validate_identifier(x.strip(), "layer") for x in dbutils.widgets.get("layers").split(",") if x.strip()]  # noqa: F821
+if not layers:
+    raise ValueError("At least one reconciliation layer (silver, gold) is required")
 
 results = run_reconciliation(spark, cfg, default_specs(layers), FIXTURES_DIR)  # noqa: F821
 write_results(spark, cfg, results, run_id)  # noqa: F821

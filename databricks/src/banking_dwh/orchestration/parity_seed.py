@@ -16,7 +16,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from ..common.config import EnvConfig
+from ..common.config import EnvConfig, load_raw_config
 from ..contracts.ddl import create_table_sql
 from ..contracts.tables import SILVER_TABLES
 from ..dq.reconciliation import FIXTURES_DIR, default_specs, expected_df
@@ -28,8 +28,13 @@ class NotScratchNamespaceError(ValueError):
     pass
 
 
+def _protected_catalogs() -> set[str]:
+    return {t["catalog"] for name, t in load_raw_config()["targets"].items() if name != "dev"}
+
+
 def assert_scratch(cfg: EnvConfig) -> None:
-    if cfg.target == "prod" or not SCRATCH_PREFIX.match(cfg.schema_prefix or ""):
+    if (cfg.target != "dev" or cfg.catalog in _protected_catalogs()
+            or not SCRATCH_PREFIX.match(cfg.schema_prefix or "")):
         raise NotScratchNamespaceError(
             f"Refusing to seed {cfg.catalog}.{cfg.schema_prefix}* (target={cfg.target}): parity seeding is only "
             "allowed in a ticket scratch namespace, e.g. schema_prefix=bdwh_t10_")

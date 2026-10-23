@@ -55,6 +55,11 @@ resources:
           default: ${var.catalog}
         - name: schema_prefix
           default: ${var.schema_prefix}
+        # The parity fixtures are the legacy DWH output for the sample.bak snapshot, so exact parity
+        # only holds while the sources match that snapshot (migration validation / cut-over).
+        # After cut-over, run with parity_gate=false: results are still recorded but don't fail the run.
+        - name: parity_gate
+          default: "true"
       environments:
         - environment_key: default
           spec:
@@ -206,4 +211,4 @@ resources:
               <<: *env_params
               run_id: "{{job.run_id}}"
               layers: silver,gold
-              fail_on_error: "true"
+              fail_on_error: "{{job.parameters.parity_gate}}"

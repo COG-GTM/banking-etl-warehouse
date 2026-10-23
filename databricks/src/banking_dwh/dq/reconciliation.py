@@ -114,6 +114,8 @@ def _gold_specs() -> list[ReconSpec]:
 
 def default_specs(layers: Iterable[str] = ("silver", "gold")) -> list[ReconSpec]:
     layers = set(layers)
+    if not layers:
+        raise ValueError("At least one reconciliation layer (silver, gold) is required")
     unknown = layers - {"silver", "gold"}
     if unknown:
         raise ValueError(f"Unknown reconciliation layer(s) {sorted(unknown)}; expected silver and/or gold")
@@ -187,7 +189,8 @@ def reconcile_spec(spark, cfg: EnvConfig, spec: ReconSpec, fixtures_dir: Path | 
                             "true", "false", False, json.dumps({"error": msg}))]
 
     e_prof, a_prof = profile(exp, spec), profile(act, spec)
-    results = []
+    results = [ReconResult(f"{spec.name}.exists", spec.layer, rel_name, spec.legacy_object, "exists",
+                           "true", "true", True)]
     for metric, e_val in e_prof.items():
         a_val = a_prof.get(metric)
         results.append(ReconResult(f"{spec.name}.{metric}", spec.layer, rel_name, spec.legacy_object,
@@ -257,6 +260,8 @@ def summarize(results: list[ReconResult]) -> dict:
 
 
 def assert_reconciled(results: list[ReconResult]) -> None:
+    if not results:
+        raise ReconciliationError("No reconciliation checks ran")
     failed = [r for r in results if not r.passed]
     if failed:
         msg = "; ".join(f"{r.check_name}: expected {r.expected}, got {r.actual}" for r in failed)

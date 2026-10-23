@@ -280,7 +280,7 @@ BRONZE_TABLES = (
 # Creation order matters: referenced dims before the fact.
 SILVER_TABLES = (DIM_BRANCH, DIM_ACCOUNT, DIM_CUSTOMER, FACT_TRANSACTION)
 OPS_TABLES = (DQ_RESULTS,)
-ALL_TABLES = BRONZE_TABLES + SILVER_TABLES + OPS_TABLES
+ALL_TABLES = BRONZE_TABLES + SILVER_TABLES + OPS_TABLES + (RECONCILIATION_RESULTS,)
 
 
 def get_contract(layer: str, name: str) -> TableContract:

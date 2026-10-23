@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 
 from banking_dwh.common.config import EnvConfig
-from banking_dwh.contracts.tables import GOLD_OBJECTS, RECONCILIATION_RESULTS, SILVER_TABLES
+from banking_dwh.contracts.tables import GOLD_OBJECTS, RECONCILIATION_RESULTS, SILVER_TABLES, get_contract
 from banking_dwh.dq import reconciliation as rec
 from banking_dwh.orchestration import parity_seed
 
@@ -81,11 +81,22 @@ def test_specs_cover_every_silver_table_and_gold_object():
 def test_reconciliation_contract():
     assert RECONCILIATION_RESULTS.layer == "ops" and RECONCILIATION_RESULTS.name == "reconciliation_results"
     assert RECONCILIATION_RESULTS.owner_ticket == 10
+    assert get_contract("ops", "reconciliation_results") is RECONCILIATION_RESULTS
 
 
-@pytest.mark.parametrize("prefix,target", [("bdwh_", "dev"), ("", "dev"), ("bdwh_t10_", "prod"), ("t10x_", "dev")])
-def test_seeding_refuses_non_scratch_namespaces(prefix, target):
-    cfg = EnvConfig.from_target(target, catalog="migration_demo", schema_prefix=prefix)
+def test_empty_layer_selection_is_rejected():
+    with pytest.raises(ValueError):
+        rec.default_specs([])
+    with pytest.raises(rec.ReconciliationError):
+        rec.assert_reconciled([])
+
+
+@pytest.mark.parametrize("catalog,prefix,target", [
+    ("migration_demo", "bdwh_", "dev"), ("migration_demo", "", "dev"), ("migration_demo", "bdwh_t10_", "prod"),
+    ("migration_demo", "t10x_", "dev"), ("banking_dwh", "t10_", "dev"), ("banking_dwh", "bdwh_t10_", "dev"),
+])
+def test_seeding_refuses_non_scratch_namespaces(catalog, prefix, target):
+    cfg = EnvConfig.from_target(target, catalog=catalog, schema_prefix=prefix)
     with pytest.raises(parity_seed.NotScratchNamespaceError):
         parity_seed.assert_scratch(cfg)
     with pytest.raises(parity_seed.NotScratchNamespaceError):
@@ -192,4 +203,4 @@ def test_count_metrics_detect_duplicate_keys(spark, t10_cfg):
     prof = rec.profile(dup, spec)
     assert prof["row_count"] == "6" and prof["distinct_keys"] == "5"
     assert Counter(r.metric for r in rec.reconcile_spec(spark, t10_cfg, spec)) == Counter(
-        ["row_count", "distinct_keys", "rows_missing", "rows_unexpected"])
+        ["exists", "row_count", "distinct_keys", "rows_missing", "rows_unexpected"])
