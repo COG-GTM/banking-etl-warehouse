@@ -199,6 +199,13 @@ def test_empty_sql_extract_deletes_sql_rows(spark):
     assert s["merge"] == {"inserted": 0, "updated": 0, "deleted": 2}
     assert sorted(_fact(spark, cfg)) == [3]
 
+    # A table of the older run landing late must not make that run current again.
+    t8_seed.write_rows(spark, cfg, BRONZE_SQLSERVER_BRANCH,
+                       [{"branch_id": 1, "_batch_id": "new", "_ingested_at": datetime(2026, 2, 1)},
+                        {"branch_id": 1, "_batch_id": "old", "_ingested_at": datetime(2026, 3, 1)}], unity_catalog=False)
+    s = ft.load_fact_transaction(spark, cfg, run_id="e3", unity_catalog=False)
+    assert s["source_counts"]["sqlserver"] == 0 and s["merge"] == {"inserted": 0, "updated": 0, "deleted": 0}
+
 
 def test_input_rejects_quarantined_before_dedup(spark):
     cfg = _cfg(spark, "t8r_")

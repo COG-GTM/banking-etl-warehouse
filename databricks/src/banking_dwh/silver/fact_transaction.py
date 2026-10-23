@@ -154,6 +154,8 @@ def latest_sql_batch(spark, cfg: EnvConfig, df):
 
     The newest ``_batch_id`` is taken across all SQL Server Bronze tables, so a run whose transaction_db
     extract was empty yields an empty stream (and the MERGE deletes the old SQL rows, like TRUNCATE).
+    Runs are ordered by their start (earliest ``_ingested_at`` of any table in the batch), so a table of an
+    older run that lands late does not make that run look newer.
     """
     from pyspark.sql import functions as F
 
@@ -162,17 +164,22 @@ def latest_sql_batch(spark, cfg: EnvConfig, df):
         fq = cfg.table(contract.layer, contract.name)
         if not spark.catalog.tableExists(fq):
             continue
-        b = spark.table(fq).groupBy("_batch_id").agg(F.max("_ingested_at").alias("_ingested_at"))
+        b = spark.table(fq).groupBy("_batch_id").agg(F.min("_ingested_at").alias("_run_started_at"))
         batches = b if batches is None else batches.unionByName(b)
     newest = (
-        batches.groupBy("_batch_id").agg(F.max("_ingested_at").alias("_ingested_at"))
-        .orderBy(F.col("_ingested_at").desc(), F.col("_batch_id").desc()).select("_batch_id").limit(1)
+        batches.groupBy("_batch_id").agg(F.min("_run_started_at").alias("_run_started_at"))
+        .orderBy(F.col("_run_started_at").desc(), F.col("_batch_id").desc()).select("_batch_id").limit(1)
     )
     return df.join(newest, on="_batch_id", how="left_semi")
 
 
 def latest_file(df):
-    """Rows of the most recently ingested file version: Talend read one fixed CSV / Excel path per run."""
+    """Rows of the most recently ingested file version: Talend read one fixed CSV / Excel path per run.
+
+    A file version is ``(_source_file, _ingested_at)``: per the Bronze file contract every row of one file
+    ingestion carries the same ``_ingested_at`` (``current_timestamp()`` of the ingesting query/micro-batch),
+    which is also what tells repeated ingestions of the same path apart.
+    """
     from pyspark.sql import functions as F
 
     newest = df.orderBy(F.col("_ingested_at").desc(), F.col("_source_file").desc()).select(
