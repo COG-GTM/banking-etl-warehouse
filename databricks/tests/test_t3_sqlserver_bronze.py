@@ -356,16 +356,21 @@ def test_failed_snapshot_publish_keeps_scratch_for_recovery(spark, local_schemas
         return real_stage(df, path)
 
     monkeypatch.setattr(ss, "stage_parquet", full_volume)
-    with pytest.raises(RuntimeError, match="intact in .*_incoming/pub-fail") as err:
+    with pytest.raises(RuntimeError, match="intact in .*_incoming/pub-fail.*recover_batch") as err:
         ss.ingest(spark, cfg, source="jdbc", jdbc={"url": "jdbc:sqlserver://fake"}, staged_root=str(landing),
                   batch_id="pub-fail", unity_catalog=False)
     scratch = str(landing / "_incoming" / "pub-fail")
     assert scratch in str(err.value)
     assert all(_batch_rows(spark, cfg, t, "pub-fail") == 0 for t in ss.CONTRACTS)
+    assert spark.read.parquet(str(landing / "city")).count() == 2  # publish of city failed: still the old snapshot
     monkeypatch.setattr(ss, "stage_parquet", real_stage)
-    s = ss.ingest(spark, cfg, source="staged", staged_root=scratch, batch_id="pub-recover", assert_counts=True,
-                  unity_catalog=False)
-    assert s["row_counts"] == ss.EXPECTED_ROW_COUNTS
+    s = ss.recover_batch(spark, cfg, scratch, staged_root=str(landing), batch_id="pub-recover",
+                         assert_counts=True, unity_catalog=False)
+    assert s["row_counts"] == ss.EXPECTED_ROW_COUNTS and s["recovered_from"] == scratch
+    # Landing and Bronze both hold the recovered batch; scratch is gone.
+    assert {t: spark.read.parquet(str(landing / t)).count() for t in ss.CONTRACTS} == ss.EXPECTED_ROW_COUNTS
+    assert all(_batch_rows(spark, cfg, t, "pub-recover") == ss.EXPECTED_ROW_COUNTS[t] for t in ss.CONTRACTS)
+    assert not (landing / "_incoming").exists()
 
 
 def test_remove_tree_handles_uris_and_callbacks(spark, tmp_path):

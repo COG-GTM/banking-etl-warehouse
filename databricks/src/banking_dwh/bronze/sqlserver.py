@@ -346,7 +346,7 @@ def ingest(
     JDBC + ``stage``: extracts land in ``<landing>/_incoming/<batch_id>/`` and are published to
     the landing folders *before* Bronze is written, so the landing snapshot is never older than
     Bronze and a staged rerun restores Bronze after a failed write. If publishing a snapshot fails,
-    the scratch copy is kept (rerun with ``source="staged"``, ``staged_root=<scratch>``).
+    the scratch copy is kept and ``recover_batch`` finishes the batch from it.
     ``remove_path`` deletes the scratch folder for non-local URIs (e.g. ``dbutils.fs.rm``).
     """
     from pyspark.sql import functions as F
@@ -408,7 +408,7 @@ def ingest(
                         keep_scratch = True
                         raise RuntimeError(
                             f"Publishing the staged snapshot of {table} failed; batch {batch_id} is intact in "
-                            f"{scratch} (rerun with source='staged', staged_root='{scratch}')"
+                            f"{scratch} (finish it with recover_batch(spark, cfg, '{scratch}'))"
                         ) from e
             for table, contract, location, df, _, exp in prepared:
                 name = write_bronze(spark, cfg, contract, df, unity_catalog=unity_catalog)
@@ -430,6 +430,21 @@ def ingest(
     if assert_counts and not summary["counts_ok"]:
         bad = {r.source_table: (r.rows, r.expected_rows) for r in results if not r.count_ok}
         raise AssertionError(f"Row-count mismatch (actual, expected): {bad}")
+    return summary
+
+
+def recover_batch(spark, cfg: EnvConfig, scratch: str, *, staged_root: str | None = None,
+                  remove_path: Callable[[str], Any] | None = None, **ingest_kwargs: Any) -> dict[str, Any]:
+    """Finish a JDBC batch whose snapshot publication failed: publish every table kept in
+    ``scratch`` to the landing folders, load Bronze from them (staged ingest), then drop scratch."""
+    root = staged_root.rstrip("/") if staged_root else None
+    tables = resolve_tables(cfg, ingest_kwargs.pop("tables", None))
+    for table in tables:
+        dest = f"{root}/{table}" if root else cfg.landing_path("sqlserver", table)
+        stage_parquet(read_staged(spark, f"{scratch.rstrip('/')}/{table}"), dest)
+    summary = ingest(spark, cfg, source="staged", staged_root=staged_root, tables=tables, **ingest_kwargs)
+    remove_tree(scratch, spark, remove_path)
+    summary["recovered_from"] = scratch
     return summary
 
 
