@@ -31,14 +31,13 @@ from banking_dwh.contracts.ddl import create_table_sql  # noqa: E402
 from banking_dwh.contracts.tables import BRONZE_SQLSERVER_ACCOUNT, BRONZE_SQLSERVER_BRANCH  # noqa: E402
 
 dbutils.widgets.dropdown("target", "dev", ["dev"], "Target (dev only)")  # noqa: F821
-dbutils.widgets.text("catalog", "", "Catalog override")  # noqa: F821
 dbutils.widgets.text("schema_prefix", "bdwh_t6_", "Scratch schema prefix (must end in t6_)")  # noqa: F821
 dbutils.widgets.dropdown("mode", "reset", ["reset", "append_change"], "Mode")  # noqa: F821
 
 prefix = dbutils.widgets.get("schema_prefix")  # noqa: F821
 if not re.fullmatch(r"[A-Za-z0-9_]*t6_", prefix or ""):
     raise ValueError(f"Refusing to seed: schema_prefix {prefix!r} is not a ticket-6 scratch prefix (…t6_)")
-cfg = EnvConfig.from_target("dev", catalog=dbutils.widgets.get("catalog") or None, schema_prefix=prefix)  # noqa: F821
+cfg = EnvConfig.from_target("dev", schema_prefix=prefix)  # catalog fixed to the dev target; no override
 mode = dbutils.widgets.get("mode")  # noqa: F821
 
 

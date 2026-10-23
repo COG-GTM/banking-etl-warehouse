@@ -107,11 +107,14 @@ def scd1_merge(spark, cfg: EnvConfig, contract: TableContract, source_df, *,
     columns = business + [LOADED_AT]
     loaded_at = loaded_at or utc_now()
 
-    source_rows = source_df.count()
-    keyed = source_df.filter(" AND ".join(f"{c} IS NOT NULL" for c in key))
-    keyed_rows = keyed.count()
-    deduped = latest_per_key(keyed, key)
-    merge_rows = deduped.count()
+    key_present = " AND ".join(f"{c} IS NOT NULL" for c in key)
+    stats = source_df.agg(
+        F.count(F.lit(1)).alias("source_rows"),
+        F.count(F.when(F.expr(key_present), 1)).alias("keyed_rows"),
+        F.countDistinct(*key).alias("merge_rows"),
+    ).collect()[0]
+    source_rows, keyed_rows, merge_rows = (int(stats[n]) for n in ("source_rows", "keyed_rows", "merge_rows"))
+    deduped = latest_per_key(source_df.filter(key_present), key)
 
     src = deduped.select(*business).withColumn(LOADED_AT, F.lit(loaded_at).cast("timestamp"))
     target = ensure_table(spark, cfg, contract, unity_catalog=unity_catalog)
