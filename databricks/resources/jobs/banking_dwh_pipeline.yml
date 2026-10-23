@@ -1,0 +1,214 @@
+# Ticket 10: end-to-end banking_dwh pipeline (replaces the Talend run order + SSMS steps).
+#
+#   setup_unity_catalog -> create_star_schema -> bronze x3 (parallel)
+#   -> load_dim_branch -> load_dim_account -> load_dim_customer -> load_fact_transaction
+#   -> dq_star_schema -> gold_objects -> reconcile
+#
+# Serverless notebook tasks only (the workspace has no classic compute). The job-level parameters
+# target / catalog / schema_prefix default to the bundle variables and are also passed explicitly
+# to every task as base_parameters, so `-t prod` can never fall back to the notebooks' `dev` default.
+
+variables:
+  failure_email:
+    description: Address notified when a run fails or exceeds the duration threshold (placeholder)
+    default: banking-dwh-oncall@example.com
+  gold_notebook:
+    description: Ticket 9 gold notebook, relative to this file
+    default: ../../notebooks/gold/01_create_gold_objects.py
+
+resources:
+  jobs:
+    banking_dwh_pipeline:
+      name: banking_dwh_pipeline_${bundle.target}
+      description: >-
+        Lakehouse port of the SQL Server + Talend banking DWH: UC setup, Bronze ingestion
+        (SQL Server JDBC, CSV Auto Loader, Excel), Silver star schema (Load_DimBranch,
+        Load_DimAccount, Load_DimCustomer, Load_FactTransaction), star-schema DQ, Gold
+        replacements for sp_DailyTransaction / sp_BalancePerCustomer, and reconciliation
+        against the legacy DWH parity fixtures.
+      tags:
+        project: banking_dwh
+        ticket: "10"
+      max_concurrent_runs: 1
+      timeout_seconds: 10800
+      queue:
+        enabled: true
+      health:
+        rules:
+          - metric: RUN_DURATION_SECONDS
+            op: GREATER_THAN
+            value: 5400
+      email_notifications:
+        on_failure:
+          - ${var.failure_email}
+        on_duration_warning_threshold_exceeded:
+          - ${var.failure_email}
+        no_alert_for_skipped_runs: true
+      schedule:
+        quartz_cron_expression: "0 0 2 * * ?"
+        timezone_id: UTC
+        pause_status: PAUSED
+      parameters:
+        - name: target
+          default: ${var.target_env}
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema_prefix
+          default: ${var.schema_prefix}
+        # The parity fixtures are the legacy DWH output for the sample.bak snapshot, so exact parity
+        # only holds while the sources match that snapshot (migration validation / cut-over).
+        # After cut-over, run with parity_gate=false: results are still recorded but don't fail the run.
+        - name: parity_gate
+          default: "true"
+      environments:
+        - environment_key: default
+          spec:
+            client: "3"
+            dependencies:
+              - pyyaml
+      tasks:
+        - task_key: setup_unity_catalog
+          environment_key: default
+          max_retries: 1
+          min_retry_interval_millis: 60000
+          timeout_seconds: 900
+          notebook_task:
+            notebook_path: ../../notebooks/00_setup/01_setup_unity_catalog.py
+            base_parameters: &env_params
+              target: "{{job.parameters.target}}"
+              catalog: "{{job.parameters.catalog}}"
+              schema_prefix: "{{job.parameters.schema_prefix}}"
+
+        - task_key: create_star_schema
+          depends_on:
+            - task_key: setup_unity_catalog
+          environment_key: default
+          max_retries: 1
+          min_retry_interval_millis: 60000
+          timeout_seconds: 900
+          notebook_task:
+            notebook_path: ../../notebooks/00_setup/02_create_star_schema.py
+            base_parameters:
+              <<: *env_params
+              create_bronze: "true"
+
+        - task_key: bronze_ingest_sqlserver
+          depends_on:
+            - task_key: create_star_schema
+          environment_key: default
+          max_retries: 2
+          min_retry_interval_millis: 120000
+          retry_on_timeout: true
+          timeout_seconds: 1800
+          notebook_task:
+            notebook_path: ../../notebooks/bronze/01_ingest_sqlserver.py
+            base_parameters: *env_params
+
+        - task_key: bronze_ingest_csv_autoloader
+          depends_on:
+            - task_key: create_star_schema
+          environment_key: default
+          max_retries: 2
+          min_retry_interval_millis: 120000
+          retry_on_timeout: true
+          timeout_seconds: 1800
+          notebook_task:
+            notebook_path: ../../notebooks/bronze/02_ingest_csv_autoloader.py
+            base_parameters: *env_params
+
+        - task_key: bronze_ingest_excel
+          depends_on:
+            - task_key: create_star_schema
+          environment_key: default
+          max_retries: 2
+          min_retry_interval_millis: 120000
+          retry_on_timeout: true
+          timeout_seconds: 1800
+          notebook_task:
+            notebook_path: ../../notebooks/bronze/03_ingest_excel.py
+            base_parameters: *env_params
+
+        - task_key: load_dim_branch
+          depends_on:
+            - task_key: bronze_ingest_sqlserver
+            - task_key: bronze_ingest_csv_autoloader
+            - task_key: bronze_ingest_excel
+          environment_key: default
+          max_retries: 1
+          min_retry_interval_millis: 60000
+          timeout_seconds: 1800
+          notebook_task:
+            notebook_path: ../../notebooks/silver/01_load_dim_branch.py
+            base_parameters: *env_params
+
+        - task_key: load_dim_account
+          depends_on:
+            - task_key: load_dim_branch
+          environment_key: default
+          max_retries: 1
+          min_retry_interval_millis: 60000
+          timeout_seconds: 1800
+          notebook_task:
+            notebook_path: ../../notebooks/silver/02_load_dim_account.py
+            base_parameters: *env_params
+
+        - task_key: load_dim_customer
+          depends_on:
+            - task_key: load_dim_account
+          environment_key: default
+          max_retries: 1
+          min_retry_interval_millis: 60000
+          timeout_seconds: 1800
+          notebook_task:
+            notebook_path: ../../notebooks/silver/03_load_dim_customer.py
+            base_parameters: *env_params
+
+        - task_key: load_fact_transaction
+          depends_on:
+            - task_key: load_dim_customer
+          environment_key: default
+          max_retries: 1
+          min_retry_interval_millis: 60000
+          timeout_seconds: 1800
+          notebook_task:
+            notebook_path: ../../notebooks/silver/04_load_fact_transaction.py
+            base_parameters: *env_params
+
+        # Deterministic gates: no retries, a failure means the data is wrong.
+        - task_key: dq_star_schema
+          depends_on:
+            - task_key: load_fact_transaction
+          environment_key: default
+          max_retries: 0
+          timeout_seconds: 900
+          notebook_task:
+            notebook_path: ../../notebooks/00_setup/03_dq_star_schema.py
+            base_parameters:
+              <<: *env_params
+              run_id: "{{job.run_id}}"
+              fail_on_error: "true"
+
+        - task_key: gold_objects
+          depends_on:
+            - task_key: dq_star_schema
+          environment_key: default
+          max_retries: 1
+          min_retry_interval_millis: 60000
+          timeout_seconds: 900
+          notebook_task:
+            notebook_path: ${var.gold_notebook}
+            base_parameters: *env_params
+
+        - task_key: reconcile
+          depends_on:
+            - task_key: gold_objects
+          environment_key: default
+          max_retries: 0
+          timeout_seconds: 1200
+          notebook_task:
+            notebook_path: ../../notebooks/orchestration/01_reconcile.py
+            base_parameters:
+              <<: *env_params
+              run_id: "{{job.run_id}}"
+              layers: silver,gold
+              fail_on_error: "{{job.parameters.parity_gate}}"

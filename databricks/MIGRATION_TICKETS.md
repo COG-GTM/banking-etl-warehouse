@@ -31,7 +31,7 @@ and their PRs target it.
 | 7 | `dim_customer` Silver load (customer+city+state, uppercase) | 1, 2 (reads T3 Bronze contract) | `src/banking_dwh/silver/dim_customer.py`, `notebooks/silver/03_*`, `tests/test_t7_*` | Not started | — | — |
 | 8 | `fact_transaction` Silver load (union + dedup + MERGE) | 1, 2 (reads T3/T4/T5 Bronze contracts) | `src/banking_dwh/silver/fact_transaction.py`, `notebooks/silver/04_*`, `tests/test_t8_*` | Not started | — | — |
 | 9 | Gold analytics (replace 2 stored procedures) | 1, 2 (reads Silver contract) | `src/banking_dwh/gold/`, `notebooks/gold/`, `ddl/04_gold_*`, `tests/test_t9_*` | Not started | — | — |
-| 10 | Workflow, reconciliation DQ, runbook | 1, 2 (wires the notebook paths named above) | `resources/jobs/`, `notebooks/orchestration/`, `src/banking_dwh/orchestration/`, `src/banking_dwh/dq/reconciliation.py`, `fixtures/parity/`, `tests/test_t10_*`, root `README.md` "How to Run" | Not started | — | — |
+| 10 | Workflow, reconciliation DQ, runbook | 1, 2 (wires the notebook paths named above) | `resources/jobs/`, `notebooks/orchestration/`, `src/banking_dwh/orchestration/`, `src/banking_dwh/dq/reconciliation.py`, `fixtures/parity/`, `tests/test_t10_*`, root `README.md` "How to Run" | PR open | https://devin-gtm.devinenterprise.com/sessions/a6c69998fad14272a73e889389dfb949 | https://github.com/COG-GTM/banking-etl-warehouse/pull/78 |
 
 Status values: Not started → In progress → PR open → Done. Each ticket session updates **only its own row**
 (and appends to the log at the bottom), so concurrent PRs don't conflict beyond that one line.
@@ -94,3 +94,4 @@ The original plan assumed some inputs were missing. They are committed:
 
 * 2026-10-23: T1 and T2 implemented on the foundation branch. Local suite 29/29. Live serverless run on
   `migration_demo.bdwh_*` created the namespace, volumes and star schema (all 13 tables, PK/FK constraints visible in `information_schema`), and the DQ gate passed. Run: `jobs submit` 932701605587220.
+* 2026-10-23: T10 PR #78 opened: `banking_dwh_pipeline` job (12 serverless tasks, target/catalog/schema_prefix passed to every task), legacy-parity reconciliation into `ops.reconciliation_results`, parity fixtures and the root README runbook. Local suite 71 passed. Live on `bdwh_t10_*`: clean run 217540017330795 passed 48/48 checks; broken run 324451885848042 failed 20 checks as intended.

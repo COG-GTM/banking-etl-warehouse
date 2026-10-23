@@ -64,7 +64,98 @@ To provide immediate value to the "client," two parameterized Stored Procedures 
 
 ## 🚀 How to Run This Project
 
-To replicate this solution, follow these steps:
+The warehouse now runs on Databricks: Delta Lake tables, Unity Catalog, Spark SQL, and one
+Databricks Workflow (`banking_dwh_pipeline`). The original SQL Server + Talend steps are kept
+under [Legacy (SQL Server + Talend)](#legacy-sql-server--talend).
+
+### 1. Prerequisites
+- Databricks workspace with Unity Catalog and serverless jobs compute.
+- [Databricks CLI](https://docs.databricks.com/dev-tools/cli/) v0.2xx+ authenticated
+  (`databricks auth login` or `DATABRICKS_HOST`/`DATABRICKS_CLIENT_ID`/`DATABRICKS_CLIENT_SECRET`).
+- A secret scope with the SQL Server JDBC credentials (scope and key names: `databricks/config/environments.yml` → `jdbc`).
+- For local tests: Python 3.10+, JDK 17 or 21.
+
+### 2. Targets and namespaces
+| Target | Catalog | Schemas | Bundle root |
+|---|---|---|---|
+| `dev` (default) | `migration_demo` | `bdwh_bronze`, `bdwh_silver`, `bdwh_gold`, `bdwh_ops` | `/Workspace/Shared/banking_dwh_migration/bundle` |
+| `prod` | `banking_dwh` | `bronze`, `silver`, `gold`, `ops` | `/Workspace/Shared/banking_dwh/bundle` |
+
+Names are resolved by `EnvConfig` (`databricks/src/banking_dwh/common/config.py`) from
+`databricks/config/environments.yml`. Don't hard-code them.
+
+### 3. Deploy the bundle
+```bash
+cd databricks
+databricks bundle validate -t dev
+databricks bundle deploy   -t dev          # or -t prod
+```
+`databricks.yml` includes `resources/jobs/*.yml`, which deploys the job `banking_dwh_pipeline_<target>`.
+Before deploying to prod, set `failure_email` (the default is a placeholder): `--var failure_email=team@bank.com`.
+
+### 4. Run the pipeline
+```bash
+databricks bundle run -t dev banking_dwh_pipeline
+# override job parameters for a one-off run, e.g. a scratch namespace:
+databricks bundle run -t dev banking_dwh_pipeline --params schema_prefix=bdwh_t10_
+```
+Tasks run on serverless compute (environment client 3, plus `pyyaml`), in this order:
+
+| # | Task | Notebook | Replaces |
+|---|---|---|---|
+| 1 | `setup_unity_catalog` | `notebooks/00_setup/01_setup_unity_catalog` | Creating the `DWH` database |
+| 2 | `create_star_schema` | `notebooks/00_setup/02_create_star_schema` | `sql_scripts/01_create_tables.sql` |
+| 3 | `bronze_ingest_sqlserver`, `bronze_ingest_csv_autoloader`, `bronze_ingest_excel` (parallel) | `notebooks/bronze/01..03_*` | Talend `tMSSqlInput`, `tFileInputDelimited`, `tFileInputExcel` |
+| 4 | `load_dim_branch` → `load_dim_account` → `load_dim_customer` → `load_fact_transaction` | `notebooks/silver/01..04_*` | `Load_DimBranch`, `Load_DimAccount`, `Load_DimCustomer`, `Load_FactTransaction` |
+| 5 | `dq_star_schema` | `notebooks/00_setup/03_dq_star_schema` | The SQL Server PK/FK constraints |
+| 6 | `gold_objects` | `notebooks/gold/` (Ticket 9) | `sp_DailyTransaction`, `sp_BalancePerCustomer` |
+| 7 | `reconcile` | `notebooks/orchestration/01_reconcile` | Manual comparison against the legacy DWH |
+
+Retries: Bronze tasks retry twice (also on timeout), setup, Silver and Gold tasks retry once, and the two DQ gates never
+retry. Every task has a timeout, and the run has a 3 h cap plus a 90 min duration warning. Failure and duration alerts go to
+`failure_email`. A daily 02:00 UTC schedule is deployed **paused**.
+
+### 5. Job parameters
+| Parameter | Default | Meaning |
+|---|---|---|
+| `target` | bundle target (`dev`/`prod`) | Which `environments.yml` target to resolve names from. |
+| `catalog` | blank (from config) | Catalog override. |
+| `schema_prefix` | blank (from config) | Schema prefix override (`-` = no prefix). |
+| `parity_gate` | `true` | Whether a reconciliation mismatch fails the run. The fixtures are the legacy output for the `sample.bak` snapshot, so keep this `true` while validating the migration and cut-over. Once live sources move past that snapshot, set it to `false` (results are still recorded) or regenerate the fixtures from a new legacy snapshot. |
+
+`target`, `catalog` and `schema_prefix` are job-level parameters, and every task receives them explicitly as notebook parameters. This matters because
+the notebooks' `target` widget defaults to `dev`. Widget values that end up in SQL are validated as plain identifiers.
+
+### 6. Data quality and reconciliation
+- **`dq_star_schema`** runs PK not-null/unique checks and the two FK checks (`FK_FactTransaction_DimAccount`,
+  `FK_FactTransaction_DimBranch`). It appends to `<ops>.dq_results` and fails the run on any violation.
+- **`reconcile`** compares every Silver table and Gold object with the legacy SQL Server output captured in
+  `databricks/fixtures/parity/`. It checks row count, distinct keys, SUM of every money column (`amount`, `balance`,
+  `total_amount`, `current_balance`, ...), and a full-row diff. Comparisons are exact. One row per metric goes to
+  `<ops>.reconciliation_results` and one row per object to `<ops>.dq_results`. The task fails on any mismatch
+  while `parity_gate=true`.
+```sql
+SELECT check_name, expected, actual, passed
+FROM migration_demo.bdwh_ops.reconciliation_results
+WHERE run_id = '<job run id>' AND NOT passed;
+```
+- To regenerate the fixtures (Docker SQL Server 2022 + the Talend-equivalent load):
+  `python databricks/fixtures/parity/build_parity.py` (see the docstring of that script).
+- Rehearse the gate without touching shared tables. Run `notebooks/orchestration/90_seed_parity_scratch` and then
+  `01_reconcile` with `schema_prefix=bdwh_t<N>_` (the seeder refuses any other namespace). Pass `break=fact_row_missing`
+  to see the gate fail.
+
+### 7. Local tests
+```bash
+cd databricks
+python -m venv .venv && . .venv/bin/activate && pip install -r requirements-dev.txt
+JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 pytest
+```
+
+### Legacy (SQL Server + Talend)
+
+The original run book. Kept for reference and for regenerating the parity fixtures (`databricks/fixtures/parity/build_parity.py` automates steps 2-5 in Docker).
+
 
 1.  **Prerequisites:**
     - Microsoft SQL Server and SQL Server Management Studio (SSMS) installed.
