@@ -49,7 +49,10 @@ RESCUED_COLUMN = "_rescued_data"
 CORRUPT_COLUMN = "_corrupt_record"
 TIMESTAMP_FORMAT = "dd-MM-yyyy HH:mm:ss"
 FIELD_SEPARATOR = ","
-SAMPLE_CSV = Path(__file__).resolve().parents[4] / "data_sources" / "transaction_csv.csv"
+# Sample CSV: next to src/ in a workspace import (<root>/data_sources), else the repo root
+# (local checkout or Databricks Git folder, where src/ lives under databricks/).
+_SAMPLE_CANDIDATES = [Path(__file__).resolve().parents[i] / "data_sources" / "transaction_csv.csv" for i in (3, 4)]
+SAMPLE_CSV = next((p for p in _SAMPLE_CANDIDATES if p.is_file()), _SAMPLE_CANDIDATES[-1])
 
 CSV_OPTIONS: dict[str, str] = {
     "header": "true",
@@ -283,7 +286,7 @@ def land_sample_csv(dest_dir: str, source: str | Path = SAMPLE_CSV, *, overwrite
 
 
 def resolve_sample_source(sample_source: str | Path | None = None) -> Path:
-    """Sample CSV to land: an explicit path, else ``data_sources/transaction_csv.csv`` next to ``src/``.
+    """Sample CSV to land: an explicit path, else ``data_sources/transaction_csv.csv`` next to ``src/`` or at the repo root.
 
     In a workspace import that means ``<root>/data_sources/transaction_csv.csv`` (import the
     repo's ``data_sources`` folder alongside ``src``/``config``/``notebooks``, or use a Git folder).
@@ -292,7 +295,7 @@ def resolve_sample_source(sample_source: str | Path | None = None) -> Path:
     if not src.is_file():
         raise FileNotFoundError(
             f"Sample CSV not found: {src}. Set the sample_source widget to the CSV path, or import "
-            f"data_sources/transaction_csv.csv to {SAMPLE_CSV.parent}."
+            f"data_sources/transaction_csv.csv to {_SAMPLE_CANDIDATES[0].parent}."
         )
     return src
 
