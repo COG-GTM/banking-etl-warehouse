@@ -15,6 +15,7 @@ from banking_dwh.contracts.ddl import bronze_statements, star_schema_statements
 from banking_dwh.contracts.tables import (
     BRONZE_FILE_TRANSACTION_CSV,
     BRONZE_FILE_TRANSACTION_EXCEL,
+    BRONZE_SQLSERVER_BRANCH,
     BRONZE_SQLSERVER_TRANSACTION,
     DIM_ACCOUNT,
     DIM_BRANCH,
@@ -130,7 +131,7 @@ def test_real_sources_union_dedup_and_quarantine(spark):
     dup = rejects.filter("reject_reason = 'duplicate_transaction_id' AND transaction_id = 14").collect()[0]
     assert dup["_source_system"] == "csv" and json.loads(dup["details"]) == {"kept_source": "excel"}
     dq_rows = spark.table(cfg.table("ops", "dq_results")).filter("run_id = 'real-1'").count()
-    assert dq_rows == len(s["dq"]) == 6
+    assert dq_rows == len(s["dq"]) == 7
 
 
 def test_union_of_three_streams_conformed(spark):
@@ -163,16 +164,40 @@ def test_cross_source_duplicates_resolved_by_priority(spark):
     assert {k: v["_source_system"] for k, v in _fact(spark, cfg).items()} == {100: "sqlserver", 101: "excel", 102: "csv"}
 
 
-def test_within_source_newest_ingestion_wins_and_sql_latest_batch_only(spark):
+def test_latest_sql_batch_and_latest_file_snapshot(spark):
     cfg = _cfg(spark, "t8b_")
     later = datetime(2026, 2, 1)
     _seed(spark, cfg,
           sql=_sql(_txn(1, amount=1), _txn(300, amount=1), batch="old", at=T0) + _sql(_txn(1, amount=9), batch="new", at=later),
-          csv=_file(_txn(5, amount="1"), at=T0, source_file="/a.csv") + _file(_txn(5, amount="2"), at=later, source_file="/b.csv"))
+          csv=_file(_txn(5, amount="1"), _txn(6, amount="1"), at=T0, source_file="/a.csv")
+          + _file(_txn(5, amount="2"), at=later, source_file="/b.csv"))
     s = ft.load_fact_transaction(spark, cfg, run_id="b", unity_catalog=False)
     fact = _fact(spark, cfg)
-    assert s["source_counts"]["sqlserver"] == 1
+    assert s["source_counts"] == {"sqlserver": 1, "excel": 0, "csv": 1}
+    # 300 left the SQL source, 6 left the CSV (only in the superseded file /a.csv): both absent.
     assert sorted(fact) == [1, 5] and fact[1]["amount"] == Decimal(9) and fact[5]["amount"] == Decimal(2)
+
+    # all_files: every ingested file is read, the newest ingestion of a key wins.
+    s = ft.load_fact_transaction(spark, cfg, run_id="b2", file_snapshot="all_files", unity_catalog=False)
+    fact = _fact(spark, cfg)
+    assert s["merge"] == {"inserted": 1, "updated": 0, "deleted": 0}
+    assert sorted(fact) == [1, 5, 6] and fact[5]["amount"] == Decimal(2)
+    with pytest.raises(ValueError, match="file_snapshot"):
+        ft.load_fact_transaction(spark, cfg, file_snapshot="newest", unity_catalog=False)
+
+
+def test_empty_sql_extract_deletes_sql_rows(spark):
+    cfg = _cfg(spark, "t8e_")
+    _seed(spark, cfg, sql=_sql(_txn(1), _txn(2), batch="old", at=T0), csv=_file(_txn(3, amount="1")))
+    assert ft.load_fact_transaction(spark, cfg, run_id="e1", unity_catalog=False)["final_count"] == 3
+
+    # Newer extraction run: branch extracted, transaction_db returned zero rows.
+    t8_seed.write_rows(spark, cfg, BRONZE_SQLSERVER_BRANCH,
+                       [{"branch_id": 1, "_batch_id": "new", "_ingested_at": datetime(2026, 2, 1)}], unity_catalog=False)
+    s = ft.load_fact_transaction(spark, cfg, run_id="e2", unity_catalog=False)
+    assert s["source_counts"]["sqlserver"] == 0
+    assert s["merge"] == {"inserted": 0, "updated": 0, "deleted": 2}
+    assert sorted(_fact(spark, cfg)) == [3]
 
 
 def test_input_rejects_quarantined_before_dedup(spark):
@@ -184,6 +209,9 @@ def test_input_rejects_quarantined_before_dedup(spark):
     assert s["input_rejects"] == 2 and s["final_count"] == 1
     assert _fact(spark, cfg)[200]["_source_system"] == "csv"
     assert s["rejects_by_reason"] == {"bronze_rescued_data": 1, "null_transaction_id": 1}
+    assert ft.dq_failures(s) == []  # regular PK/FK checks pass on the loaded table
+    quarantined = ft.dq_failures(s, include_regular=False, include_quarantine=True)
+    assert [(r["check_name"], r["failed_rows"]) for r in quarantined] == [("fact_transaction.input_rejects.quarantined", 2)]
 
 
 def test_idempotent_rerun_and_truncate_semantics(spark):
@@ -227,6 +255,8 @@ def test_ri_failure_surfaced(spark):
     assert s["final_count"] == 4
     failed = {r["check_name"]: r["failed_rows"] for r in ft.dq_failures(s)}
     assert failed == {"FK_FactTransaction_DimAccount": 1, "FK_FactTransaction_DimBranch": 1}
+    # notebook: fail_on_dq=false + fail_on_quarantine=true must not raise on regular FK failures
+    assert ft.dq_failures(s, include_regular=False, include_quarantine=True) == []
     stored = spark.table(cfg.table("ops", "dq_results")).filter("run_id = 'f2' AND NOT passed").collect()
     assert {r["check_name"] for r in stored} == set(failed)
     sample = json.loads(next(r for r in stored if r["check_name"] == "FK_FactTransaction_DimAccount")["details"])

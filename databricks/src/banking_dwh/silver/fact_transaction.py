@@ -11,9 +11,12 @@ Talend job (``talend_jobs/Load_FactTransaction.zip`` -> ``Load_FactTransaction_0
 
 Port, step by step:
 
-1. **Read** the three Bronze contracts. SQL Server: only the latest extraction batch (``_batch_id`` of
-   the newest ``_ingested_at``), which is what Talend's full-table SELECT saw. Files: all ingested rows
-   (the Bronze file tables are already typed, nothing is re-parsed).
+1. **Read** the three Bronze contracts (append-only). SQL Server: only the latest extraction run (newest
+   ``_batch_id`` across all SQL Server Bronze tables, so an empty transaction extract reads as empty),
+   which is what Talend's full-table SELECT saw. Files: by default only the most recently ingested file
+   version (``_source_file`` + ``_ingested_at``), as Talend read one fixed path per run;
+   ``file_snapshot="all_files"`` reads every ingested file instead. Bronze file tables are already typed,
+   nothing is re-parsed.
 2. **Conform** to the ``FACT_TRANSACTION`` columns and types (``amount`` INT -> DECIMAL(19,4)) and tag each
    row with ``_source_system`` and a source priority that mirrors tUnite's input order
    ``row1`` SQL (1), ``row2`` Excel (2), ``row3`` CSV (3).
@@ -33,8 +36,9 @@ Port, step by step:
    deletes keys no longer produced by the sources (``WHEN NOT MATCHED BY SOURCE``). The table ends up
    exactly as Talend's TRUNCATE + INSERT would leave it, but unchanged rows are not rewritten, so a
    rerun on the same input changes nothing and the Change Data Feed only shows real changes.
-8. **DQ**: Ticket 2's ``pk_*`` and ``FK_FactTransaction_*`` checks on the loaded table, plus one
-   ``<FK>.quarantined`` result per foreign key, appended to ``ops.dq_results``.
+8. **DQ**: Ticket 2's ``pk_*`` and ``FK_FactTransaction_*`` checks on the loaded table, plus quarantine
+   results (``fact_transaction.input_rejects.quarantined`` and one ``<FK>.quarantined`` per foreign key),
+   appended to ``ops.dq_results``. ``dq_failures`` separates regular and quarantine failures.
 """
 
 from __future__ import annotations
@@ -49,6 +53,11 @@ from ..contracts.ddl import create_table_sql
 from ..contracts.tables import (
     BRONZE_FILE_TRANSACTION_CSV,
     BRONZE_FILE_TRANSACTION_EXCEL,
+    BRONZE_SQLSERVER_ACCOUNT,
+    BRONZE_SQLSERVER_BRANCH,
+    BRONZE_SQLSERVER_CITY,
+    BRONZE_SQLSERVER_CUSTOMER,
+    BRONZE_SQLSERVER_STATE,
     BRONZE_SQLSERVER_TRANSACTION,
     DQ_RESULTS,
     FACT_TRANSACTION,
@@ -74,6 +83,13 @@ SOURCES = (
 
 BUSINESS_COLUMNS = FACT_TRANSACTION.business_columns
 ORPHAN_POLICIES = ("quarantine", "load", "fail")
+FILE_SNAPSHOTS = ("latest_file", "all_files")
+# Every JDBC extract of one run shares a _batch_id, so an empty transaction_db extract is still visible here.
+SQLSERVER_BATCH_TABLES = (
+    BRONZE_SQLSERVER_TRANSACTION, BRONZE_SQLSERVER_BRANCH, BRONZE_SQLSERVER_ACCOUNT,
+    BRONZE_SQLSERVER_CUSTOMER, BRONZE_SQLSERVER_CITY, BRONZE_SQLSERVER_STATE,
+)
+QUARANTINE_CHECK_TYPES = ("referential_integrity_quarantine", "input_quarantine")
 
 REJECT_NULL_KEY = "null_transaction_id"
 REJECT_RESCUED = "bronze_rescued_data"
@@ -133,20 +149,48 @@ def conform_stream(df, stream: SourceStream):
     )
 
 
-def latest_batch(df):
-    """Rows of the newest JDBC extraction batch (Bronze JDBC tables are append-only snapshots)."""
+def latest_sql_batch(spark, cfg: EnvConfig, df):
+    """transaction_db rows of the newest JDBC extraction run (Bronze JDBC tables are append-only snapshots).
+
+    The newest ``_batch_id`` is taken across all SQL Server Bronze tables, so a run whose transaction_db
+    extract was empty yields an empty stream (and the MERGE deletes the old SQL rows, like TRUNCATE).
+    """
     from pyspark.sql import functions as F
 
-    newest = df.orderBy(F.col("_ingested_at").desc(), F.col("_batch_id").desc()).select("_batch_id").limit(1)
+    batches = None
+    for contract in SQLSERVER_BATCH_TABLES:
+        fq = cfg.table(contract.layer, contract.name)
+        if not spark.catalog.tableExists(fq):
+            continue
+        b = spark.table(fq).groupBy("_batch_id").agg(F.max("_ingested_at").alias("_ingested_at"))
+        batches = b if batches is None else batches.unionByName(b)
+    newest = (
+        batches.groupBy("_batch_id").agg(F.max("_ingested_at").alias("_ingested_at"))
+        .orderBy(F.col("_ingested_at").desc(), F.col("_batch_id").desc()).select("_batch_id").limit(1)
+    )
     return df.join(newest, on="_batch_id", how="left_semi")
 
 
-def read_streams(spark, cfg: EnvConfig) -> dict[str, Any]:
+def latest_file(df):
+    """Rows of the most recently ingested file version: Talend read one fixed CSV / Excel path per run."""
+    from pyspark.sql import functions as F
+
+    newest = df.orderBy(F.col("_ingested_at").desc(), F.col("_source_file").desc()).select(
+        "_source_file", "_ingested_at"
+    ).limit(1)
+    return df.join(newest, on=["_source_file", "_ingested_at"], how="left_semi")
+
+
+def read_streams(spark, cfg: EnvConfig, file_snapshot: str = "latest_file") -> dict[str, Any]:
+    if file_snapshot not in FILE_SNAPSHOTS:
+        raise ValueError(f"file_snapshot must be one of {FILE_SNAPSHOTS}, got {file_snapshot!r}")
     streams = {}
     for s in SOURCES:
         df = spark.table(cfg.table(s.contract.layer, s.contract.name))
         if s.source_system == "sqlserver":
-            df = latest_batch(df)
+            df = latest_sql_batch(spark, cfg, df)
+        elif file_snapshot == "latest_file":
+            df = latest_file(df)
         streams[s.source_system] = conform_stream(df, s)
     return streams
 
@@ -304,12 +348,22 @@ def quarantine_results(cfg: EnvConfig, orphan_counts: dict[str, int]) -> list[DQ
     return out
 
 
+def input_quarantine_result(cfg: EnvConfig, input_reject_counts: dict[str, int]) -> DQResult:
+    rejects_fq = cfg.table(FACT_TRANSACTION_REJECTS.layer, FACT_TRANSACTION_REJECTS.name)
+    n = sum(input_reject_counts.values())
+    return DQResult(
+        "fact_transaction.input_rejects.quarantined", "input_quarantine", rejects_fq, n == 0, n,
+        json.dumps({"rejects": rejects_fq, "by_reason": input_reject_counts}),
+    )
+
+
 def load_fact_transaction(
     spark,
     cfg: EnvConfig,
     *,
     run_id: str | None = None,
     orphan_policy: str = "quarantine",
+    file_snapshot: str = "latest_file",
     unity_catalog: bool = True,
     write_dq: bool = True,
 ) -> dict[str, Any]:
@@ -319,12 +373,13 @@ def load_fact_transaction(
     run_id = run_id or str(uuid.uuid4())
     ensure_rejects_table(spark, cfg, unity_catalog=unity_catalog)
 
-    streams = read_streams(spark, cfg)
+    streams = read_streams(spark, cfg, file_snapshot)
     source_counts = {k: v.count() for k, v in streams.items()}
     unioned = union_streams(streams[s.source_system] for s in SOURCES)
     union_count = unioned.count()
 
     valid, input_rejects = split_input_rejects(unioned)
+    input_reject_counts = _count_by(input_rejects, "_reject_reason")
     winners, losers = deduplicate(valid)
     dedup_count = winners.count()
     loadable, orphans = split_orphans(spark, cfg, winners)
@@ -349,6 +404,7 @@ def load_fact_transaction(
     results = primary_key_checks(spark, cfg, [FACT_TRANSACTION]) + referential_integrity_checks(
         spark, cfg, [FACT_TRANSACTION]
     )
+    results.append(input_quarantine_result(cfg, input_reject_counts))
     if orphan_policy == "quarantine":
         results += quarantine_results(cfg, orphan_counts)
     if write_dq:
@@ -358,11 +414,12 @@ def load_fact_transaction(
     return {
         "run_id": run_id,
         "orphan_policy": orphan_policy,
+        "file_snapshot": file_snapshot,
         "fact_table": fact_fq,
         "rejects_table": rejects_fq,
         "source_counts": source_counts,
         "union_count": union_count,
-        "input_rejects": input_rejects.count(),
+        "input_rejects": sum(input_reject_counts.values()),
         "dedup_count": dedup_count,
         "duplicates_removed": losers.count(),
         "orphan_rows": orphan_rows,
@@ -380,9 +437,10 @@ def load_fact_transaction(
     }
 
 
-def dq_failures(summary: dict[str, Any], *, include_quarantine: bool = False) -> list[dict]:
-    """Failed checks from a load summary; quarantine results only when asked for."""
+def dq_failures(summary: dict[str, Any], *, include_regular: bool = True, include_quarantine: bool = False) -> list[dict]:
+    """Failed checks from a load summary: regular PK/FK checks and/or quarantine (rows not loaded) results."""
     return [
         r for r in summary["dq"]
-        if not r["passed"] and (include_quarantine or r["check_type"] != "referential_integrity_quarantine")
+        if not r["passed"]
+        and (include_quarantine if r["check_type"] in QUARANTINE_CHECK_TYPES else include_regular)
     ]

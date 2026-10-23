@@ -23,22 +23,28 @@ import json
 import uuid
 
 from banking_dwh.dq.checks import DataQualityError
-from banking_dwh.silver.fact_transaction import ORPHAN_POLICIES, dq_failures, load_fact_transaction
+from banking_dwh.silver.fact_transaction import FILE_SNAPSHOTS, ORPHAN_POLICIES, dq_failures, load_fact_transaction
 
 dbutils.widgets.text("run_id", "", "Run id (defaults to a uuid)")  # noqa: F821
 dbutils.widgets.dropdown("orphan_policy", "quarantine", list(ORPHAN_POLICIES), "Orphan FK rows")  # noqa: F821
+dbutils.widgets.dropdown("file_snapshot", "latest_file", list(FILE_SNAPSHOTS), "File rows to read")  # noqa: F821
 dbutils.widgets.dropdown("fail_on_dq", "true", ["true", "false"], "Fail on PK/FK check failure")  # noqa: F821
 dbutils.widgets.dropdown("fail_on_quarantine", "false", ["true", "false"], "Fail if rows were quarantined")  # noqa: F821
 
 run_id = dbutils.widgets.get("run_id") or str(uuid.uuid4())  # noqa: F821
 summary = load_fact_transaction(
-    spark, cfg, run_id=run_id, orphan_policy=dbutils.widgets.get("orphan_policy")  # noqa: F821
+    spark, cfg, run_id=run_id, orphan_policy=dbutils.widgets.get("orphan_policy"),  # noqa: F821
+    file_snapshot=dbutils.widgets.get("file_snapshot"),  # noqa: F821
 )
 print(json.dumps(summary, indent=2, default=str))
 
 # COMMAND ----------
 
-failed = dq_failures(summary, include_quarantine=dbutils.widgets.get("fail_on_quarantine") == "true")  # noqa: F821
-if failed and (dbutils.widgets.get("fail_on_dq") == "true" or dbutils.widgets.get("fail_on_quarantine") == "true"):  # noqa: F821
+failed = dq_failures(
+    summary,
+    include_regular=dbutils.widgets.get("fail_on_dq") == "true",  # noqa: F821
+    include_quarantine=dbutils.widgets.get("fail_on_quarantine") == "true",  # noqa: F821
+)
+if failed:
     raise DataQualityError(f"fact_transaction DQ failed: {failed}")
 dbutils.notebook.exit(json.dumps(summary, default=str))  # noqa: F821
