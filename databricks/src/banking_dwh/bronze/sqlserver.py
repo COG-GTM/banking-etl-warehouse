@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import os
 import re
+import shutil
 import uuid
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -91,6 +92,8 @@ def resolve_tables(cfg: EnvConfig, requested: str | Iterable[str] | None = None)
             raise ValueError(f"Table {t!r} is not an extractable source table; expected a subset of {configured}")
         if t not in out:
             out.append(t)
+    if not out:
+        raise ValueError(f"No source tables selected from {requested!r}; expected 'all' or a subset of {configured}")
     return out
 
 
@@ -259,9 +262,27 @@ def write_bronze(spark, cfg: EnvConfig, contract: TableContract, df, *, unity_ca
 
 
 def stage_parquet(df, path: str) -> str:
-    """Stage the raw extract (source columns only) as parquet, replacing the previous batch."""
+    """Write the raw extract (source columns only) as parquet, replacing whatever is at ``path``."""
     df.write.mode("overwrite").parquet(path)
     return path
+
+
+def incoming_root(landing_root: str, batch_id: str) -> str:
+    """Per-batch scratch folder next to the published ``<root>/<table>`` folders. JDBC extracts
+    land here first so a failed read never replaces the last good staged snapshot; the
+    ``_`` prefix keeps Spark from ever listing it as data."""
+    return f"{landing_root.rstrip('/')}/_incoming/{validate_batch_id(batch_id)}"
+
+
+def remove_tree(path: str) -> None:
+    """Best-effort cleanup of a local or FUSE path (``/Volumes`` is FUSE-mounted on Databricks)."""
+    if "://" in path or path.startswith("dbfs:"):
+        return
+    shutil.rmtree(path, ignore_errors=True)
+    try:
+        os.rmdir(os.path.dirname(path.rstrip("/")))  # the shared _incoming folder, once empty
+    except OSError:
+        pass
 
 
 # ---------------------------------------------------------------------------------------
@@ -321,38 +342,54 @@ def ingest(
     ingested_at = datetime.now(timezone.utc).replace(microsecond=0)
     source_schema = cfg.jdbc.source_schema if cfg.jdbc else "dbo"
 
-    def landing(table: str) -> str:
-        if staged_root:
-            return f"{staged_root.rstrip('/')}/{table}"
-        return cfg.landing_path("sqlserver", table)
+    landing_root = staged_root.rstrip("/") if staged_root else cfg.landing_path("sqlserver")
+    scratch = incoming_root(landing_root, batch_id)
+    stage_jdbc = source == "jdbc" and stage
 
+    def landing(table: str) -> str:
+        return f"{landing_root}/{table}" if staged_root else cfg.landing_path("sqlserver", table)
+
+    # Phase 1 (no writes to Bronze or the published landing folders): read, conform, validate
+    # every table, so a bad table or count mismatch can't leave a mix of old and new snapshots.
+    prepared: list[tuple[str, TableContract, str, Any, int, int | None]] = []
     results: list[TableResult] = []
-    with char_varchar_as_string(spark) as char_as_string:
-        if source == "jdbc":
-            present = set(list_source_tables(spark, jdbc, source_schema))
-            absent = [t for t in names if t not in present]
-            if absent:
-                raise ValueError(f"Source tables not found in {source_schema}: {absent}")
-        for table in names:
-            contract = contract_for(table)
-            staged_to = None
+    try:
+        with char_varchar_as_string(spark) as char_as_string:
             if source == "jdbc":
-                raw = read_jdbc(spark, jdbc, table, source_schema)
-                location = f"jdbc:{source_schema}.{table}"
-                if stage:
-                    staged_to = stage_parquet(raw, landing(table))
-                    raw = read_staged(spark, staged_to)  # single source read; Bronze == staged copy
-            else:
-                location = landing(table)
-                raw = read_staged(spark, location)
-            df = conform_to_contract(raw, contract, batch_id=batch_id, ingested_at=ingested_at)
-            bad = null_key_count(df, contract)
-            if bad:
-                raise ValueError(f"{table}: {bad} rows have NULL in NOT NULL contract columns")
-            name = write_bronze(spark, cfg, contract, df, unity_catalog=unity_catalog)
-            rows = spark.table(name).filter(F.col("_batch_id") == F.lit(batch_id)).count()
-            exp = (expected_counts or {}).get(table)
-            results.append(TableResult(table, name, source, location, rows, exp, staged_to))
+                present = set(list_source_tables(spark, jdbc, source_schema))
+                absent = [t for t in names if t not in present]
+                if absent:
+                    raise ValueError(f"Source tables not found in {source_schema}: {absent}")
+            for table in names:
+                contract = contract_for(table)
+                if source == "jdbc":
+                    location = f"jdbc:{source_schema}.{table}"
+                    raw = read_jdbc(spark, jdbc, table, source_schema)
+                    if stage_jdbc:  # single source read; Bronze == staged copy
+                        raw = read_staged(spark, stage_parquet(raw, f"{scratch}/{table}"))
+                else:
+                    location = landing(table)
+                    raw = read_staged(spark, location)
+                df = conform_to_contract(raw, contract, batch_id=batch_id, ingested_at=ingested_at)
+                bad = null_key_count(df, contract)
+                if bad:
+                    raise ValueError(f"{table}: {bad} rows have NULL in NOT NULL contract columns")
+                prepared.append((table, contract, location, df, df.count(), (expected_counts or {}).get(table)))
+            mismatch = {t: (n, e) for t, _, _, _, n, e in prepared if e is not None and n != e}
+            if assert_counts and mismatch:
+                raise AssertionError(f"Row-count mismatch (actual, expected): {mismatch}; no table was written")
+
+            # Phase 2: publish Bronze (and the staged snapshot) for every validated table.
+            for table, contract, location, df, _, exp in prepared:
+                name = write_bronze(spark, cfg, contract, df, unity_catalog=unity_catalog)
+                staged_to = None
+                if stage_jdbc:
+                    staged_to = stage_parquet(read_staged(spark, f"{scratch}/{table}"), landing(table))
+                rows = spark.table(name).filter(F.col("_batch_id") == F.lit(batch_id)).count()
+                results.append(TableResult(table, name, source, location, rows, exp, staged_to))
+    finally:
+        if stage_jdbc:
+            remove_tree(scratch)
 
     summary = {
         "batch_id": batch_id,
@@ -403,15 +440,24 @@ def local_jdbc_options(cfg: EnvConfig, *, host: str, port: str | int, database: 
 
 def extract_to_parquet(spark, jdbc: Mapping[str, str], out_dir: str, tables: Iterable[str],
                        source_schema: str = "dbo") -> dict[str, int]:
+    """Extract every table to ``<out_dir>/_incoming/<id>/`` first and publish to
+    ``<out_dir>/<table>`` only once all reads succeeded, keeping the previous snapshot otherwise."""
+    tables = list(tables)
+    scratch = incoming_root(out_dir, new_batch_id())
     counts = {}
-    with char_varchar_as_string(spark):
-        present = set(list_source_tables(spark, jdbc, source_schema))
-        for t in tables:
-            if t not in present:
-                raise ValueError(f"Source table {source_schema}.{t} not found")
-            path = os.path.join(out_dir, t)
-            stage_parquet(read_jdbc(spark, jdbc, t, source_schema), path)
-            counts[t] = spark.read.parquet(path).count()
+    try:
+        with char_varchar_as_string(spark):
+            present = set(list_source_tables(spark, jdbc, source_schema))
+            missing = [t for t in tables if t not in present]
+            if missing:
+                raise ValueError(f"Source tables not found in {source_schema}: {missing}")
+            for t in tables:
+                stage_parquet(read_jdbc(spark, jdbc, t, source_schema), f"{scratch}/{t}")
+            for t in tables:
+                path = stage_parquet(spark.read.parquet(f"{scratch}/{t}"), os.path.join(out_dir, t))
+                counts[t] = spark.read.parquet(path).count()
+    finally:
+        remove_tree(scratch)
     return counts
 
 

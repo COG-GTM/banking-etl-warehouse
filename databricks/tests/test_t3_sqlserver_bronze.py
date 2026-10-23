@@ -84,7 +84,7 @@ def test_resolve_tables(local_cfg):
     assert ss.resolve_tables(local_cfg, "all") == list(local_cfg.jdbc.source_tables)
     assert ss.resolve_tables(local_cfg, " branch, account,branch ") == ["branch", "account"]
     assert ss.resolve_tables(local_cfg, ["state"]) == ["state"]
-    for bad in ("sysdiagrams", "orders", "branch;DROP TABLE x", "dbo.branch"):
+    for bad in ("sysdiagrams", "orders", "branch;DROP TABLE x", "dbo.branch", " , ", [""]):
         with pytest.raises(ValueError):
             ss.resolve_tables(local_cfg, bad)
 
@@ -245,13 +245,71 @@ def test_staged_ingest_is_full_refresh(spark, local_schemas, staged_root):
     assert hist[0].operation in ("WRITE", "REPLACE TABLE AS SELECT", "CREATE OR REPLACE TABLE AS SELECT")
 
 
+def _batch_rows(spark, cfg, table: str, batch_id: str) -> int:
+    name = cfg.table("bronze", f"sqlserver_{table}")
+    return spark.table(name).filter(f"_batch_id = '{batch_id}'").count() if spark.catalog.tableExists(name) else 0
+
+
 def test_assert_counts_fails_on_mismatch(spark, local_schemas, staged_root):
-    with pytest.raises(AssertionError, match="Row-count mismatch"):
-        ss.ingest(spark, local_schemas, source="staged", staged_root=staged_root, tables="branch",
-                  expected_counts={"branch": 6}, assert_counts=True, unity_catalog=False)
+    ss.ingest(spark, local_schemas, source="staged", staged_root=staged_root, tables="branch,state",
+              batch_id="counts-ok", unity_catalog=False)
+    with pytest.raises(AssertionError, match="Row-count mismatch.*no table was written"):
+        ss.ingest(spark, local_schemas, source="staged", staged_root=staged_root, tables="branch,state",
+                  batch_id="counts-bad", expected_counts={"state": 6}, assert_counts=True, unity_catalog=False)
+    # Validation runs before any write: branch (count OK) still holds the previous batch.
+    for t in ("branch", "state"):
+        assert _batch_rows(spark, local_schemas, t, "counts-bad") == 0
+        assert _batch_rows(spark, local_schemas, t, "counts-ok") == ss.EXPECTED_ROW_COUNTS[t]
     s = ss.ingest(spark, local_schemas, source="staged", staged_root=staged_root, tables="branch",
                   expected_counts={"branch": 6}, unity_catalog=False)
     assert s["counts_ok"] is False and s["tables"][0]["expected_rows"] == 6
+
+
+def test_failing_table_leaves_earlier_bronze_tables_untouched(spark, local_schemas, staged_root, tmp_path):
+    cfg = local_schemas
+    root = tmp_path / "sqlserver"
+    for table in ss.CONTRACTS:
+        df = spark.read.parquet(f"{staged_root}/{table}")
+        if table == "transaction_db":
+            df = df.drop("amount")
+        df.write.parquet(str(root / table))
+    with pytest.raises(ValueError, match="missing contract columns"):
+        ss.ingest(spark, cfg, source="staged", staged_root=str(root), batch_id="mixed", unity_catalog=False)
+    assert all(_batch_rows(spark, cfg, t, "mixed") == 0 for t in ss.CONTRACTS)
+
+
+class _FakeJdbc:
+    """Stands in for SQL Server: serves fixture rows, optionally failing one table's read."""
+
+    def __init__(self, spark, fail: str | None = None):
+        self.spark, self.fail = spark, fail
+
+    def read(self, spark, options, table, source_schema="dbo"):
+        if table == self.fail:
+            raise RuntimeError(f"connection reset while reading {table}")
+        return spark.createDataFrame(_rows(table, ss.EXPECTED_ROW_COUNTS[table]), SOURCE_DDL[table])
+
+
+def test_failed_jdbc_extract_keeps_previous_staged_snapshot(spark, local_schemas, tmp_path, monkeypatch):
+    cfg, landing = local_schemas, tmp_path / "sqlserver"
+    for table in ss.CONTRACTS:  # previous good snapshot: 2 rows per table
+        spark.createDataFrame(_rows(table, 2), SOURCE_DDL[table]).write.parquet(str(landing / table))
+    monkeypatch.setattr(ss, "list_source_tables", lambda *a, **k: sorted(ss.CONTRACTS))
+
+    monkeypatch.setattr(ss, "read_jdbc", _FakeJdbc(spark, fail="transaction_db").read)
+    with pytest.raises(RuntimeError, match="connection reset"):
+        ss.ingest(spark, cfg, source="jdbc", jdbc={"url": "jdbc:sqlserver://fake"}, staged_root=str(landing),
+                  batch_id="jdbc-fail", unity_catalog=False)
+    assert {t: spark.read.parquet(str(landing / t)).count() for t in ss.CONTRACTS} == dict.fromkeys(ss.CONTRACTS, 2)
+    assert not (landing / "_incoming").exists()
+    assert all(_batch_rows(spark, cfg, t, "jdbc-fail") == 0 for t in ss.CONTRACTS)
+
+    monkeypatch.setattr(ss, "read_jdbc", _FakeJdbc(spark).read)
+    s = ss.ingest(spark, cfg, source="jdbc", jdbc={"url": "jdbc:sqlserver://fake"}, staged_root=str(landing),
+                  batch_id="jdbc-ok", assert_counts=True, unity_catalog=False)
+    assert s["counts_ok"] and all(t["staged_to"] == str(landing / t["source_table"]) for t in s["tables"])
+    assert {t: spark.read.parquet(str(landing / t)).count() for t in ss.CONTRACTS} == ss.EXPECTED_ROW_COUNTS
+    assert not (landing / "_incoming").exists()
 
 
 # --------------------------------------------------------------------------------------
