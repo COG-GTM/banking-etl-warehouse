@@ -94,4 +94,4 @@ The original plan assumed some inputs were missing. They are committed:
 
 * 2026-10-23: T1 and T2 implemented on the foundation branch. Local suite 29/29. Live serverless run on
   `migration_demo.bdwh_*` created the namespace, volumes and star schema (all 13 tables, PK/FK constraints visible in `information_schema`), and the DQ gate passed. Run: `jobs submit` 932701605587220.
-* 2026-10-23: T10 PR #78 opened: `banking_dwh_pipeline` job (12 serverless tasks, target/catalog/schema_prefix passed to every task), legacy-parity reconciliation into `ops.reconciliation_results`, parity fixtures and the root README runbook. Local suite 68 passed. Live on `bdwh_t10_*`: clean run 936269294740760 passed 40/40 checks; broken run 336494463418928 failed 20 checks as intended.
+* 2026-10-23: T10 PR #78 opened: `banking_dwh_pipeline` job (12 serverless tasks, target/catalog/schema_prefix passed to every task), legacy-parity reconciliation into `ops.reconciliation_results`, parity fixtures and the root README runbook. Local suite 71 passed. Live on `bdwh_t10_*`: clean run 217540017330795 passed 48/48 checks; broken run 324451885848042 failed 20 checks as intended.
