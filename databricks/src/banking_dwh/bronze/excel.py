@@ -63,6 +63,7 @@ TIMESTAMP_FORMATS = (
     "dd-MM-yyyy",
 )
 # Excel serial dates (days since 1899-12-30), only when a date cell lost its format.
+_DECIMAL_19_4_MAX = Decimal("999999999999999.9999")
 _EXCEL_EPOCH_OFFSET_DAYS = 25569  # 1970-01-01 as an Excel serial
 _EXCEL_SERIAL_MIN, _EXCEL_SERIAL_MAX = 1, 2958465  # 1900-01-01 .. 9999-12-31
 
@@ -199,6 +200,18 @@ def read_native(spark, files: Sequence[str], sheet: str = DEFAULT_SHEET, header_
     from pyspark.sql import functions as F
 
     raw = spark.read.format("excel").options(**native_reader_options(sheet, header_rows)).load(list(files))
+    path = F.regexp_replace(F.col("_metadata.file_path"), r"^(dbfs:|file://|file:)", "")
+    return project_native(raw, path)
+
+
+def project_native(raw, path):
+    """Map native-reader columns onto SOURCE_COLUMNS (+ file path, + JSON of unknown columns).
+
+    A row is kept when any known *or* unknown column has a value, matching the openpyxl reader,
+    so a row whose only data is in an extra column still lands with it in ``_rescued_data``.
+    """
+    from pyspark.sql import functions as F
+
     by_key = {}
     for name in raw.columns:
         by_key.setdefault(name.strip().lower(), name)
@@ -214,12 +227,11 @@ def read_native(spark, files: Sequence[str], sheet: str = DEFAULT_SHEET, header_
         ))
         if extras else F.lit(None).cast("string")
     )
-    path = F.regexp_replace(F.col("_metadata.file_path"), r"^(dbfs:|file://|file:)", "")
-    non_empty = F.coalesce(*[F.col(c) for c in SOURCE_COLUMNS]).isNotNull()
+    non_empty = F.coalesce(*[F.col(c) for c in (*SOURCE_COLUMNS, _RAW_EXTRA)]).isNotNull()
     return (
         raw.select(*cols, path.alias(RAW_FILE_COLUMN), extra_json.alias(_RAW_EXTRA))
-        .where(non_empty)
         .withColumn(_RAW_EXTRA, F.when(F.col(_RAW_EXTRA) != "{}", F.col(_RAW_EXTRA)))
+        .where(non_empty)
     )
 
 
@@ -245,9 +257,10 @@ def _int_expr(c: str):
 def _decimal_expr(c: str):
     from pyspark.sql import functions as F
 
-    d = F.expr(f"try_cast(trim(`{c}`) AS DECIMAL(38,10))")
-    ok = d.isNotNull() & (F.abs(d) < F.lit(Decimal("1e15")))  # DECIMAL(19,4) range
-    return F.when(ok, F.round(d, 4).cast("decimal(19,4)"))
+    rounded = F.round(F.expr(f"try_cast(trim(`{c}`) AS DECIMAL(38,10))"), 4)
+    # Range-check after rounding: 999999999999999.99995 rounds past DECIMAL(19,4) and must be rescued.
+    ok = rounded.isNotNull() & (F.abs(rounded) <= F.lit(_DECIMAL_19_4_MAX))
+    return F.when(ok, rounded.cast("decimal(19,4)"))
 
 
 def _timestamp_expr(c: str):

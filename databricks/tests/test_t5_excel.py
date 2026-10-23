@@ -227,6 +227,44 @@ def test_typing_accepts_single_digit_hours(spark, text, expected):
     assert r["transaction_date"] == expected and r["_rescued_data"] is None
 
 
+@pytest.mark.parametrize("text,expected", [
+    ("999999999999999.9999", Decimal("999999999999999.9999")),
+    ("-999999999999999.99994", Decimal("-999999999999999.9999")),
+    ("999999999999999.99995", None),
+    ("1000000000000000", None),
+])
+def test_amount_range_checked_after_rounding(spark, text, expected):
+    raw = excel._string_frame(spark, [
+        {"transaction_id": "1", "account_id": "1", "transaction_date": "2024-01-01 10:00:00", "amount": text,
+         "transaction_type": "Deposit", "branch_id": "1", "_source_file": "/Volumes/c/s/landing/x.xlsx"},
+    ])
+    r = excel.with_lineage(excel.type_and_rescue(raw)).collect()[0]
+    assert r["amount"] == expected
+    if expected is None:
+        assert json.loads(r["_rescued_data"]) == {"amount": text}
+    else:
+        assert r["_rescued_data"] is None
+
+
+def test_native_projection_keeps_extra_only_rows(spark):
+    """Native reader rows whose only data is an unknown column are kept and rescued (as openpyxl does)."""
+    from pyspark.sql import functions as F
+
+    header = ["Transaction_ID", "account_id", "transaction_date", "amount", "transaction_type", "branch_id", "Comment"]
+    raw = spark.createDataFrame(
+        [("6", "6", "1/18/24 13:10", "50000", "Withdrawal", "1", None),
+         (None, None, None, None, None, None, "review"),
+         (None, None, None, None, None, None, None)],
+        "`" + "` string, `".join(header) + "` string",
+    )
+    projected = excel.project_native(raw, F.lit("/Volumes/c/s/landing/x.xlsx"))
+    rows = excel.with_lineage(excel.type_and_rescue(projected)).collect()
+    assert len(rows) == 2
+    extra = [r for r in rows if r["transaction_id"] is None][0]
+    assert json.loads(extra["_rescued_data"]) == {"comment": "review"}
+    assert extra["_source_file"] == "/Volumes/c/s/landing/x.xlsx"
+
+
 def test_unknown_reader_rejected(spark, t5_cfg, landing):
     _copy_committed(landing)
     with pytest.raises(ValueError, match="reader"):
