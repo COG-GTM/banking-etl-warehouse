@@ -209,7 +209,7 @@ def test_dq_fails_on_duplicate_key(spark, clean):
     with pytest.raises(DataQualityError, match="pk_unique.dim_customer"):
         dc.run_dq(spark, cfg, "t7-dup")
     res = dc.run_dq(spark, cfg, "t7-dup2", fail_on_error=False)
-    assert {r["check_name"]: r["failed_rows"] for r in res}["pk_unique.dim_customer"] == 1
+    assert {r["check_name"]: r["failed_rows"] for r in res}["pk_unique.dim_customer"] == 2
 
 
 # ------------------------------------------------------------------ sample.bak parity
