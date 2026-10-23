@@ -94,4 +94,4 @@ The original plan assumed some inputs were missing. They are committed:
 
 * 2026-10-23: T1 and T2 implemented on the foundation branch. Local suite 29/29. Live serverless run on
   `migration_demo.bdwh_*` created the namespace, volumes and star schema (all 13 tables, PK/FK constraints visible in `information_schema`), and the DQ gate passed. Run: `jobs submit` 932701605587220.
-* 2026-10-23: T8 PR #77 open. Local suite 39/39. Live runs 797540395994377, 1112061775667860 (review fixes) on `migration_demo.bdwh_t8_*`: union 29 -> dedup 25 -> 22 loaded, 3 FK_FactTransaction_DimAccount orphans quarantined in `ops.fact_transaction_rejects`; rerun MERGE 0/0/0.
+* 2026-10-23: T8 PR #77 open. Local suite 40/40 (rebased on 54bb63f). Live runs 797540395994377, 877490366093876 (review fixes, fresh table) on `migration_demo.bdwh_t8_*`: union 29 -> dedup 25 -> 22 loaded, 3 FK_FactTransaction_DimAccount orphans quarantined in `ops.fact_transaction_rejects`; rerun MERGE 0/0/0.
