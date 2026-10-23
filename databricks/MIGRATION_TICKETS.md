@@ -30,7 +30,7 @@ and their PRs target it.
 | 6 | `dim_branch` + `dim_account` Silver MERGE | 1, 2 (reads T3 Bronze contract) | `src/banking_dwh/silver/dim_branch.py`, `dim_account.py`, `notebooks/silver/01_*`, `02_*`, `tests/test_t6_*` | Not started | — | — |
 | 7 | `dim_customer` Silver load (customer+city+state, uppercase) | 1, 2 (reads T3 Bronze contract) | `src/banking_dwh/silver/dim_customer.py`, `notebooks/silver/03_*`, `tests/test_t7_*` | Not started | — | — |
 | 8 | `fact_transaction` Silver load (union + dedup + MERGE) | 1, 2 (reads T3/T4/T5 Bronze contracts) | `src/banking_dwh/silver/fact_transaction.py`, `notebooks/silver/04_*`, `tests/test_t8_*` | Not started | — | — |
-| 9 | Gold analytics (replace 2 stored procedures) | 1, 2 (reads Silver contract) | `src/banking_dwh/gold/`, `notebooks/gold/`, `ddl/04_gold_*`, `tests/test_t9_*` | Not started | — | — |
+| 9 | Gold analytics (replace 2 stored procedures) | 1, 2 (reads Silver contract) | `src/banking_dwh/gold/`, `notebooks/gold/`, `ddl/04_gold_*`, `tests/test_t9_*` | PR open | https://devin-gtm.devinenterprise.com/sessions/ef95231284f94f07841a3fa3b018a328 | https://github.com/COG-GTM/banking-etl-warehouse/pull/80 |
 | 10 | Workflow, reconciliation DQ, runbook | 1, 2 (wires the notebook paths named above) | `resources/jobs/`, `notebooks/orchestration/`, `src/banking_dwh/orchestration/`, `src/banking_dwh/dq/reconciliation.py`, `fixtures/parity/`, `tests/test_t10_*`, root `README.md` "How to Run" | Not started | — | — |
 
 Status values: Not started → In progress → PR open → Done. Each ticket session updates **only its own row**
@@ -94,3 +94,4 @@ The original plan assumed some inputs were missing. They are committed:
 
 * 2026-10-23: T1 and T2 implemented on the foundation branch. Local suite 29/29. Live serverless run on
   `migration_demo.bdwh_*` created the namespace, volumes and star schema (all 13 tables, PK/FK constraints visible in `information_schema`), and the DQ gate passed. Run: `jobs submit` 932701605587220.
+* 2026-10-23: T9 PR #80 opened: gold `v_daily_transaction`, `fn_daily_transaction`, `fn_balance_per_customer` (SQL Server 2022 proc parity fixtures). Local suite 83/83. Live serverless run 807291474875125 on `migration_demo.bdwh_t9_*`: parity legacy 12/12, edge 26/26.
