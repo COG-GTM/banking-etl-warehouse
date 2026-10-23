@@ -6,6 +6,15 @@ shared config, Silver/Gold contracts). They merge first, as the foundation PR. T
 parallel as separate sessions on top of it.
 
 Orchestrator session: https://devin-gtm.devinenterprise.com/sessions/88b1fbe4556d4614a048a15f6fa361e4
+Ticket sessions (launched 2026-10-23):
+[T3](https://devin-gtm.devinenterprise.com/sessions/a87534359a1042dd93e178586869606e) ·
+[T4](https://devin-gtm.devinenterprise.com/sessions/95f8b4383f0c4f20a905da962c0038ec) ·
+[T5](https://devin-gtm.devinenterprise.com/sessions/8ff0af30a01b465c9a8e20c753f53a5b) ·
+[T6](https://devin-gtm.devinenterprise.com/sessions/d305ce1357dd47059212182842355343) ·
+[T7](https://devin-gtm.devinenterprise.com/sessions/12c04aa9e6db4748ba4cc16f53dc1975) ·
+[T8](https://devin-gtm.devinenterprise.com/sessions/1be8b79073ec4284ac6bc1034504749a) ·
+[T9](https://devin-gtm.devinenterprise.com/sessions/ef95231284f94f07841a3fa3b018a328) ·
+[T10](https://devin-gtm.devinenterprise.com/sessions/a6c69998fad14272a73e889389dfb949)
 Foundation branch: `devin/1792762652-databricks-lakehouse-foundation`. Ticket branches are cut from it
 and their PRs target it.
 
