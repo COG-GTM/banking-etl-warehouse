@@ -27,7 +27,7 @@ and their PRs target it.
 | 3 | SQL Server extraction (JDBC) → Bronze | 1, 2 | `src/banking_dwh/bronze/sqlserver.py`, `notebooks/bronze/01_*`, `tests/test_t3_*` | Not started | — | — |
 | 4 | CSV Auto Loader → Bronze | 1, 2 | `src/banking_dwh/bronze/csv_autoloader.py`, `notebooks/bronze/02_*`, `tests/test_t4_*` | Not started | — | — |
 | 5 | Excel → Bronze | 1, 2 | `src/banking_dwh/bronze/excel.py`, `notebooks/bronze/03_*`, `tests/test_t5_*` | Not started | — | — |
-| 6 | `dim_branch` + `dim_account` Silver MERGE | 1, 2 (reads T3 Bronze contract) | `src/banking_dwh/silver/dim_branch.py`, `dim_account.py`, `notebooks/silver/01_*`, `02_*`, `tests/test_t6_*` | Not started | — | — |
+| 6 | `dim_branch` + `dim_account` Silver MERGE | 1, 2 (reads T3 Bronze contract) | `src/banking_dwh/silver/dim_branch.py`, `dim_account.py`, `notebooks/silver/01_*`, `02_*`, `tests/test_t6_*` | PR open | [session](https://devin-gtm.devinenterprise.com/sessions/d305ce1357dd47059212182842355343) | [#76](https://github.com/COG-GTM/banking-etl-warehouse/pull/76) |
 | 7 | `dim_customer` Silver load (customer+city+state, uppercase) | 1, 2 (reads T3 Bronze contract) | `src/banking_dwh/silver/dim_customer.py`, `notebooks/silver/03_*`, `tests/test_t7_*` | Not started | — | — |
 | 8 | `fact_transaction` Silver load (union + dedup + MERGE) | 1, 2 (reads T3/T4/T5 Bronze contracts) | `src/banking_dwh/silver/fact_transaction.py`, `notebooks/silver/04_*`, `tests/test_t8_*` | Not started | — | — |
 | 9 | Gold analytics (replace 2 stored procedures) | 1, 2 (reads Silver contract) | `src/banking_dwh/gold/`, `notebooks/gold/`, `ddl/04_gold_*`, `tests/test_t9_*` | Not started | — | — |
@@ -94,3 +94,4 @@ The original plan assumed some inputs were missing. They are committed:
 
 * 2026-10-23: T1 and T2 implemented on the foundation branch. Local suite 29/29. Live serverless run on
   `migration_demo.bdwh_*` created the namespace, volumes and star schema (all 13 tables, PK/FK constraints visible in `information_schema`), and the DQ gate passed. Run: `jobs submit` 932701605587220.
+* 2026-10-23: T6 PR #76 open: dim_branch/dim_account SCD-1 MERGE + PK DQ. Local suite 45/45; live run 792925305468994 on `bdwh_t6_*`: 5/21 loaded, rerun inserted=0 updated=0.
