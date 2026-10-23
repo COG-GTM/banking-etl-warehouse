@@ -1,0 +1,8 @@
+{
+  "_comment": "Cluster policy definition for banking_dwh job clusters (create with: databricks cluster-policies create --name banking_dwh_jobs --definition @config/compute/cluster_policy.json after removing this key).",
+  "spark_version": {"type": "regex", "pattern": "1[6-9]\\.[0-9]+\\.x-scala2\\.1[23]"},
+  "data_security_mode": {"type": "allowlist", "values": ["SINGLE_USER", "USER_ISOLATION"]},
+  "num_workers": {"type": "range", "maxValue": 4},
+  "autotermination_minutes": {"type": "range", "minValue": 10, "maxValue": 60, "defaultValue": 30},
+  "custom_tags.project": {"type": "fixed", "value": "banking_dwh"}
+}

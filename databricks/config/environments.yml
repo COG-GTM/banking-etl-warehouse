@@ -1,0 +1,56 @@
+# Environment targets for the banking_dwh Lakehouse (Ticket 1).
+# `prod` is the target namespace from the migration plan: catalog banking_dwh with
+# bronze / silver / gold schemas. `dev` maps the same layout onto the shared demo
+# workspace, where the jobs service principal cannot create catalogs, by prefixing
+# schema names inside an existing catalog.
+default_target: dev
+
+targets:
+  prod:
+    catalog: banking_dwh
+    schema_prefix: ""
+    create_catalog: true
+    catalog_comment: "Banking DWH Lakehouse migrated from SQL Server DWH + Talend (COG-GTM/banking-etl-warehouse)."
+  dev:
+    catalog: migration_demo
+    schema_prefix: bdwh_
+    create_catalog: false
+
+layers:
+  bronze: "Raw, source-shaped copies of the SQL Server `sample` DB and the transaction CSV/Excel files (append-only, ingestion metadata columns)."
+  silver: "Conformed star schema replacing the legacy DWH database: dim_branch, dim_account, dim_customer, fact_transaction."
+  gold: "Analytics layer replacing the T-SQL stored procedures (sp_DailyTransaction, sp_BalancePerCustomer) as views and SQL table functions."
+  ops: "Operational metadata: data-quality results, reconciliation results, run audit, Auto Loader checkpoints and schemas."
+
+volumes:
+  # layer -> volume name -> comment
+  bronze:
+    landing: "Raw landing zone. Sub-folders: csv/transaction/, excel/transaction/, sqlserver/<table>/."
+  ops:
+    checkpoints: "Auto Loader / Structured Streaming checkpoints and inferred schemas."
+
+landing:
+  csv_transaction: csv/transaction
+  excel_transaction: excel/transaction
+  sqlserver: sqlserver
+
+jdbc:
+  # Databricks secret scope holding the SQL Server connection for the legacy `sample` DB.
+  secret_scope: banking-etl-sqlserver
+  keys:
+    host: jdbc-host
+    port: jdbc-port
+    database: jdbc-database
+    user: jdbc-user
+    password: jdbc-password
+  driver: com.microsoft.sqlserver.jdbc.SQLServerDriver
+  url_options: "encrypt=true;trustServerCertificate=false"
+  source_schema: dbo
+  source_tables: [branch, account, customer, city, state, transaction_db]
+  # Legacy DWH (for Ticket 10 reconciliation against the SQL Server star schema).
+  legacy_dwh_database: DWH
+
+grants:
+  # Applied by notebooks/00_setup/01_setup_unity_catalog.py when apply_grants=true.
+  # Use account-level principals (workspace-local groups are rejected by UC).
+  readers: ["account users"]

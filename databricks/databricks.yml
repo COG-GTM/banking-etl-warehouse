@@ -1,0 +1,33 @@
+# Declarative Automation Bundle for the banking_dwh Lakehouse migration.
+# Ticket 1 owns this file; Ticket 10 adds jobs under resources/jobs/.
+bundle:
+  name: banking_dwh
+
+include:
+  - resources/jobs/*.yml
+
+variables:
+  target_env:
+    description: EnvConfig target (config/environments.yml)
+    default: dev
+  catalog:
+    description: Catalog override (blank = from config/environments.yml)
+    default: ""
+  schema_prefix:
+    description: Schema prefix override (blank = from config; '-' = no prefix)
+    default: ""
+
+targets:
+  dev:
+    default: true
+    mode: production
+    workspace:
+      root_path: /Workspace/Shared/banking_dwh_migration/bundle
+    variables:
+      target_env: dev
+  prod:
+    mode: production
+    workspace:
+      root_path: /Workspace/Shared/banking_dwh/bundle
+    variables:
+      target_env: prod

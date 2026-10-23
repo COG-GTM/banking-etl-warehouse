@@ -1,0 +1,7 @@
+# Local test environment (Spark 4.0 needs JDK 17 or 21).
+pyspark==4.0.1
+delta-spark==4.0.0
+pytest
+pyyaml
+openpyxl
+pandas

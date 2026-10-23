@@ -1,0 +1,21 @@
+{
+  "_comment": "Classic job cluster for workspaces that allow it (prod). The dev workspace is serverless-only; jobs there use serverless notebook tasks and config/compute/serverless_environment.json.",
+  "spark_version": "16.4.x-scala2.12",
+  "node_type_id": "i3.xlarge",
+  "num_workers": 0,
+  "data_security_mode": "SINGLE_USER",
+  "runtime_engine": "PHOTON",
+  "spark_conf": {
+    "spark.master": "local[*, 4]",
+    "spark.databricks.cluster.profile": "singleNode",
+    "spark.sql.ansi.enabled": "true",
+    "spark.databricks.delta.optimizeWrite.enabled": "true",
+    "spark.databricks.delta.autoCompact.enabled": "true"
+  },
+  "custom_tags": {
+    "ResourceClass": "SingleNode",
+    "project": "banking_dwh",
+    "cost_center": "data-platform"
+  },
+  "autotermination_minutes": 30
+}
