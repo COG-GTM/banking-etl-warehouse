@@ -26,7 +26,7 @@ and their PRs target it.
 | 2 | Delta DDL for star schema + RI DQ | 1 | `src/banking_dwh/contracts/`, `src/banking_dwh/dq/checks.py`, `notebooks/00_setup/02_*`, `03_*`, `ddl/02_*`, `ddl/03_*` | Done (validated live, dev) | orchestrator | foundation PR |
 | 3 | SQL Server extraction (JDBC) → Bronze | 1, 2 | `src/banking_dwh/bronze/sqlserver.py`, `notebooks/bronze/01_*`, `tests/test_t3_*` | Not started | — | — |
 | 4 | CSV Auto Loader → Bronze | 1, 2 | `src/banking_dwh/bronze/csv_autoloader.py`, `notebooks/bronze/02_*`, `tests/test_t4_*` | Not started | — | — |
-| 5 | Excel → Bronze | 1, 2 | `src/banking_dwh/bronze/excel.py`, `notebooks/bronze/03_*`, `tests/test_t5_*` | Not started | — | — |
+| 5 | Excel → Bronze | 1, 2 | `src/banking_dwh/bronze/excel.py`, `notebooks/bronze/03_*`, `tests/test_t5_*` | PR open | [session](https://devin-gtm.devinenterprise.com/sessions/8ff0af30a01b465c9a8e20c753f53a5b) | [#79](https://github.com/COG-GTM/banking-etl-warehouse/pull/79) |
 | 6 | `dim_branch` + `dim_account` Silver MERGE | 1, 2 (reads T3 Bronze contract) | `src/banking_dwh/silver/dim_branch.py`, `dim_account.py`, `notebooks/silver/01_*`, `02_*`, `tests/test_t6_*` | Not started | — | — |
 | 7 | `dim_customer` Silver load (customer+city+state, uppercase) | 1, 2 (reads T3 Bronze contract) | `src/banking_dwh/silver/dim_customer.py`, `notebooks/silver/03_*`, `tests/test_t7_*` | Not started | — | — |
 | 8 | `fact_transaction` Silver load (union + dedup + MERGE) | 1, 2 (reads T3/T4/T5 Bronze contracts) | `src/banking_dwh/silver/fact_transaction.py`, `notebooks/silver/04_*`, `tests/test_t8_*` | Not started | — | — |
@@ -94,3 +94,4 @@ The original plan assumed some inputs were missing. They are committed:
 
 * 2026-10-23: T1 and T2 implemented on the foundation branch. Local suite 29/29. Live serverless run on
   `migration_demo.bdwh_*` created the namespace, volumes and star schema (all 13 tables, PK/FK constraints visible in `information_schema`), and the DQ gate passed. Run: `jobs submit` 932701605587220.
+* 2026-10-23: T5 PR #79 opened. Excel to Bronze `file_transaction_excel` via openpyxl and native readers, with rescue and idempotent replaceWhere. Local suite 58/58. Live `bdwh_t5_`: native 1005343801059338 and openpyxl 866635124252464 each wrote 7 rows; rerun 398675530172680 left the table at 7 rows.
