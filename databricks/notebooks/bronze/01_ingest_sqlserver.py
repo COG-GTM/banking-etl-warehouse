@@ -46,6 +46,7 @@ summary = ingest(
     stage=dbutils.widgets.get("stage") == "true",  # noqa: F821
     expected_counts=EXPECTED_ROW_COUNTS,
     assert_counts=dbutils.widgets.get("assert_counts") == "true",  # noqa: F821
+    remove_path=lambda p: dbutils.fs.rm(p, True),  # noqa: F821
 )
 
 # COMMAND ----------

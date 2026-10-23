@@ -28,10 +28,11 @@ import os
 import re
 import shutil
 import uuid
+import warnings
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Iterable, Iterator, Mapping
+from typing import Any, Callable, Iterable, Iterator, Mapping
 
 from ..common.config import EnvConfig, validate_identifier
 from ..contracts.ddl import create_table_sql
@@ -64,7 +65,7 @@ SOURCES = ("jdbc", "staged")
 MSSQL_JDBC_PACKAGE = "com.microsoft.sqlserver:mssql-jdbc:12.8.1.jre11"
 LINEAGE_COLUMNS = ("_ingested_at", "_batch_id")
 _CHAR_AS_STRING = "spark.sql.legacy.charVarcharAsString"
-_BATCH_ID = re.compile(r"^[A-Za-z0-9_.:-]{1,128}$")
+_BATCH_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$")  # alnum first: no "." / ".." path segments
 _DECIMAL = re.compile(r"^DECIMAL\((\d+),\s*(\d+)\)$", re.IGNORECASE)
 
 
@@ -110,7 +111,7 @@ def new_batch_id() -> str:
 
 def validate_batch_id(value: str) -> str:
     if not isinstance(value, str) or not _BATCH_ID.match(value):
-        raise ValueError(f"Invalid batch_id: {value!r} (expected [A-Za-z0-9_.:-]{{1,128}})")
+        raise ValueError(f"Invalid batch_id: {value!r} (expected [A-Za-z0-9][A-Za-z0-9_.:-]{{0,127}})")
     return value
 
 
@@ -274,15 +275,25 @@ def incoming_root(landing_root: str, batch_id: str) -> str:
     return f"{landing_root.rstrip('/')}/_incoming/{validate_batch_id(batch_id)}"
 
 
-def remove_tree(path: str) -> None:
-    """Best-effort cleanup of a local or FUSE path (``/Volumes`` is FUSE-mounted on Databricks)."""
-    if "://" in path or path.startswith("dbfs:"):
-        return
-    shutil.rmtree(path, ignore_errors=True)
+def remove_tree(path: str, spark=None, remove: Callable[[str], Any] | None = None) -> None:
+    """Best-effort recursive delete of a scratch folder. Local/FUSE paths (``/Volumes`` is
+    FUSE-mounted on Databricks) use ``shutil``; URIs use ``remove`` (e.g. ``dbutils.fs.rm``) or,
+    on classic Spark, the Hadoop FileSystem of the path's scheme."""
     try:
-        os.rmdir(os.path.dirname(path.rstrip("/")))  # the shared _incoming folder, once empty
-    except OSError:
-        pass
+        if remove is not None:
+            remove(path)
+        elif "://" in path or path.startswith("dbfs:"):
+            jvm = spark._jvm  # not available on Spark Connect -> AttributeError -> warning
+            hpath = jvm.org.apache.hadoop.fs.Path(path)
+            hpath.getFileSystem(spark._jsc.hadoopConfiguration()).delete(hpath, True)
+        else:
+            shutil.rmtree(path, ignore_errors=True)
+            try:
+                os.rmdir(os.path.dirname(path.rstrip("/")))  # the shared _incoming folder, once empty
+            except OSError:
+                pass
+    except Exception as e:  # cleanup must never mask the load result
+        warnings.warn(f"Could not remove scratch folder {path}: {e}", stacklevel=2)
 
 
 # ---------------------------------------------------------------------------------------
@@ -324,12 +335,19 @@ def ingest(
     expected_counts: Mapping[str, int] | None = EXPECTED_ROW_COUNTS,
     assert_counts: bool = False,
     unity_catalog: bool = True,
+    remove_path: Callable[[str], Any] | None = None,
 ) -> dict[str, Any]:
     """Extract every requested source table into its Bronze contract table.
 
     ``staged_root`` overrides the landing root (``cfg.landing_path("sqlserver")``), e.g. a
     local directory in tests. With ``assert_counts`` the run fails after loading if any
     table's row count differs from ``expected_counts``.
+
+    JDBC + ``stage``: extracts land in ``<landing>/_incoming/<batch_id>/`` and are published to
+    the landing folders *before* Bronze is written, so the landing snapshot is never older than
+    Bronze and a staged rerun restores Bronze after a failed write. If publishing a snapshot fails,
+    the scratch copy is kept (rerun with ``source="staged"``, ``staged_root=<scratch>``).
+    ``remove_path`` deletes the scratch folder for non-local URIs (e.g. ``dbutils.fs.rm``).
     """
     from pyspark.sql import functions as F
 
@@ -353,6 +371,7 @@ def ingest(
     # every table, so a bad table or count mismatch can't leave a mix of old and new snapshots.
     prepared: list[tuple[str, TableContract, str, Any, int, int | None]] = []
     results: list[TableResult] = []
+    keep_scratch = False
     try:
         with char_varchar_as_string(spark) as char_as_string:
             if source == "jdbc":
@@ -365,7 +384,7 @@ def ingest(
                 if source == "jdbc":
                     location = f"jdbc:{source_schema}.{table}"
                     raw = read_jdbc(spark, jdbc, table, source_schema)
-                    if stage_jdbc:  # single source read; Bronze == staged copy
+                    if stage_jdbc:  # single source read; Bronze == published staged copy
                         raw = read_staged(spark, stage_parquet(raw, f"{scratch}/{table}"))
                 else:
                     location = landing(table)
@@ -379,17 +398,25 @@ def ingest(
             if assert_counts and mismatch:
                 raise AssertionError(f"Row-count mismatch (actual, expected): {mismatch}; no table was written")
 
-            # Phase 2: publish Bronze (and the staged snapshot) for every validated table.
+            # Phase 2: publish the staged snapshots, then Bronze, for every validated table.
+            staged_to: dict[str, str] = {}
+            if stage_jdbc:
+                for table, *_ in prepared:
+                    try:
+                        staged_to[table] = stage_parquet(read_staged(spark, f"{scratch}/{table}"), landing(table))
+                    except Exception as e:
+                        keep_scratch = True
+                        raise RuntimeError(
+                            f"Publishing the staged snapshot of {table} failed; batch {batch_id} is intact in "
+                            f"{scratch} (rerun with source='staged', staged_root='{scratch}')"
+                        ) from e
             for table, contract, location, df, _, exp in prepared:
                 name = write_bronze(spark, cfg, contract, df, unity_catalog=unity_catalog)
-                staged_to = None
-                if stage_jdbc:
-                    staged_to = stage_parquet(read_staged(spark, f"{scratch}/{table}"), landing(table))
                 rows = spark.table(name).filter(F.col("_batch_id") == F.lit(batch_id)).count()
-                results.append(TableResult(table, name, source, location, rows, exp, staged_to))
+                results.append(TableResult(table, name, source, location, rows, exp, staged_to.get(table)))
     finally:
-        if stage_jdbc:
-            remove_tree(scratch)
+        if stage_jdbc and not keep_scratch:
+            remove_tree(scratch, spark, remove_path)
 
     summary = {
         "batch_id": batch_id,
@@ -457,7 +484,7 @@ def extract_to_parquet(spark, jdbc: Mapping[str, str], out_dir: str, tables: Ite
                 path = stage_parquet(spark.read.parquet(f"{scratch}/{t}"), os.path.join(out_dir, t))
                 counts[t] = spark.read.parquet(path).count()
     finally:
-        remove_tree(scratch)
+        remove_tree(scratch, spark)
     return counts
 
 

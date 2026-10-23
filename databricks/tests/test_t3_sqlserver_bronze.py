@@ -122,7 +122,7 @@ def test_landing_paths_for_each_table(local_cfg):
 def test_batch_id_and_types():
     assert ss.validate_batch_id(ss.new_batch_id())
     assert ss.validate_batch_id("123456789")
-    for bad in ("", "x' OR '1'='1", "a b", "x" * 129):
+    for bad in ("", "x' OR '1'='1", "a b", "x" * 129, ".", "..", "_x", "-x", "a/b"):
         with pytest.raises(ValueError):
             ss.validate_batch_id(bad)
     assert ss.spark_type("DECIMAL(19,4)").simpleString() == "decimal(19,4)"
@@ -310,6 +310,78 @@ def test_failed_jdbc_extract_keeps_previous_staged_snapshot(spark, local_schemas
     assert s["counts_ok"] and all(t["staged_to"] == str(landing / t["source_table"]) for t in s["tables"])
     assert {t: spark.read.parquet(str(landing / t)).count() for t in ss.CONTRACTS} == ss.EXPECTED_ROW_COUNTS
     assert not (landing / "_incoming").exists()
+
+
+def _seed_previous_snapshot(spark, landing):
+    for table in ss.CONTRACTS:
+        spark.createDataFrame(_rows(table, 2), SOURCE_DDL[table]).write.parquet(str(landing / table))
+
+
+def test_bronze_failure_after_publish_is_recoverable_from_staged(spark, local_schemas, tmp_path, monkeypatch):
+    cfg, landing = local_schemas, tmp_path / "sqlserver"
+    _seed_previous_snapshot(spark, landing)
+    monkeypatch.setattr(ss, "list_source_tables", lambda *a, **k: sorted(ss.CONTRACTS))
+    monkeypatch.setattr(ss, "read_jdbc", _FakeJdbc(spark).read)
+    real_write = ss.write_bronze
+
+    def flaky_write(spark_, cfg_, contract, df, **kw):
+        if contract.name == "sqlserver_account":
+            raise RuntimeError("Delta commit conflict")
+        return real_write(spark_, cfg_, contract, df, **kw)
+
+    monkeypatch.setattr(ss, "write_bronze", flaky_write)
+    with pytest.raises(RuntimeError, match="Delta commit conflict"):
+        ss.ingest(spark, cfg, source="jdbc", jdbc={"url": "jdbc:sqlserver://fake"}, staged_root=str(landing),
+                  batch_id="pub-1", unity_catalog=False)
+    # Snapshots were published before Bronze, so the landing copy is never older than Bronze ...
+    assert {t: spark.read.parquet(str(landing / t)).count() for t in ss.CONTRACTS} == ss.EXPECTED_ROW_COUNTS
+    assert not (landing / "_incoming").exists()
+    # ... and a staged rerun completes the batch.
+    monkeypatch.setattr(ss, "write_bronze", real_write)
+    s = ss.ingest(spark, cfg, source="staged", staged_root=str(landing), batch_id="pub-2", assert_counts=True,
+                  unity_catalog=False)
+    assert s["counts_ok"]
+
+
+def test_failed_snapshot_publish_keeps_scratch_for_recovery(spark, local_schemas, tmp_path, monkeypatch):
+    cfg, landing = local_schemas, tmp_path / "sqlserver"
+    _seed_previous_snapshot(spark, landing)
+    monkeypatch.setattr(ss, "list_source_tables", lambda *a, **k: sorted(ss.CONTRACTS))
+    monkeypatch.setattr(ss, "read_jdbc", _FakeJdbc(spark).read)
+    real_stage = ss.stage_parquet
+
+    def full_volume(df, path):
+        if path == str(landing / "city"):
+            raise OSError("No space left on device")
+        return real_stage(df, path)
+
+    monkeypatch.setattr(ss, "stage_parquet", full_volume)
+    with pytest.raises(RuntimeError, match="intact in .*_incoming/pub-fail") as err:
+        ss.ingest(spark, cfg, source="jdbc", jdbc={"url": "jdbc:sqlserver://fake"}, staged_root=str(landing),
+                  batch_id="pub-fail", unity_catalog=False)
+    scratch = str(landing / "_incoming" / "pub-fail")
+    assert scratch in str(err.value)
+    assert all(_batch_rows(spark, cfg, t, "pub-fail") == 0 for t in ss.CONTRACTS)
+    monkeypatch.setattr(ss, "stage_parquet", real_stage)
+    s = ss.ingest(spark, cfg, source="staged", staged_root=scratch, batch_id="pub-recover", assert_counts=True,
+                  unity_catalog=False)
+    assert s["row_counts"] == ss.EXPECTED_ROW_COUNTS
+
+
+def test_remove_tree_handles_uris_and_callbacks(spark, tmp_path):
+    uri_dir = tmp_path / "remote" / "_incoming" / "b1"
+    spark.range(3).write.parquet(str(uri_dir / "t"))
+    ss.remove_tree(uri_dir.as_uri(), spark)  # file:// URI -> Hadoop FileSystem delete
+    assert not uri_dir.exists()
+    seen = []
+    ss.remove_tree("s3a://bucket/sqlserver/_incoming/b2", spark, seen.append)
+    assert seen == ["s3a://bucket/sqlserver/_incoming/b2"]
+
+    class NoJvm:  # Spark Connect: no JVM gateway; cleanup warns instead of failing the load
+        pass
+
+    with pytest.warns(UserWarning, match="Could not remove"):
+        ss.remove_tree("abfss://c@a.dfs.core.windows.net/x", NoJvm())
 
 
 # --------------------------------------------------------------------------------------
