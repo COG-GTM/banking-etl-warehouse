@@ -94,4 +94,4 @@ The original plan assumed some inputs were missing. They are committed:
 
 * 2026-10-23: T1 and T2 implemented on the foundation branch. Local suite 29/29. Live serverless run on
   `migration_demo.bdwh_*` created the namespace, volumes and star schema (all 13 tables, PK/FK constraints visible in `information_schema`), and the DQ gate passed. Run: `jobs submit` 932701605587220.
-* 2026-10-23: T4 PR #81 open. Auto Loader CSV → `bronze.file_transaction_csv`. Local suite 38/38. Live serverless run 473010496278713 on `bdwh_t4_`: run 1 +12 rows, run 2 +0 (12 total), and malformed rows rescued without failing the stream.
+* 2026-10-23: T4 PR #81 open. Auto Loader CSV → `bronze.file_transaction_csv`. Local suite 40/40. Live serverless run 518082081009116 on `bdwh_t4_` (`land_sample=true`): run 1 +12 rows, run 2 +0 (12 total), and malformed rows rescued without failing the stream.
