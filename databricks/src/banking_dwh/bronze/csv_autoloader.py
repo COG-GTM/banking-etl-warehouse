@@ -44,7 +44,7 @@ from ..contracts.tables import BRONZE_FILE_TRANSACTION_CSV
 
 CONTRACT = BRONZE_FILE_TRANSACTION_CSV
 STREAM_NAME = "csv_transaction"
-LANDING_SOURCE = "csv_transaction"
+LANDING = ("csv", "transaction")
 RESCUED_COLUMN = "_rescued_data"
 CORRUPT_COLUMN = "_corrupt_record"
 TIMESTAMP_FORMAT = "dd-MM-yyyy HH:mm:ss"
@@ -189,7 +189,7 @@ def read_csv_stream(
     autoloader: bool = True,
 ) -> Any:
     """Streaming read of the landing folder, already shaped like the Bronze contract."""
-    path = source_dir or cfg.landing_path(LANDING_SOURCE)
+    path = source_dir or cfg.landing_path(*LANDING)
     if autoloader:
         raw = (
             spark.readStream.format("cloudFiles")
@@ -254,7 +254,7 @@ def ingest(
     ).first()
     return {
         "table": target,
-        "source_dir": source_dir or cfg.landing_path(LANDING_SOURCE),
+        "source_dir": source_dir or cfg.landing_path(*LANDING),
         "rows_before": before,
         "rows_added": after - before,
         "stream_input_rows": _progress_rows(query),
@@ -282,7 +282,7 @@ def land_sample_csv(dest_dir: str, source: str | Path = SAMPLE_CSV, *, overwrite
 
 def land_sample_commands(cfg: EnvConfig, source: str | Path = SAMPLE_CSV, *, overwrite: bool = False) -> list[list[str]]:
     """Databricks CLI commands that upload the sample CSV into the target's landing volume."""
-    dest = cfg.landing_path(LANDING_SOURCE)
+    dest = cfg.landing_path(*LANDING)
     cp = ["databricks", "fs", "cp", str(source), f"dbfs:{dest}/{Path(source).name}"]
     if overwrite:
         cp.append("--overwrite")

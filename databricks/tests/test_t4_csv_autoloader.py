@@ -51,7 +51,7 @@ def test_autoloader_options_use_cfg_paths():
         "/Volumes/migration_demo/bdwh_t4_ops/checkpoints/csv_transaction/schema"
     )
     assert opts["timestampFormat"] == "dd-MM-yyyy HH:mm:ss"
-    assert cfg.landing_path(t4.LANDING_SOURCE) == "/Volumes/migration_demo/bdwh_t4_bronze/landing/csv/transaction"
+    assert cfg.landing_path(*t4.LANDING) == "/Volumes/migration_demo/bdwh_t4_bronze/landing/csv/transaction"
 
 
 # ----------------------------------------------------------------------------- repo sample
