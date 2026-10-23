@@ -44,7 +44,7 @@ jdbc:
     user: jdbc-user
     password: jdbc-password
   driver: com.microsoft.sqlserver.jdbc.SQLServerDriver
-  url_options: "encrypt=true;trustServerCertificate=true"
+  url_options: "encrypt=true;trustServerCertificate=false"
   source_schema: dbo
   source_tables: [branch, account, customer, city, state, transaction_db]
   # Legacy DWH (for Ticket 10 reconciliation against the SQL Server star schema).

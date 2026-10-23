@@ -160,7 +160,13 @@ class EnvConfig:
         return path
 
     def landing_path(self, source: str, *parts: str) -> str:
-        """Landing folder for a source key in config (csv_transaction, excel_transaction, sqlserver)."""
+        """Landing folder for a source.
+
+        Accepts a config key (``landing_path("csv_transaction")``) or the source/entity form
+        (``landing_path("csv", "transaction")``); both resolve to ``.../landing/csv/transaction``.
+        """
+        if source not in self.landing and parts and f"{source}_{parts[0]}" in self.landing:
+            source, parts = f"{source}_{parts[0]}", parts[1:]
         if source not in self.landing:
             raise ValueError(f"Unknown landing source {source!r}; expected one of {sorted(self.landing)}")
         return self.volume_path("bronze", "landing", self.landing[source], *parts)
@@ -182,8 +188,14 @@ class EnvConfig:
         }
 
 
-def jdbc_options(cfg: EnvConfig, dbutils: Any, database: str | None = None) -> dict[str, str]:
-    """Spark JDBC reader options for the legacy SQL Server, credentials from the secret scope."""
+def jdbc_options(
+    cfg: EnvConfig, dbutils: Any, database: str | None = None, *, trust_server_certificate: bool = False
+) -> dict[str, str]:
+    """Spark JDBC reader options for the legacy SQL Server, credentials from the secret scope.
+
+    TLS certificates are verified by default. ``trust_server_certificate=True`` is only for
+    throwaway local containers with self-signed certificates.
+    """
     assert cfg.jdbc is not None
     j = cfg.jdbc
 
@@ -191,8 +203,11 @@ def jdbc_options(cfg: EnvConfig, dbutils: Any, database: str | None = None) -> d
         return dbutils.secrets.get(scope=j.secret_scope, key=j.keys[key])
 
     db = database or secret("database")
+    url = j.url(secret("host"), secret("port"), db)
+    if trust_server_certificate:
+        url = url.replace("trustServerCertificate=false", "trustServerCertificate=true")
     return {
-        "url": j.url(secret("host"), secret("port"), db),
+        "url": url,
         "user": secret("user"),
         "password": secret("password"),
         "driver": j.driver,

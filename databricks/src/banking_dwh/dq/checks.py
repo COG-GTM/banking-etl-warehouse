@@ -58,9 +58,9 @@ def primary_key_checks(spark, cfg: EnvConfig, tables: Iterable[TableContract] = 
             json.dumps({"key": pk}),
         ))
         dups = df.groupBy(*pk).agg(F.count(F.lit(1)).alias("n")).filter("n > 1")
-        n_dup = dups.count()
+        n_dup = dups.agg(F.coalesce(F.sum("n"), F.lit(0)).alias("rows")).first()["rows"]
         results.append(DQResult(
-            f"pk_unique.{t.name}", "pk_unique", fq, n_dup == 0, n_dup,
+            f"pk_unique.{t.name}", "pk_unique", fq, n_dup == 0, int(n_dup),
             json.dumps({"key": pk, "sample": _sample(dups, pk + ["n"])}, default=str),
         ))
     return results

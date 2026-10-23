@@ -148,10 +148,11 @@ def test_orphan_fact_rows_fail_referential_integrity(spark, star):
 
 
 def test_delta_does_not_enforce_keys_so_dq_catches_duplicates(spark, star):
-    _seed(spark, star, [_fact(1, 10, 1), _fact(1, 10, 1)], dup_branch=True)
+    _seed(spark, star, [_fact(1, 10, 1), _fact(1, 10, 1), _fact(1, 10, 1)], dup_branch=True)
     by_name = {r.check_name: r for r in run_star_schema_checks(spark, star)}
-    assert by_name["pk_unique.fact_transaction"].failed_rows == 1
-    assert by_name["pk_unique.dim_branch"].failed_rows == 1
+    # failed_rows counts every row that shares a duplicated key, not the number of keys.
+    assert by_name["pk_unique.fact_transaction"].failed_rows == 3
+    assert by_name["pk_unique.dim_branch"].failed_rows == 2
     assert not by_name["pk_unique.dim_account"].failed_rows
 
 
