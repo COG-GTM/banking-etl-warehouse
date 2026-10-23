@@ -254,9 +254,39 @@ def test_parity_helper_reports_mismatches(spark, clean):
     assert (p["match"], p["mismatched"], p["missing"]) == (False, [1], [20])
 
 
+def test_parity_helper_flags_duplicate_rows(spark, clean):
+    cfg = clean
+    dc.seed_bronze_from_fixture(spark, cfg, unity_catalog=False)
+    dc.load(spark, cfg, unity_catalog=False)
+    tbl = cfg.table("silver", "dim_customer")
+    spark.sql(f"INSERT INTO {tbl} SELECT * FROM {tbl} WHERE customer_id = 1")
+    p = dc.parity_with_fixture(spark, cfg)
+    assert (p["match"], p["actual_rows"], p["duplicate_keys"], p["mismatched"]) == (False, 21, [1], [])
+
+
+def test_dedupe_tie_break_is_deterministic(spark):
+    from datetime import datetime
+
+    ts = datetime(2026, 1, 1)
+    rows = [(1, "b", ts, "x"), (1, "a", ts, "x"), (2, "c", ts, "x")]
+    df = spark.createDataFrame(rows, "id INT, v STRING, _ingested_at TIMESTAMP, _batch_id STRING")
+    for d in (df, df.orderBy("v"), df.repartition(3)):
+        assert sorted((r.id, r.v) for r in dc.latest_per_key(d, "id").collect()) == [(1, "a"), (2, "c")]
+
+
 def test_seed_refuses_shared_namespace_and_prod(spark):
     shared = EnvConfig.from_target("dev", catalog="spark_catalog")  # bdwh_ = shared dev prefix
     with pytest.raises(ValueError, match="shared namespace"):
         dc.seed_bronze_from_fixture(spark, shared, unity_catalog=False)
     with pytest.raises(ValueError, match="prod"):
         dc.seed_bronze_from_fixture(spark, EnvConfig.from_target("prod", schema_prefix="x_"), unity_catalog=False)
+    # dev label but resolving into the prod catalog (schema_prefix="-" -> "") or the dev shared namespace
+    for bad in (
+        EnvConfig.from_target("dev", catalog="banking_dwh", schema_prefix=""),
+        EnvConfig.from_target("dev", catalog="banking_dwh", schema_prefix="scratch_"),
+        EnvConfig.from_target("dev", schema_prefix="bdwh_"),
+        EnvConfig.from_target("dev", catalog="spark_catalog", schema_prefix=""),
+    ):
+        with pytest.raises(ValueError, match="Refusing"):
+            dc.seed_bronze_from_fixture(spark, bad, unity_catalog=False)
+    dc.assert_scratch_namespace(EnvConfig.from_target("dev", schema_prefix="bdwh_t7_"))

@@ -26,6 +26,7 @@ from __future__ import annotations
 import csv
 import json
 import uuid
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -51,8 +52,8 @@ def latest_per_key(df, key: str):
     from pyspark.sql import functions as F
 
     order = [F.col(c).desc_nulls_last() for c in ("_ingested_at", "_batch_id") if c in df.columns]
-    if not order:
-        return df.dropDuplicates([key])
+    # Deterministic tie-break when two versions share _ingested_at/_batch_id.
+    order += [F.col(c).asc_nulls_last() for c in df.columns if c != key and not c.startswith("_")]
     w = Window.partitionBy(key).orderBy(*order)
     return df.withColumn("_rn", F.row_number().over(w)).filter("_rn = 1").drop("_rn")
 
@@ -164,10 +165,27 @@ _FIXTURE_TABLES: tuple[tuple[str, TableContract], ...] = (
 )
 
 
-def _shared_prefix(cfg: EnvConfig) -> str:
+def _protected_namespaces() -> tuple[set[tuple[str, str]], set[str]]:
+    """(catalog, schema_prefix) of every configured target, and the catalogs of targets that own one."""
     from ..common.config import load_raw_config
 
-    return load_raw_config()["targets"][cfg.target].get("schema_prefix", "")
+    targets = load_raw_config()["targets"].values()
+    shared = {(t["catalog"], t.get("schema_prefix", "")) for t in targets}
+    owned_catalogs = {t["catalog"] for t in targets if t.get("create_catalog") or not t.get("schema_prefix")}
+    return shared, owned_catalogs
+
+
+def assert_scratch_namespace(cfg: EnvConfig) -> None:
+    """Fixture seeding overwrites Bronze tables: only allow a ticket scratch namespace."""
+    shared, owned_catalogs = _protected_namespaces()
+    where = cfg.schema("bronze")
+    if cfg.target == "prod" or cfg.catalog in owned_catalogs:
+        raise ValueError(f"Refusing to seed Bronze from fixtures in production namespace {where}.")
+    if not cfg.schema_prefix or cfg.schema_prefix in {prefix for _, prefix in shared}:
+        raise ValueError(
+            f"Refusing to seed Bronze in the shared namespace {where}; "
+            "use a ticket scratch schema_prefix (e.g. bdwh_t7_)."
+        )
 
 
 def read_fixture(name: str, contract: TableContract, fixture_dir: Path | str = FIXTURE_DIR) -> list[tuple]:
@@ -187,13 +205,7 @@ def seed_bronze_from_fixture(
     Only for local tests and the ticket's scratch prefix: refuses the target's shared prefix
     (those Bronze tables belong to Ticket 3) and never touches silver/gold.
     """
-    if cfg.target == "prod":
-        raise ValueError("Refusing to seed Bronze from fixtures on the prod target.")
-    if cfg.schema_prefix == _shared_prefix(cfg):
-        raise ValueError(
-            f"Refusing to seed Bronze in the shared namespace {cfg.schema('bronze')}; "
-            "use a ticket scratch schema_prefix (e.g. bdwh_t7_)."
-        )
+    assert_scratch_namespace(cfg)
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     batch_id = f"t7-fixture-{now:%Y%m%dT%H%M%S}"
     counts = {}
@@ -211,7 +223,9 @@ def parity_with_fixture(spark, cfg: EnvConfig, fixture_dir: Path | str = FIXTURE
     with open(Path(fixture_dir) / "expected_dim_customer.csv", newline="", encoding="utf-8") as fh:
         expected = {int(r[KEY]): r for r in csv.DictReader(fh)}
     cols = DIM_CUSTOMER.business_columns
-    got = {r[KEY]: r for r in spark.table(cfg.table("silver", DIM_CUSTOMER.name)).select(*cols).collect()}
+    rows = spark.table(cfg.table("silver", DIM_CUSTOMER.name)).select(*cols).collect()
+    got = {r[KEY]: r for r in rows}
+    duplicates = sorted(k for k, n in Counter(r[KEY] for r in rows).items() if n > 1)
 
     def norm(row) -> tuple:
         return tuple(None if row[c] in (None, "") else str(row[c]) for c in cols)
@@ -219,11 +233,12 @@ def parity_with_fixture(spark, cfg: EnvConfig, fixture_dir: Path | str = FIXTURE
     mismatched = sorted(k for k in expected.keys() & got.keys() if norm(expected[k]) != norm(got[k]))
     return {
         "expected_rows": len(expected),
-        "actual_rows": len(got),
+        "actual_rows": len(rows),
         "missing": sorted(expected.keys() - got.keys()),
         "unexpected": sorted(got.keys() - expected.keys()),
+        "duplicate_keys": duplicates,
         "mismatched": mismatched,
-        "match": not mismatched and expected.keys() == got.keys(),
+        "match": not mismatched and not duplicates and len(rows) == len(expected) and expected.keys() == got.keys(),
     }
 
 

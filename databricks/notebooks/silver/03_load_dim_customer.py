@@ -47,6 +47,8 @@ if dbutils.widgets.get("run_dq") == "true":  # noqa: F821
 if "seeded_bronze" in out:
     out["parity_vs_legacy_dimcustomer"] = dim_customer.parity_with_fixture(spark, cfg, fixture_dir)  # noqa: F821
     print(out["parity_vs_legacy_dimcustomer"])
+    if not out["parity_vs_legacy_dimcustomer"]["match"] and dbutils.widgets.get("fail_on_error") == "true":  # noqa: F821
+        raise AssertionError(f"dim_customer differs from legacy DimCustomer: {out['parity_vs_legacy_dimcustomer']}")
 
 out["sample"] = dim_customer.sample_rows(spark, cfg, 5)  # noqa: F821
 dbutils.notebook.exit(json.dumps(out, default=str))  # noqa: F821
