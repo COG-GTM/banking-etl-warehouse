@@ -203,7 +203,10 @@ def test_to_bronze_parses_dates_and_merges_rescue(spark, tmp_path):
 
 
 def test_quotes_are_literal_like_talend(spark, tmp_path):
-    """Talend CSV_OPTION=false: quotes are data, and a quoted comma still splits the field."""
+    """Talend CSV_OPTION=false: quotes are data, and a quoted comma still splits the field.
+
+    The split line has 7 tokens for 6 columns; Auto Loader then nulls the bad field without a
+    rescue entry (live probe), and the local path matches."""
     f = _write(
         tmp_path / "q" / "q.csv",
         HEADER + '200,13,21-01-2024 14:00:00,10,"Deposit",4\n201,13,21-01-2024 14:00:00,10,"Dep,osit",4\n',
@@ -212,7 +215,7 @@ def test_quotes_are_literal_like_talend(spark, tmp_path):
     assert rows[200].transaction_type == '"Deposit"' and rows[200].branch_id == 4
     assert rows[200]._rescued_data is None
     assert rows[201].transaction_type == '"Dep' and rows[201].branch_id is None
-    assert json.loads(rows[201]._rescued_data)["branch_id"] == 'osit"'
+    assert rows[201]._rescued_data is None
 
 
 def test_resolve_sample_source(tmp_path):

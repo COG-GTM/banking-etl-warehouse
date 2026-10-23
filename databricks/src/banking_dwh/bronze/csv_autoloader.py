@@ -105,8 +105,9 @@ def autoloader_options(cfg: EnvConfig, *, schema_location: str | None = None) ->
 def _emulate_rescue(df: Any) -> Any:
     """OSS Spark: rebuild Auto Loader's ``_rescued_data`` from the corrupt-record column.
 
-    For a malformed line, every non-empty raw token whose typed column came back NULL is
-    rescued under its column name, plus ``_file_path``.
+    For a malformed line with exactly one token per column, every non-empty raw token whose
+    typed column came back NULL is rescued under its column name, plus ``_file_path``. Like
+    Auto Loader (verified live), a line with too few or too many tokens gets NULLs, no rescue.
     """
     from pyspark.sql import functions as F
 
@@ -124,7 +125,8 @@ def _emulate_rescue(df: Any) -> Any:
         entries, F.array(F.struct(F.lit("_file_path").alias("k"), F.col("_metadata.file_path").alias("v")))
     )
     rescued = F.when(
-        F.col(CORRUPT_COLUMN).isNotNull() & (F.size(entries) > 0), F.to_json(F.map_from_entries(with_path))
+        F.col(CORRUPT_COLUMN).isNotNull() & (F.size(tokens) == len(cols)) & (F.size(entries) > 0),
+        F.to_json(F.map_from_entries(with_path))
     )
     return df.withColumn(RESCUED_COLUMN, rescued).drop(CORRUPT_COLUMN)
 
