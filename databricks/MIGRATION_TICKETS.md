@@ -94,4 +94,4 @@ The original plan assumed some inputs were missing. They are committed:
 
 * 2026-10-23: T1 and T2 implemented on the foundation branch. Local suite 29/29. Live serverless run on
   `migration_demo.bdwh_*` created the namespace, volumes and star schema (all 13 tables, PK/FK constraints visible in `information_schema`), and the DQ gate passed. Run: `jobs submit` 932701605587220.
-* 2026-10-23: T7 `dim_customer` Silver MERGE (Talend Load_DimCustomer port). Local suite 45 passed. Live serverless run on `migration_demo.bdwh_t7_*`: 20 rows, parity with legacy DimCustomer 20/20, PK DQ passed, rerun 0 inserts / 0 updates. Run 1101459102180928.
+* 2026-10-23: T7 `dim_customer` Silver MERGE (Talend Load_DimCustomer port). Local suite 48 passed. Live serverless run on `migration_demo.bdwh_t7_*`: 20 inserted, parity with legacy DimCustomer 20/20, PK DQ passed, rerun 0 inserts / 0 updates. Run 269334112242371.
