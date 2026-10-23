@@ -24,7 +24,7 @@ and their PRs target it.
 |---|--------|-----------|------------------------------------|--------|----------------|----|
 | 1 | Unity Catalog & environment setup | none | `config/`, `databricks.yml`, `src/banking_dwh/common/`, `notebooks/00_setup/00_config.py`, `01_setup_unity_catalog.py`, `ddl/01_unity_catalog_setup.sql` | Done (validated live, dev) | orchestrator | foundation PR |
 | 2 | Delta DDL for star schema + RI DQ | 1 | `src/banking_dwh/contracts/`, `src/banking_dwh/dq/checks.py`, `notebooks/00_setup/02_*`, `03_*`, `ddl/02_*`, `ddl/03_*` | Done (validated live, dev) | orchestrator | foundation PR |
-| 3 | SQL Server extraction (JDBC) → Bronze | 1, 2 | `src/banking_dwh/bronze/sqlserver.py`, `notebooks/bronze/01_*`, `tests/test_t3_*` | Not started | — | — |
+| 3 | SQL Server extraction (JDBC) → Bronze | 1, 2 | `src/banking_dwh/bronze/sqlserver.py`, `notebooks/bronze/01_*`, `tests/test_t3_*` | PR open | https://devin-gtm.devinenterprise.com/sessions/a87534359a1042dd93e178586869606e | https://github.com/COG-GTM/banking-etl-warehouse/pull/75 |
 | 4 | CSV Auto Loader → Bronze | 1, 2 | `src/banking_dwh/bronze/csv_autoloader.py`, `notebooks/bronze/02_*`, `tests/test_t4_*` | Not started | — | — |
 | 5 | Excel → Bronze | 1, 2 | `src/banking_dwh/bronze/excel.py`, `notebooks/bronze/03_*`, `tests/test_t5_*` | Not started | — | — |
 | 6 | `dim_branch` + `dim_account` Silver MERGE | 1, 2 (reads T3 Bronze contract) | `src/banking_dwh/silver/dim_branch.py`, `dim_account.py`, `notebooks/silver/01_*`, `02_*`, `tests/test_t6_*` | Not started | — | — |
@@ -94,3 +94,4 @@ The original plan assumed some inputs were missing. They are committed:
 
 * 2026-10-23: T1 and T2 implemented on the foundation branch. Local suite 29/29. Live serverless run on
   `migration_demo.bdwh_*` created the namespace, volumes and star schema (all 13 tables, PK/FK constraints visible in `information_schema`), and the DQ gate passed. Run: `jobs submit` 932701605587220.
+* 2026-10-23: T3 PR #75 open. Local suite 51/51; serverless staged ingest into `migration_demo.bdwh_t3_bronze` run 245656131373553 matched all six row counts (5/21/20/52/9/10).
