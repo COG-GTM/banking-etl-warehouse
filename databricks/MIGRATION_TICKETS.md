@@ -28,7 +28,7 @@ and their PRs target it.
 | 4 | CSV Auto Loader → Bronze | 1, 2 | `src/banking_dwh/bronze/csv_autoloader.py`, `notebooks/bronze/02_*`, `tests/test_t4_*` | Not started | — | — |
 | 5 | Excel → Bronze | 1, 2 | `src/banking_dwh/bronze/excel.py`, `notebooks/bronze/03_*`, `tests/test_t5_*` | Not started | — | — |
 | 6 | `dim_branch` + `dim_account` Silver MERGE | 1, 2 (reads T3 Bronze contract) | `src/banking_dwh/silver/dim_branch.py`, `dim_account.py`, `notebooks/silver/01_*`, `02_*`, `tests/test_t6_*` | Not started | — | — |
-| 7 | `dim_customer` Silver load (customer+city+state, uppercase) | 1, 2 (reads T3 Bronze contract) | `src/banking_dwh/silver/dim_customer.py`, `notebooks/silver/03_*`, `tests/test_t7_*` | Not started | — | — |
+| 7 | `dim_customer` Silver load (customer+city+state, uppercase) | 1, 2 (reads T3 Bronze contract) | `src/banking_dwh/silver/dim_customer.py`, `notebooks/silver/03_*`, `tests/test_t7_*`, `fixtures/t7_*` | PR open | [T7 session](https://devin-gtm.devinenterprise.com/sessions/12c04aa9e6db4748ba4cc16f53dc1975) | PR_LINK |
 | 8 | `fact_transaction` Silver load (union + dedup + MERGE) | 1, 2 (reads T3/T4/T5 Bronze contracts) | `src/banking_dwh/silver/fact_transaction.py`, `notebooks/silver/04_*`, `tests/test_t8_*` | Not started | — | — |
 | 9 | Gold analytics (replace 2 stored procedures) | 1, 2 (reads Silver contract) | `src/banking_dwh/gold/`, `notebooks/gold/`, `ddl/04_gold_*`, `tests/test_t9_*` | Not started | — | — |
 | 10 | Workflow, reconciliation DQ, runbook | 1, 2 (wires the notebook paths named above) | `resources/jobs/`, `notebooks/orchestration/`, `src/banking_dwh/orchestration/`, `src/banking_dwh/dq/reconciliation.py`, `fixtures/parity/`, `tests/test_t10_*`, root `README.md` "How to Run" | Not started | — | — |
@@ -94,3 +94,4 @@ The original plan assumed some inputs were missing. They are committed:
 
 * 2026-10-23: T1 and T2 implemented on the foundation branch. Local suite 29/29. Live serverless run on
   `migration_demo.bdwh_*` created the namespace, volumes and star schema (all 13 tables, PK/FK constraints visible in `information_schema`), and the DQ gate passed. Run: `jobs submit` 932701605587220.
+* 2026-10-23: T7 `dim_customer` Silver MERGE (Talend Load_DimCustomer port). Local suite 45 passed. Live serverless run on `migration_demo.bdwh_t7_*`: 20 rows, parity with legacy DimCustomer 20/20, PK DQ passed, rerun 0 inserts / 0 updates. Run 1101459102180928.
