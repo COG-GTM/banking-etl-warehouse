@@ -104,6 +104,21 @@ def test_source_query_matches_talend_tmssqlinput():
         ss.source_query("branch", "dbo; DROP")
 
 
+def test_local_jdbc_options_verify_tls_by_default(local_cfg):
+    kw = dict(host="h", port=1433, database="sample", user="u", password="p")
+    strict = ss.local_jdbc_options(local_cfg, **kw)
+    assert "trustServerCertificate=false" in strict["url"] and "encrypt=true" in strict["url"]
+    assert strict["driver"] == "com.microsoft.sqlserver.jdbc.SQLServerDriver"
+    assert "trustServerCertificate=true" in ss.local_jdbc_options(local_cfg, **kw, trust_server_certificate=True)["url"]
+
+
+def test_landing_paths_for_each_table(local_cfg):
+    for table in ss.CONTRACTS:
+        assert local_cfg.landing_path("sqlserver", table) == (
+            f"/Volumes/spark_catalog/t_bronze/landing/sqlserver/{table}"
+        )
+
+
 def test_batch_id_and_types():
     assert ss.validate_batch_id(ss.new_batch_id())
     assert ss.validate_batch_id("123456789")
@@ -172,9 +187,27 @@ def test_null_key_count(spark):
 
 def test_char_varchar_as_string_restores_conf(spark):
     before = spark.conf.get(ss._CHAR_AS_STRING, None)
-    with ss.char_varchar_as_string(spark):
-        assert spark.conf.get(ss._CHAR_AS_STRING) == "true"
+    with ss.char_varchar_as_string(spark) as applied:
+        assert applied and spark.conf.get(ss._CHAR_AS_STRING) == "true"
     assert spark.conf.get(ss._CHAR_AS_STRING, None) in (before, "false")
+
+
+class _ConnectLikeConf:
+    """Mimics Databricks serverless: the legacy conf cannot be set (CONFIG_NOT_AVAILABLE)."""
+
+    def get(self, key, default=None):
+        return default
+
+    def set(self, key, value):
+        raise RuntimeError("[CONFIG_NOT_AVAILABLE.WITHOUT_SUGGESTION] Configuration is not available.")
+
+
+def test_char_varchar_as_string_tolerates_locked_conf():
+    class FakeSpark:
+        conf = _ConnectLikeConf()
+
+    with ss.char_varchar_as_string(FakeSpark()) as applied:
+        assert applied is False
 
 
 # --------------------------------------------------------------------------------------
@@ -185,6 +218,7 @@ def test_staged_ingest_writes_all_contract_tables(spark, local_schemas, staged_r
     s = ss.ingest(spark, cfg, source="staged", staged_root=staged_root, batch_id="t3-batch-1",
                   assert_counts=True, unity_catalog=False)
     assert s["counts_ok"] and s["row_counts"] == ss.EXPECTED_ROW_COUNTS
+    assert s["char_varchar_as_string"] is True
     assert s["source"] == "staged" and s["batch_id"] == "t3-batch-1"
     for table, contract in ss.CONTRACTS.items():
         name = cfg.table("bronze", f"sqlserver_{table}")
@@ -253,12 +287,9 @@ mssql = pytest.mark.skipif(
 @pytest.fixture(scope="module")
 def jdbc_opts(spark, local_cfg):
     spark.sql(f"ADD JAR {_mssql_jar()}")
-    return {
-        "url": local_cfg.jdbc.url(MSSQL_HOST, MSSQL_PORT, "sample"),
-        "user": MSSQL_USER,
-        "password": os.environ["MSSQL_PASSWORD"],
-        "driver": local_cfg.jdbc.driver,
-    }
+    # Throwaway docker container with a self-signed certificate.
+    return ss.local_jdbc_options(local_cfg, host=MSSQL_HOST, port=MSSQL_PORT, database="sample", user=MSSQL_USER,
+                                 password=os.environ["MSSQL_PASSWORD"], trust_server_certificate=True)
 
 
 @mssql
@@ -288,13 +319,34 @@ def test_mssql_jdbc_ingest_to_bronze_and_staging(spark, local_schemas, jdbc_opts
 
 
 @mssql
+def test_mssql_jdbc_ingest_without_char_conf_keeps_string_columns(spark, local_schemas, jdbc_opts, monkeypatch):
+    # Serverless path: the legacy conf is unavailable, so the contract DDL must keep STRING columns.
+    from contextlib import contextmanager
+
+    @contextmanager
+    def locked(_spark):
+        yield False
+
+    monkeypatch.setattr(ss, "char_varchar_as_string", locked)
+    cfg = local_schemas
+    s = ss.ingest(spark, cfg, source="jdbc", jdbc=jdbc_opts, stage=False, batch_id="jdbc-noconf",
+                  assert_counts=True, unity_catalog=False)
+    assert s["char_varchar_as_string"] is False and s["counts_ok"]
+    for table, contract in ss.CONTRACTS.items():
+        name = cfg.table("bronze", f"sqlserver_{table}")
+        assert _type_strings(spark, name) == _contract_types(contract)
+        desc = {r.col_name: r.data_type for r in spark.sql(f"DESCRIBE TABLE {name}").collect()}
+        assert not any("varchar" in str(v).lower() for v in desc.values()), desc
+
+
+@mssql
 def test_mssql_cli_extract_then_staged_ingest(spark, local_schemas, tmp_path):
     out = tmp_path / "staged"
     env = {**os.environ, "PYTHONPATH": str(Path(__file__).resolve().parents[1] / "src"),
            "MSSQL_JDBC_JAR": _mssql_jar()}
     proc = subprocess.run(
         [sys.executable, "-m", "banking_dwh.bronze.sqlserver", "extract", "--host", MSSQL_HOST,
-         "--port", str(MSSQL_PORT), "--user", MSSQL_USER, "--out", str(out)],
+         "--port", str(MSSQL_PORT), "--user", MSSQL_USER, "--out", str(out), "--trust-server-certificate"],
         env=env, capture_output=True, text=True, timeout=300,
     )
     assert proc.returncode == 0, proc.stderr[-2000:]

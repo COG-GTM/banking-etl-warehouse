@@ -17,7 +17,8 @@ Local staging for the staged path (needs a reachable SQL Server and the mssql-jd
 fetched as a Spark package)::
 
     MSSQL_PASSWORD=... python -m banking_dwh.bronze.sqlserver extract \
-        --host localhost --port 1433 --database sample --user sa --out /tmp/landing/sqlserver
+        --host localhost --port 1433 --database sample --user sa --out /tmp/landing/sqlserver \
+        --trust-server-certificate   # only for a throwaway container with a self-signed cert
 """
 
 from __future__ import annotations
@@ -138,16 +139,20 @@ def _same_type(actual, expected) -> bool:
 
 
 @contextmanager
-def char_varchar_as_string(spark) -> Iterator[None]:
+def char_varchar_as_string(spark) -> Iterator[bool]:
     """Spark 4 JDBC tags varchar columns with char/varchar metadata, which makes Delta
-    store VARCHAR(n). Treat them as plain STRING while the extract is planned/written."""
+    store VARCHAR(n) when it creates a table from the frame. Treat them as plain STRING while
+    the extract is planned/written. Serverless (Spark Connect) rejects this legacy conf; the
+    guard then is that Bronze tables are pre-created from the contract (STRING) and written
+    without schema evolution. Yields whether the conf was applied."""
     try:
-        previous = spark.conf.get(_CHAR_AS_STRING)
-    except Exception:
-        previous = None
-    spark.conf.set(_CHAR_AS_STRING, "true")
+        previous = spark.conf.get(_CHAR_AS_STRING, None)
+        spark.conf.set(_CHAR_AS_STRING, "true")
+    except Exception:  # CONFIG_NOT_AVAILABLE on Databricks serverless
+        yield False
+        return
     try:
-        yield
+        yield True
     finally:
         if previous is None:
             try:
@@ -322,7 +327,7 @@ def ingest(
         return cfg.landing_path("sqlserver", table)
 
     results: list[TableResult] = []
-    with char_varchar_as_string(spark):
+    with char_varchar_as_string(spark) as char_as_string:
         if source == "jdbc":
             present = set(list_source_tables(spark, jdbc, source_schema))
             absent = [t for t in names if t not in present]
@@ -356,6 +361,7 @@ def ingest(
         "tables": [r.as_dict() for r in results],
         "row_counts": {r.source_table: r.rows for r in results},
         "counts_ok": all(r.count_ok for r in results),
+        "char_varchar_as_string": char_as_string,
     }
     if assert_counts and not summary["counts_ok"]:
         bad = {r.source_table: (r.rows, r.expected_rows) for r in results if not r.count_ok}
@@ -382,6 +388,17 @@ def local_spark(jars: str | None = None, repositories: str | None = None):
         if repositories:
             b = b.config("spark.jars.repositories", repositories)
     return b.getOrCreate()
+
+
+def local_jdbc_options(cfg: EnvConfig, *, host: str, port: str | int, database: str, user: str,
+                       password: str, trust_server_certificate: bool = False) -> dict[str, str]:
+    """JDBC options for a directly reachable SQL Server (local CLI / tests). TLS certificates
+    are verified unless ``trust_server_certificate`` is set for a throwaway local container."""
+    assert cfg.jdbc is not None
+    url = cfg.jdbc.url(host, port, database)
+    if trust_server_certificate:
+        url = url.replace("trustServerCertificate=false", "trustServerCertificate=true")
+    return {"url": url, "user": user, "password": password, "driver": cfg.jdbc.driver}
 
 
 def extract_to_parquet(spark, jdbc: Mapping[str, str], out_dir: str, tables: Iterable[str],
@@ -411,6 +428,8 @@ def main(argv: list[str] | None = None) -> None:
     e.add_argument("--tables", default="all")
     e.add_argument("--target", default="dev")
     e.add_argument("--jars", default=os.environ.get("MSSQL_JDBC_JAR"), help="mssql-jdbc jar (else Spark package)")
+    e.add_argument("--trust-server-certificate", action="store_true",
+                   help="accept a self-signed certificate (throwaway local container only)")
     e.add_argument("--repositories", default="https://maven-central.storage-download.googleapis.com/maven2/")
     a = p.parse_args(argv)
 
@@ -418,10 +437,8 @@ def main(argv: list[str] | None = None) -> None:
     password = os.environ.get(a.password_env)
     if not password:
         raise SystemExit(f"Set the SQL Server password in ${a.password_env}")
-    opts = {
-        "url": cfg.jdbc.url(a.host, a.port, a.database),
-        "user": a.user, "password": password, "driver": cfg.jdbc.driver,
-    }
+    opts = local_jdbc_options(cfg, host=a.host, port=a.port, database=a.database, user=a.user,
+                              password=password, trust_server_certificate=a.trust_server_certificate)
     spark = local_spark(a.jars, a.repositories)
     try:
         counts = extract_to_parquet(spark, opts, a.out, resolve_tables(cfg, a.tables), cfg.jdbc.source_schema)
