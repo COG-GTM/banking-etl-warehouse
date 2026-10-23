@@ -251,6 +251,27 @@ DQ_RESULTS = TableContract(
     owner_ticket=2,
 )
 
+# Ticket 10: not in OPS_TABLES (02_create_star_schema / ddl/02_star_schema.sql stay as-is);
+# banking_dwh.dq.reconciliation creates it on first write.
+RECONCILIATION_RESULTS = TableContract(
+    "ops", "reconciliation_results",
+    (
+        Column("run_id", "STRING", False, "Job run id (or uuid) of the reconciliation run."),
+        Column("check_name", "STRING", False, "<object>.<metric>, e.g. silver.fact_transaction.sum_amount"),
+        Column("layer", "STRING", False, "silver / gold"),
+        Column("object_name", "STRING", False, "Fully qualified Lakehouse table, view or function call."),
+        Column("legacy_object", "STRING", False, "Legacy SQL Server object the fixture was exported from."),
+        Column("metric", "STRING", False, "exists / row_count / distinct_keys / sum_<col> / rows_missing / rows_unexpected"),
+        Column("expected", "STRING", True, "Legacy (parity fixture) value."),
+        Column("actual", "STRING", True, "Lakehouse value."),
+        Column("passed", "BOOLEAN", False, ""),
+        Column("details", "STRING", True, "JSON: sample of differing rows / error."),
+        Column("checked_at", "TIMESTAMP", False, ""),
+    ),
+    "Lakehouse vs legacy SQL Server DWH reconciliation (Ticket 10, fixtures/parity/).",
+    owner_ticket=10,
+)
+
 BRONZE_TABLES = (
     BRONZE_SQLSERVER_BRANCH, BRONZE_SQLSERVER_ACCOUNT, BRONZE_SQLSERVER_CUSTOMER,
     BRONZE_SQLSERVER_CITY, BRONZE_SQLSERVER_STATE, BRONZE_SQLSERVER_TRANSACTION,

@@ -1,0 +1,93 @@
+{
+  "generated_by": "databricks/fixtures/parity/build_parity.py",
+  "null_encoding": "empty field",
+  "sql_server": "Microsoft SQL Server 2022 (RTM-CU27-GDR) (KB5126934) - 16.0.4305.5 (X64) ",
+  "inputs": {
+    "sample.bak": "bc9ce95b4ea6d3859e302f478ae6f8bc81b8526d25aa69150cc7d1d59169b41b",
+    "transaction_excel.xlsx": "a2e3e8162baf4bf134e2bbe09c60537141e25d49c65b998c77a7659128772315",
+    "transaction_csv.csv": "ce4a5e8a70c78406b08ea8e83fa360095c6e8fd7ec4a9c614e9adbe22a02cf0a"
+  },
+  "talend_fact_load": {
+    "stream_rows": {
+      "sqlserver": 10,
+      "excel": 7,
+      "csv": 12
+    },
+    "after_tUniqRow": 25,
+    "duplicates_dropped": [
+      {
+        "transaction_id": 6,
+        "stream": "excel"
+      },
+      {
+        "transaction_id": 7,
+        "stream": "excel"
+      },
+      {
+        "transaction_id": 14,
+        "stream": "csv"
+      },
+      {
+        "transaction_id": 15,
+        "stream": "csv"
+      }
+    ],
+    "insert_rejected_fk": [
+      {
+        "transaction_id": 23,
+        "account_id": 22,
+        "branch_id": 1,
+        "stream": "csv"
+      },
+      {
+        "transaction_id": 24,
+        "account_id": 23,
+        "branch_id": 1,
+        "stream": "csv"
+      },
+      {
+        "transaction_id": 25,
+        "account_id": 23,
+        "branch_id": 1,
+        "stream": "csv"
+      }
+    ],
+    "insert_errors": [
+      "Msg 547"
+    ]
+  },
+  "files": {
+    "dim_branch.csv": {
+      "legacy_object": "DWH.dbo.DimBranch",
+      "rows": 5
+    },
+    "dim_account.csv": {
+      "legacy_object": "DWH.dbo.DimAccount",
+      "rows": 21
+    },
+    "dim_customer.csv": {
+      "legacy_object": "DWH.dbo.DimCustomer",
+      "rows": 20
+    },
+    "fact_transaction.csv": {
+      "legacy_object": "DWH.dbo.FactTransaction",
+      "rows": 22
+    },
+    "sp_daily_transaction__all.csv": {
+      "legacy_object": "EXEC DWH.dbo.sp_DailyTransaction @start_date='0001-01-01', @end_date='9999-12-31'",
+      "rows": 9
+    },
+    "sp_daily_transaction__2024-01-18__2024-01-20.csv": {
+      "legacy_object": "EXEC DWH.dbo.sp_DailyTransaction @start_date='2024-01-18', @end_date='2024-01-20'",
+      "rows": 1
+    },
+    "sp_balance_per_customer__all.csv": {
+      "legacy_object": "EXEC DWH.dbo.sp_BalancePerCustomer @customer_name=''",
+      "rows": 18
+    },
+    "sp_balance_per_customer__shelly.csv": {
+      "legacy_object": "EXEC DWH.dbo.sp_BalancePerCustomer @customer_name='Shelly'",
+      "rows": 2
+    }
+  }
+}
