@@ -1,0 +1,170 @@
+[
+ {
+  "AccountID": 1,
+  "CustomerID": 1,
+  "AccountType": "saving",
+  "Balance": "1500000.0000",
+  "DateOpened": "2020-05-01",
+  "Status": "active"
+ },
+ {
+  "AccountID": 2,
+  "CustomerID": 2,
+  "AccountType": "saving",
+  "Balance": "500000.0000",
+  "DateOpened": "2020-06-01",
+  "Status": "active"
+ },
+ {
+  "AccountID": 3,
+  "CustomerID": 1,
+  "AccountType": "checking",
+  "Balance": "25000000.0000",
+  "DateOpened": "2020-06-21",
+  "Status": "active"
+ },
+ {
+  "AccountID": 4,
+  "CustomerID": 3,
+  "AccountType": "checking",
+  "Balance": "4500000.0000",
+  "DateOpened": "2021-06-24",
+  "Status": "terminated"
+ },
+ {
+  "AccountID": 5,
+  "CustomerID": 4,
+  "AccountType": "saving",
+  "Balance": "75000000.0000",
+  "DateOpened": "2020-06-29",
+  "Status": "active"
+ },
+ {
+  "AccountID": 6,
+  "CustomerID": 5,
+  "AccountType": "checking",
+  "Balance": "1500000.0000",
+  "DateOpened": "2020-07-01",
+  "Status": "active"
+ },
+ {
+  "AccountID": 7,
+  "CustomerID": 6,
+  "AccountType": "saving",
+  "Balance": "15000000.0000",
+  "DateOpened": "2020-07-14",
+  "Status": "terminated"
+ },
+ {
+  "AccountID": 8,
+  "CustomerID": 7,
+  "AccountType": "checking",
+  "Balance": "25000000.0000",
+  "DateOpened": "2020-07-15",
+  "Status": "active"
+ },
+ {
+  "AccountID": 9,
+  "CustomerID": 8,
+  "AccountType": "saving",
+  "Balance": "80000000.0000",
+  "DateOpened": "2020-07-15",
+  "Status": "active"
+ },
+ {
+  "AccountID": 10,
+  "CustomerID": 9,
+  "AccountType": "checking",
+  "Balance": "25000000.0000",
+  "DateOpened": "2020-07-16",
+  "Status": "active"
+ },
+ {
+  "AccountID": 11,
+  "CustomerID": 10,
+  "AccountType": "saving",
+  "Balance": "75000000.0000",
+  "DateOpened": "2020-07-24",
+  "Status": "active"
+ },
+ {
+  "AccountID": 12,
+  "CustomerID": 11,
+  "AccountType": "checking",
+  "Balance": "25000000.0000",
+  "DateOpened": "2020-08-08",
+  "Status": "active"
+ },
+ {
+  "AccountID": 13,
+  "CustomerID": 12,
+  "AccountType": "saving",
+  "Balance": "55000000.0000",
+  "DateOpened": "2020-08-15",
+  "Status": "active"
+ },
+ {
+  "AccountID": 14,
+  "CustomerID": 13,
+  "AccountType": "checking",
+  "Balance": "25000000.0000",
+  "DateOpened": "2020-08-15",
+  "Status": "active"
+ },
+ {
+  "AccountID": 15,
+  "CustomerID": 14,
+  "AccountType": "saving",
+  "Balance": "45000000.0000",
+  "DateOpened": "2020-09-25",
+  "Status": "terminated"
+ },
+ {
+  "AccountID": 16,
+  "CustomerID": 15,
+  "AccountType": "checking",
+  "Balance": "25000000.0000",
+  "DateOpened": "2020-09-26",
+  "Status": "active"
+ },
+ {
+  "AccountID": 17,
+  "CustomerID": 15,
+  "AccountType": "saving",
+  "Balance": "10000000.0000",
+  "DateOpened": "2020-10-19",
+  "Status": "active"
+ },
+ {
+  "AccountID": 18,
+  "CustomerID": 17,
+  "AccountType": "checking",
+  "Balance": "25000000.0000",
+  "DateOpened": "2020-10-21",
+  "Status": "active"
+ },
+ {
+  "AccountID": 19,
+  "CustomerID": 18,
+  "AccountType": "saving",
+  "Balance": "55000000.0000",
+  "DateOpened": "2020-11-11",
+  "Status": "active"
+ },
+ {
+  "AccountID": 20,
+  "CustomerID": 19,
+  "AccountType": "checking",
+  "Balance": "25000000.0000",
+  "DateOpened": "2020-11-19",
+  "Status": "active"
+ },
+ {
+  "AccountID": 21,
+  "CustomerID": 20,
+  "AccountType": "checking",
+  "Balance": "6000000.0000",
+  "DateOpened": "2020-11-29",
+  "Status": "active"
+ }
+]

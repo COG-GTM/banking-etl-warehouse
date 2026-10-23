@@ -1,0 +1,27 @@
+[
+ {
+  "BranchID": 1,
+  "BranchName": "KC Jakarta",
+  "BranchLocation": "Jl. Gatot Subroto No 13"
+ },
+ {
+  "BranchID": 2,
+  "BranchName": "KC Bogor",
+  "BranchLocation": "Jl. Padjajaran No 43"
+ },
+ {
+  "BranchID": 3,
+  "BranchName": "KC Depok",
+  "BranchLocation": "Jl. Raya Sawangan No 34"
+ },
+ {
+  "BranchID": 4,
+  "BranchName": "KC Tangerang",
+  "BranchLocation": "Jl. Cisauk No 50"
+ },
+ {
+  "BranchID": 5,
+  "BranchName": "KC Bekas",
+  "BranchLocation": "Jl. Ahmad Yani No 23"
+ }
+]
