@@ -54,6 +54,8 @@ def latest_per_key(df, key: str):
     order = [F.col(c).desc_nulls_last() for c in ("_ingested_at", "_batch_id") if c in df.columns]
     # Deterministic tie-break when two versions share _ingested_at/_batch_id.
     order += [F.col(c).asc_nulls_last() for c in df.columns if c != key and not c.startswith("_")]
+    if not order:
+        return df.dropDuplicates([key])
     w = Window.partitionBy(key).orderBy(*order)
     return df.withColumn("_rn", F.row_number().over(w)).filter("_rn = 1").drop("_rn")
 

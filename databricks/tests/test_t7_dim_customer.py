@@ -290,3 +290,8 @@ def test_seed_refuses_shared_namespace_and_prod(spark):
         with pytest.raises(ValueError, match="Refusing"):
             dc.seed_bronze_from_fixture(spark, bad, unity_catalog=False)
     dc.assert_scratch_namespace(EnvConfig.from_target("dev", schema_prefix="bdwh_t7_"))
+
+
+def test_dedupe_key_only_input(spark):
+    df = spark.createDataFrame([(1,), (1,), (2,)], "id INT")
+    assert sorted(r.id for r in dc.latest_per_key(df, "id").collect()) == [1, 2]
