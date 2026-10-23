@@ -1,0 +1,8 @@
+{
+  "_comment": "Serverless job environment used by every banking_dwh notebook task (dev workspace is serverless-only).",
+  "environment_key": "banking_dwh",
+  "spec": {
+    "client": "3",
+    "dependencies": ["pyyaml"]
+  }
+}
