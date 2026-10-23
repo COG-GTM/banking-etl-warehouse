@@ -42,6 +42,37 @@ tests locally with fixtures that match the contract. Live runs use the ticket's 
 (`cfg.ticket_schema(N)` → `migration_demo.bdwh_t<N>`, or `--schema_prefix bdwh_t<N>_`) so no ticket waits on
 or overwrites another. The end-to-end run on the shared dev namespace is T10's job once 3–9 land.
 
+## Integration status (orchestrator, 2026-10-23)
+
+Ticket rows above are owned by the ticket PRs, so each PR's row change lands when that PR merges. The
+table below is the orchestrator's view of all ten tickets on one page.
+
+| # | PR (base: foundation branch) | Head | Devin Review | Owning session |
+|---|------------------------------|------|--------------|----------------|
+| 1–2 | [#73](https://github.com/COG-GTM/banking-etl-warehouse/pull/73) (→ `main`) | `54bb63f` | 3/3 threads resolved | orchestrator |
+| 3 | [#75](https://github.com/COG-GTM/banking-etl-warehouse/pull/75) | `73e605e` | 4/4 resolved | [T3](https://devin-gtm.devinenterprise.com/sessions/a87534359a1042dd93e178586869606e) |
+| 4 | [#81](https://github.com/COG-GTM/banking-etl-warehouse/pull/81) | `5597def` | 2/2 resolved | [T4](https://devin-gtm.devinenterprise.com/sessions/95f8b4383f0c4f20a905da962c0038ec) |
+| 5 | [#79](https://github.com/COG-GTM/banking-etl-warehouse/pull/79) | `5dd6052` | 2/2 resolved | [T5](https://devin-gtm.devinenterprise.com/sessions/8ff0af30a01b465c9a8e20c753f53a5b) |
+| 6 | [#76](https://github.com/COG-GTM/banking-etl-warehouse/pull/76) | `940b62a` | 1/1 resolved | [T6](https://devin-gtm.devinenterprise.com/sessions/d305ce1357dd47059212182842355343) |
+| 7 | [#74](https://github.com/COG-GTM/banking-etl-warehouse/pull/74) | `d76e2f6` | 2/2 resolved | [T7](https://devin-gtm.devinenterprise.com/sessions/12c04aa9e6db4748ba4cc16f53dc1975) |
+| 8 | [#77](https://github.com/COG-GTM/banking-etl-warehouse/pull/77) | `72df440` | 6/6 resolved | [T8](https://devin-gtm.devinenterprise.com/sessions/1be8b79073ec4284ac6bc1034504749a) |
+| 9 | [#80](https://github.com/COG-GTM/banking-etl-warehouse/pull/80) | `4d7acd1` | 1/1 resolved | [T9](https://devin-gtm.devinenterprise.com/sessions/ef95231284f94f07841a3fa3b018a328) |
+| 10 | [#78](https://github.com/COG-GTM/banking-etl-warehouse/pull/78) | `e98cf95` | 4/4 resolved | [T10](https://devin-gtm.devinenterprise.com/sessions/a6c69998fad14272a73e889389dfb949) |
+
+Each ticket PR merges cleanly into the foundation branch, including this section. When several are merged,
+the only conflicts are in this file (adjacent ticket rows and appended log lines). Resolve them by keeping both sides.
+
+**Integrated validation.** T3–T10 were merged onto `54bb63f` locally; this file was the only conflict.
+- Full local suite: 237 passed, 4 skipped. The 4 skips are the Docker SQL Server JDBC tests; run with the `sample.bak` container and the mssql-jdbc jar, the T3 file passes 27/27.
+- Live end-to-end run of the T10 workflow, all 12 serverless notebook tasks, against a fresh
+  `migration_demo.bdwh_int_*` namespace: `jobs submit` 1053876455208941 → SUCCESS. Bronze: SQL Server
+  5/21/20/52/9/10 (staged Parquet extracted by T3 from the `sample.bak` container), CSV 12, Excel 7. Silver:
+  dim_branch 5, dim_account 21, dim_customer 20. fact_transaction: union 29 → dedup 25 → 22 loaded, with
+  3 `FK_FactTransaction_DimAccount` orphans quarantined. Star-schema DQ gate passed and the 3 Gold objects were
+  created. Reconciliation against legacy parity: 48/48 checks passed.
+- Not covered: a direct JDBC read from serverless (serverless can't reach the VM's SQL Server, so T3 ran in
+  staged mode), and the prod `banking_dwh` catalog (the service principal lacks CREATE CATALOG).
+
 ## Repo facts (verified on `main` @ 057ca5d)
 
 The original plan assumed some inputs were missing. They are committed:
