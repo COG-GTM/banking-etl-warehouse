@@ -93,6 +93,29 @@ To replicate this solution, follow these steps:
 
 ---
 
+## ⚡ PySpark Implementation
+
+The four Talend jobs and the two stored procedures are also implemented as PySpark jobs in
+[`pyspark_jobs/`](pyspark_jobs/README.md). They read the same sources (`sample` database, CSV and
+Excel feeds) and load the same `DWH` tables over JDBC, so they can replace the Talend runtime.
+
+```bash
+pip install -r pyspark_jobs/requirements.txt
+export SOURCE_DB_HOST=localhost SOURCE_DB_USER=sa SOURCE_DB_PASSWORD=...   # DWH_DB_* default to these
+
+# ETL in README order: DimBranch -> DimAccount -> DimCustomer -> FactTransaction
+pyspark_jobs/bin/submit.sh pyspark_jobs/run_all.py
+# or: spark-submit --packages com.microsoft.sqlserver:mssql-jdbc:12.8.1.jre11 pyspark_jobs/run_all.py
+
+# Reports (replace EXEC sp_DailyTransaction / sp_BalancePerCustomer)
+pyspark_jobs/bin/submit.sh pyspark_jobs/reports/daily_transaction.py --start-date 2024-01-18 --end-date 2024-01-20
+pyspark_jobs/bin/submit.sh pyspark_jobs/reports/balance_per_customer.py --customer-name Shelly [--output csv|jdbc ...]
+```
+
+The SQL Server JDBC driver (`com.microsoft.sqlserver:mssql-jdbc`) is a JVM dependency that must be on
+the Spark classpath (`--packages` or `--jars`; `bin/submit.sh` adds it). See
+[`pyspark_jobs/README.md`](pyspark_jobs/README.md) for all environment variables, load modes and tests.
+
 ## 🌟 Project Outcomes
 
 This project successfully demonstrates a complete data engineering lifecycle. The final solution transforms a chaotic, multi-source data environment into a clean, reliable, and high-performance Data Warehouse, ready to power business intelligence and analytics.

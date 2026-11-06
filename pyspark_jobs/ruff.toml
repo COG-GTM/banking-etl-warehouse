@@ -1,0 +1,7 @@
+line-length = 120
+target-version = "py39"
+
+[lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+# long SQL/schema string literals; ruff format handles code width
+ignore = ["E501"]
