@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import uuid
 
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
@@ -66,7 +67,7 @@ def write_jdbc(
     """Write ``df`` into an existing DWH table without touching its DDL.
 
     * ``overwrite`` / ``delete_insert`` – full reload (the Talend job's
-      TRUNCATE/DELETE + INSERT). Rows are first written to a ``<table>__staging``
+      TRUNCATE/DELETE + INSERT). Rows are first written to a per-run ``<table>__staging_<id>``
       table, then ``DELETE FROM`` + ``INSERT ... SELECT`` run in one SQL Server
       transaction, so a failed load leaves the previous rows in place. ``DELETE``
       rather than ``TRUNCATE`` because SQL Server refuses ``TRUNCATE`` on tables
@@ -82,10 +83,10 @@ def write_jdbc(
         _jdbc_writer(df, jdbc, table).mode("append").save()
         return
 
-    staging = f"{table}__staging"
+    staging = f"{table}__staging_{uuid.uuid4().hex[:12]}"
     columns = ", ".join(f"[{c}]" for c in df.columns)
-    _jdbc_writer(df, jdbc, staging).mode("overwrite").save()
     try:
+        _jdbc_writer(df, jdbc, staging).mode("overwrite").save()
         deleted, inserted = execute_jdbc_transaction(
             spark,
             jdbc,

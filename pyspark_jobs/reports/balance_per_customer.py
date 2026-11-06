@@ -30,7 +30,7 @@ def balance_per_customer(
 ) -> DataFrame:
     summary = fact.groupBy("AccountID").agg(
         F.sum(
-            F.when(F.lower(F.trim(F.col("TransactionType"))) == "deposit", F.col("Amount")).otherwise(-F.col("Amount"))
+            F.when(F.lower(F.rtrim(F.col("TransactionType"))) == "deposit", F.col("Amount")).otherwise(-F.col("Amount"))
         ).alias("TotalTransactionAmount")
     )
     c, a, ts = dim_customer.alias("c"), dim_account.alias("a"), summary.alias("ts")

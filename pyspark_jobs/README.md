@@ -37,7 +37,7 @@ pyspark_jobs/
 
 - **Writes never recreate tables.** Spark's JDBC `overwrite` normally drops and
   recreates the table (losing PKs/FKs and the `MONEY`/`DATETIME` types). Here a
-  full reload writes the rows to `<table>__staging`, then runs `DELETE FROM` +
+  full reload writes the rows to a per-run `<table>__staging_<id>` table, then runs `DELETE FROM` +
   `INSERT ... SELECT` in one SQL Server transaction and drops the staging table, so
   a failed load (e.g. a value too long for a `VARCHAR` column) rolls back and keeps
   the previous rows. `DELETE` rather than `TRUNCATE` because SQL Server refuses

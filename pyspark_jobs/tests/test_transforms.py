@@ -183,9 +183,10 @@ def test_balance_per_customer_deposit_is_case_insensitive(spark):
     fact = spark.createDataFrame(
         [
             (1, 1, dt.datetime(2024, 1, 1), Decimal(20), "deposit", 1),
-            (2, 1, dt.datetime(2024, 1, 2), Decimal(5), " DEPOSIT", 1),
+            (2, 1, dt.datetime(2024, 1, 2), Decimal(5), "DEPOSIT ", 1),
+            (3, 1, dt.datetime(2024, 1, 3), Decimal(3), " Deposit", 1),
         ],
         _fact(spark).schema,
     )
     rows = [tuple(r) for r in balance_per_customer(fact, customer, account, "SHELLY").collect()]
-    assert rows == [("SHELLY JUWITA", "saving", Decimal(100), Decimal(125))]
+    assert rows == [("SHELLY JUWITA", "saving", Decimal(100), Decimal(122))]
