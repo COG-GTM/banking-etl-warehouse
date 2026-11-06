@@ -136,8 +136,9 @@ spark-submit --packages com.microsoft.sqlserver:mssql-jdbc:12.8.1.jre11 \
   --py-files pyspark_jobs.zip pyspark_jobs/reports/balance_per_customer.py --customer-name Shelly
 ```
 
-On a cluster, ship the source files with `--files data_sources/transaction_csv.csv,data_sources/transaction_excel.xlsx`
-or point `TRANSACTION_CSV_PATH`/`TRANSACTION_EXCEL_PATH` at shared storage.
+On a cluster, the default `data_sources/` paths only exist on the submitting machine. Put the two files on
+storage every node can read (HDFS, S3, ABFS, a shared mount) and set `TRANSACTION_CSV_PATH` / `TRANSACTION_EXCEL_PATH`
+to those locations.
 
 ## Tests
 
