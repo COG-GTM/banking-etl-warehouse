@@ -1,0 +1,16 @@
+# Runtime
+pyspark==3.5.3
+# pandas/openpyxl back the default EXCEL_READER=pandas path for the .xlsx transaction feed
+# (pyspark 3.5 does not support pandas 3).
+pandas>=2.0,<2.3
+openpyxl>=3.1,<4
+
+# Tests
+pytest>=8
+
+# JVM dependencies (not pip packages), resolved by Spark at startup:
+#   - Microsoft SQL Server JDBC driver: com.microsoft.sqlserver:mssql-jdbc:12.8.1.jre11
+#     (pulled via spark.jars.packages; override with SPARK_JDBC_PACKAGES, or point
+#     SPARK_JDBC_JARS at a local mssql-jdbc-*.jar for offline clusters)
+#   - Optional, only for EXCEL_READER=crealytics: com.crealytics:spark-excel_2.12:3.5.1_0.20.4
+# Spark 3.5 needs Java 8/11/17.
