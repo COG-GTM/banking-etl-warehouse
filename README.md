@@ -58,7 +58,7 @@ A total of four distinct Talend jobs were created for modularity and maintainabi
 To provide immediate value to the "client," two parameterized Stored Procedures were developed:
 
 - **`sp_DailyTransaction`**: Generates a daily summary of transaction volume and total amount for a given date range.
-- **`sp_BalancePerCustomer`**: A sophisticated procedure that calculates the current balance of each active account for a specific customer, applying business logic (`CASE WHEN`) to handle deposits and withdrawals.
+- **`sp_BalancePerCustomer`**: A sophisticated procedure that calculates the current balance of each active account for a specific customer, applying business logic (`CASE WHEN`) to handle deposits and withdrawals. The customer is looked up by `@customer_id` or by exact full name (`@customer_name`, no wildcard/substring matching), exactly one of which must be supplied, and only members of the `balance_lookup_role` database role may execute it (e.g. `EXEC dbo.sp_BalancePerCustomer @customer_id = 42;`).
 
 ---
 
