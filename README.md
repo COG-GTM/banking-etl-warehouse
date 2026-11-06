@@ -31,7 +31,7 @@ The solution follows a classic ETL (Extract, Transform, Load) architecture, desi
 ## 🛠️ Tech Stack
 
 *   **Database:** Microsoft SQL Server
-*   **ETL Tool:** Talend Open Studio for Data Integration
+*   **ETL Tool:** Talend Open Studio for Data Integration (PySpark port in `pyspark_jobs/`)
 *   **Data Modeling:** Star Schema
 *   **Language:** T-SQL (for Stored Procedures)
 *   **Version Control:** Git & GitHub
@@ -90,6 +90,21 @@ To replicate this solution, follow these steps:
     - In the `sql_scripts` folder, open `create_procedures.sql`.
     - Execute this script in SSMS against the `DWH` database.
     - You can now test the procedures with sample commands, e.g., `EXEC sp_DailyTransaction @start_date = '2024-01-18', @end_date = '2024-01-20';`.
+
+### Alternative: run the ETL with PySpark
+
+The four Talend jobs and both stored procedures are also implemented as PySpark jobs in [`pyspark_jobs/`](pyspark_jobs/README.md). They load the same `DWH` tables (same column names, so the stored procedures still work) in the same order:
+
+```bash
+pip install -r pyspark_jobs/requirements.txt
+export MSSQL_HOST=localhost MSSQL_USER=sa MSSQL_PASSWORD=...
+export MSSQL_TRUST_SERVER_CERTIFICATE=true   # local dev server with a self-signed cert only
+zip -r pyspark_jobs.zip pyspark_jobs -x '*/tests/*' '*__pycache__*'
+spark-submit --packages com.microsoft.sqlserver:mssql-jdbc:12.8.1.jre11 \
+  --py-files pyspark_jobs.zip pyspark_jobs/run_all.py
+```
+
+Requires Java 8/11/17 and the SQL Server JDBC driver (`com.microsoft.sqlserver:mssql-jdbc`). See [`pyspark_jobs/README.md`](pyspark_jobs/README.md) for environment variables, single-job runs and the report equivalents.
 
 ---
 

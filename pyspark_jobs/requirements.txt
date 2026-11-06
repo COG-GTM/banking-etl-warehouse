@@ -1,0 +1,20 @@
+# Runtime for the PySpark ETL jobs (Python 3.9-3.12, Java 8/11/17).
+pyspark==3.5.3
+# pandas Excel reader (EXCEL_READER=pandas, the default) + Arrow conversion.
+# pyspark 3.5 supports pandas < 2.2 for createDataFrame(pandas_df).
+pandas>=1.5,<2.2
+numpy<2
+pyarrow>=11,<18
+openpyxl>=3.1
+# distutils shim required by pyspark 3.5 on Python 3.12.
+setuptools
+
+# Tests
+pytest>=7
+
+# JVM dependencies (not pip packages) - resolved by Spark at runtime:
+#   SQL Server JDBC driver: com.microsoft.sqlserver:mssql-jdbc:12.8.1.jre11
+#     added automatically by common/spark_session.py via spark.jars.packages,
+#     or pass --packages / --jars to spark-submit, or set MSSQL_JDBC_JAR to a local jar.
+#   Optional Excel data source (EXCEL_READER=crealytics):
+#     com.crealytics:spark-excel_2.12:3.5.1_0.20.4
