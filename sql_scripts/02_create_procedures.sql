@@ -15,6 +15,7 @@ GO
 -- Menghasilkan ringkasan jumlah transaksi dan total nominal per hari.
 -------------------------------------------------------------------------------------
 PRINT 'Creating Stored Procedure sp_DailyTransaction...';
+GO
 CREATE PROCEDURE sp_DailyTransaction
     -- Mendefinisikan dua parameter input: tanggal mulai dan tanggal selesai
     @start_date DATE,
@@ -44,15 +45,31 @@ GO
 
 -------------------------------------------------------------------------------------
 -- STORED PROCEDURE 2: BalancePerCustomer
--- Menghitung saldo akhir setiap rekening aktif milik seorang nasabah.
+-- Menghitung saldo akhir setiap rekening aktif milik SATU nasabah.
+-- Nasabah dicari berdasarkan @customer_id (direkomendasikan) atau nama lengkap yang
+-- persis sama (@customer_name). Pencarian substring/wildcard (LIKE) sengaja tidak
+-- didukung agar prosedur tidak bisa dipakai untuk menarik saldo seluruh nasabah
+-- (mis. @customer_name = '%' atau '').
 -------------------------------------------------------------------------------------
 PRINT 'Creating Stored Procedure sp_BalancePerCustomer...';
-CREATE PROCEDURE sp_BalancePerCustomer
-    -- Mendefinisikan satu parameter input: nama customer yang ingin dicari
-    @customer_name VARCHAR(100)
+GO
+CREATE PROCEDURE dbo.sp_BalancePerCustomer
+    -- Parameter input: nama lengkap nasabah (pencocokan persis, tanpa wildcard)
+    @customer_name VARCHAR(100) = NULL,
+    -- Parameter input: ID nasabah (kunci unik, lebih disarankan daripada nama)
+    @customer_id INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
+
+    DECLARE @name VARCHAR(100) = NULLIF(LTRIM(RTRIM(@customer_name)), '');
+
+    -- Wajib tepat satu kriteria: ID atau nama lengkap. Input kosong ditolak.
+    IF (@customer_id IS NULL AND @name IS NULL)
+       OR (@customer_id IS NOT NULL AND @name IS NOT NULL)
+    BEGIN
+        THROW 50001, 'sp_BalancePerCustomer: provide exactly one of @customer_id or a non-empty @customer_name.', 1;
+    END;
 
     -- Menggunakan Common Table Expression (CTE) untuk menghitung total perubahan saldo per rekening
     WITH TransactionSummary AS (
@@ -84,12 +101,29 @@ BEGIN
     LEFT JOIN
         TransactionSummary ts ON a.AccountID = ts.AccountID
     WHERE
-        -- Filter berdasarkan nama dari parameter dan hanya untuk rekening yang aktif
-        c.CustomerName LIKE '%' + @customer_name + '%'
+        -- Filter persis berdasarkan ID atau nama lengkap (operator '=' tidak
+        -- menafsirkan %, _ atau [ sebagai wildcard) dan hanya rekening aktif
+        (
+            (@customer_id IS NOT NULL AND c.CustomerID = @customer_id)
+            OR (@customer_id IS NULL AND c.CustomerName = @name)
+        )
         AND a.Status = 'active';
 END;
 GO
 PRINT 'Stored Procedure sp_BalancePerCustomer created successfully.';
+GO
+
+-------------------------------------------------------------------------------------
+-- HAK AKSES sp_BalancePerCustomer
+-- Hanya anggota role balance_lookup_role yang boleh menjalankan prosedur ini.
+-- Catatan: sengaja memakai REVOKE (bukan DENY) dari public, karena DENY ke public
+-- juga akan memblokir anggota balance_lookup_role (DENY mengalahkan GRANT).
+-------------------------------------------------------------------------------------
+IF DATABASE_PRINCIPAL_ID('balance_lookup_role') IS NULL
+    CREATE ROLE balance_lookup_role;
+GO
+REVOKE EXECUTE ON dbo.sp_BalancePerCustomer FROM public;
+GRANT EXECUTE ON dbo.sp_BalancePerCustomer TO balance_lookup_role;
 GO
 
 PRINT 'All Stored Procedures have been created.';
