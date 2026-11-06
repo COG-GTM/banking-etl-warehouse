@@ -52,17 +52,20 @@ def extract(spark: SparkSession, cfg: EtlConfig) -> dict[str, DataFrame]:
     }
 
 
-def _typed_exprs(timestamp_format: str | None) -> list:
-    """Cast expressions to the canonical source schema, in SOURCE_COLUMNS order."""
+def _typed_exprs(timestamp_format: str | None, lenient_timestamps: bool = False) -> list:
+    """Cast expressions to the canonical source schema, in SOURCE_COLUMNS order.
+
+    The CSV is parsed with its configured pattern only (Talend rejects other formats); Excel cells
+    may come back as real datetimes or text, so ``lenient_timestamps`` adds a generic fallback.
+    """
 
     def as_int(c: str):
         return F.trim(F.col(c).cast("string")).cast("int")
 
     if timestamp_format:
-        ts = F.coalesce(
-            F.to_timestamp(F.trim("transaction_date"), timestamp_format),
-            F.to_timestamp(F.trim("transaction_date")),
-        )
+        ts = F.to_timestamp(F.trim("transaction_date"), timestamp_format)
+        if lenient_timestamps:
+            ts = F.coalesce(ts, F.to_timestamp(F.trim("transaction_date")))
     else:
         ts = F.col("transaction_date").cast("timestamp")
     return [
@@ -75,18 +78,25 @@ def _typed_exprs(timestamp_format: str | None) -> list:
     ]
 
 
-def normalize(df: DataFrame, source: str, timestamp_format: str | None = None) -> DataFrame:
+def normalize(
+    df: DataFrame,
+    source: str,
+    timestamp_format: str | None = None,
+    cached: list[DataFrame] | None = None,
+) -> DataFrame:
     """Normalizes one source to the canonical schema, dropping rows that fail to parse
     (Talend file inputs run with die-on-error off, which rejects such rows)."""
     flagged = df.select(
         *[F.col(c).cast("string").alias(f"_raw_{c}") for c in SOURCE_COLUMNS],
-        *[expr.alias(c) for expr, c in zip(_typed_exprs(timestamp_format), SOURCE_COLUMNS)],
+        *[expr.alias(c) for expr, c in zip(_typed_exprs(timestamp_format, source == "excel"), SOURCE_COLUMNS)],
     )
     rejected = F.col("transaction_id").isNull()
     for c in SOURCE_COLUMNS:
         raw = F.col(f"_raw_{c}")
         rejected = rejected | (raw.isNotNull() & (F.trim(raw) != "") & F.col(c).isNull())
     flagged = flagged.withColumn("_rejected", rejected).cache()
+    if cached is not None:
+        cached.append(flagged)
     rejected_count = flagged.filter("_rejected").count()
     if rejected_count:
         log.warning("%s: dropping %d unparseable rows", source, rejected_count)
@@ -154,13 +164,18 @@ def transform(
     dim_account: DataFrame,
     dim_branch: DataFrame,
     csv_timestamp_format: str = "dd-MM-yyyy HH:mm:ss",
+    cached: list[DataFrame] | None = None,
 ) -> DataFrame:
+    """Builds the FactTransaction frame. Frames it caches are appended to ``cached`` so the
+    caller can unpersist them once the result has been written."""
     sources = [
-        normalize(raw["sqlserver"], "sqlserver"),
-        normalize(raw["excel"], "excel", EXCEL_TIMESTAMP_FORMAT),
-        normalize(raw["csv"], "csv", csv_timestamp_format),
+        normalize(raw["sqlserver"], "sqlserver", cached=cached),
+        normalize(raw["excel"], "excel", EXCEL_TIMESTAMP_FORMAT, cached=cached),
+        normalize(raw["csv"], "csv", csv_timestamp_format, cached=cached),
     ]
     unique = unite_and_dedupe(sources).cache()
+    if cached is not None:
+        cached.append(unique)
     valid, orphans = reject_orphans(unique, dim_account, dim_branch)
     orphan_rows = orphans.select("transaction_id", "account_id", "branch_id", "_source").collect()
     if orphan_rows:
@@ -173,13 +188,19 @@ def transform(
 
 
 def run(spark: SparkSession, cfg: EtlConfig, mode: str = "overwrite") -> int:
-    facts = transform(
-        extract(spark, cfg),
-        read_jdbc(spark, cfg.dwh_db, table="DimAccount"),
-        read_jdbc(spark, cfg.dwh_db, table="DimBranch"),
-        cfg.files.csv_timestamp_format,
-    )
-    return load_table(spark, cfg, facts, TARGET_TABLE, "TransactionID", mode, referenced_by_fk=False)
+    cached: list[DataFrame] = []
+    try:
+        facts = transform(
+            extract(spark, cfg),
+            read_jdbc(spark, cfg.dwh_db, table="DimAccount"),
+            read_jdbc(spark, cfg.dwh_db, table="DimBranch"),
+            cfg.files.csv_timestamp_format,
+            cached,
+        )
+        return load_table(spark, cfg, facts, TARGET_TABLE, "TransactionID", mode, referenced_by_fk=False)
+    finally:
+        for df in cached:
+            df.unpersist()
 
 
 def main(argv: list[str] | None = None) -> None:

@@ -53,6 +53,7 @@ def test_unparseable_file_rows_are_dropped(spark):
             ("3", "1", "not a date", "100", "Deposit", "1"),
             ("", "1", "21-01-2024 14:00:00", "100", "Deposit", "1"),
             ("5", "1", "21-01-2024 14:00:00", "100", "Deposit", ""),
+            ("6", "1", "2024-01-21 14:00:00", "100", "Deposit", "1"),  # not the CSV pattern
         ],
         ",".join(f"{c} string" for c in fact.SOURCE_COLUMNS),
     )

@@ -28,8 +28,17 @@ from pyspark_jobs.common.spark_session import get_spark
 from pyspark_jobs.reports import add_output_args, deliver
 
 
-def transaction_summary(fact: DataFrame) -> DataFrame:
-    signed = F.when(F.col("TransactionType") == "Deposit", F.col("Amount")).otherwise(-F.col("Amount"))
+def _sql_equals(col: str, value: str, case_sensitive: bool):
+    """T-SQL ``=``: trailing spaces are ignored, and case too under the DWH's CI collation."""
+    trimmed = F.rtrim(F.col(col))
+    if case_sensitive:
+        return trimmed == value
+    return F.lower(trimmed) == value.lower()
+
+
+def transaction_summary(fact: DataFrame, case_sensitive: bool = False) -> DataFrame:
+    is_deposit = _sql_equals("TransactionType", "Deposit", case_sensitive)
+    signed = F.when(is_deposit, F.col("Amount")).otherwise(-F.col("Amount"))
     return fact.groupBy("AccountID").agg(F.sum(signed).alias("TotalTransactionAmount"))
 
 
@@ -40,13 +49,12 @@ def balance_per_customer(
     customer_name: str,
     case_sensitive: bool = False,
 ) -> DataFrame:
-    c, a, ts = dim_customer.alias("c"), dim_account.alias("a"), transaction_summary(fact).alias("ts")
+    c, a, ts = dim_customer.alias("c"), dim_account.alias("a"), transaction_summary(fact, case_sensitive).alias("ts")
     if case_sensitive:
         name_match = F.col("c.CustomerName").contains(customer_name)
-        active = F.col("a.Status") == "active"
     else:
         name_match = F.upper(F.col("c.CustomerName")).contains(customer_name.upper())
-        active = F.lower(F.col("a.Status")) == "active"
+    active = _sql_equals("a.Status", "active", case_sensitive)
     return (
         c.join(a, F.col("c.CustomerID") == F.col("a.CustomerID"))
         .join(ts, F.col("a.AccountID") == F.col("ts.AccountID"), "left")

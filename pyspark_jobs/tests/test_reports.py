@@ -56,3 +56,18 @@ def test_balance_per_customer(spark):
 
     assert balance_per_customer(_fact(spark), customers, accounts, "shelly", case_sensitive=True).count() == 0
     assert balance_per_customer(_fact(spark), customers, accounts, "SHELLY", case_sensitive=True).count() == 3
+
+
+def test_balance_per_customer_uses_sql_server_equality(spark):
+    # T-SQL `=` under the CI collation: 'deposit' is a deposit and 'active ' is active.
+    fact = spark.createDataFrame(
+        [(1, 1, dt.datetime(2024, 1, 18), Decimal(100), "deposit", 1)],
+        FACT_SCHEMA,
+    )
+    customers = spark.createDataFrame([(1, "SHELLY JUWITA")], "CustomerID int, CustomerName string")
+    accounts = spark.createDataFrame(
+        [(1, 1, "saving", Decimal(1000), "active ")],
+        "AccountID int, CustomerID int, AccountType string, Balance decimal(19,4), Status string",
+    )
+    rows = balance_per_customer(fact, customers, accounts, "shelly").collect()
+    assert [(r.InitialBalance, r.CurrentBalance) for r in rows] == [(Decimal("1000.0000"), Decimal("1100.0000"))]
