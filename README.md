@@ -98,6 +98,7 @@ The four Talend jobs and both stored procedures are also implemented as PySpark 
 ```bash
 pip install -r pyspark_jobs/requirements.txt
 export MSSQL_HOST=localhost MSSQL_USER=sa MSSQL_PASSWORD=...
+export MSSQL_TRUST_SERVER_CERTIFICATE=true   # local dev server with a self-signed cert only
 zip -r pyspark_jobs.zip pyspark_jobs -x '*/tests/*' '*__pycache__*'
 spark-submit --packages com.microsoft.sqlserver:mssql-jdbc:12.8.1.jre11 \
   --py-files pyspark_jobs.zip pyspark_jobs/run_all.py

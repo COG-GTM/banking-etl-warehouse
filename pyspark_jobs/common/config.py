@@ -86,7 +86,7 @@ def _jdbc_from_env(prefix: str, default_database: str) -> JdbcConfig:
         encrypt=_env_bool(f"{prefix}_ENCRYPT", _env_bool("MSSQL_ENCRYPT", True)),
         trust_server_certificate=_env_bool(
             f"{prefix}_TRUST_SERVER_CERTIFICATE",
-            _env_bool("MSSQL_TRUST_SERVER_CERTIFICATE", True),
+            _env_bool("MSSQL_TRUST_SERVER_CERTIFICATE", False),
         ),
         extra_properties=get("JDBC_PROPERTIES"),
     )

@@ -40,6 +40,7 @@ log = logging.getLogger(__name__)
 
 TARGET_TABLE = "FactTransaction"
 SOURCE_PRIORITY_COL = "_source_priority"
+ROW_POSITION_COL = "_row_position"
 SOURCE_PRIORITY = {"sqlserver": 1, "excel": 2, "csv": 3}
 
 CSV_SCHEMA = StructType(
@@ -64,6 +65,7 @@ def normalize(df: DataFrame, source: str) -> DataFrame:
         F.trim(F.col("transaction_type").cast("string")).alias("transaction_type"),
         F.col("branch_id").cast("int").alias("branch_id"),
         F.lit(SOURCE_PRIORITY[source]).alias(SOURCE_PRIORITY_COL),
+        F.monotonically_increasing_id().alias(ROW_POSITION_COL),
     )
 
 
@@ -74,12 +76,14 @@ def unite_and_dedup(sql_df: DataFrame, excel_df: DataFrame, csv_df: DataFrame) -
         .unionByName(normalize(csv_df, "csv"))
         .filter(F.col("transaction_id").isNotNull())
     )
-    best = F.min(SOURCE_PRIORITY_COL).over(Window.partitionBy("transaction_id"))
+    # tUniqRow keeps the first row of the united stream: highest-priority source,
+    # then earliest row within that source.
+    first = Window.partitionBy("transaction_id").orderBy(SOURCE_PRIORITY_COL, ROW_POSITION_COL)
     return (
-        united.withColumn("_best_priority", best)
-        .filter(F.col(SOURCE_PRIORITY_COL) == F.col("_best_priority"))
+        united.withColumn("_rank", F.row_number().over(first))
+        .filter(F.col("_rank") == 1)
         .dropDuplicates(["transaction_id"])
-        .drop("_best_priority", SOURCE_PRIORITY_COL)
+        .drop("_rank", SOURCE_PRIORITY_COL, ROW_POSITION_COL)
     )
 
 

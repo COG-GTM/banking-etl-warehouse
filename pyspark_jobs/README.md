@@ -8,10 +8,10 @@ in `data_sources/`, and write into the existing `DWH` star schema created by
 
 | Talend job | PySpark module | Source | Target | Write |
 |---|---|---|---|---|
-| `Load_DimBranch` | `load_dim_branch.py` | `sample.dbo.branch` | `DimBranch` | full reload (DELETE + INSERT) |
-| `Load_DimAccount` | `load_dim_account.py` | `sample.dbo.account` | `DimAccount` | full reload (DELETE + INSERT) |
-| `Load_DimCustomer` | `load_dim_customer.py` | `sample.dbo.customer` ⟕ `city` ⟕ `state` | `DimCustomer` | full reload (DELETE + INSERT) |
-| `Load_FactTransaction` | `load_fact_transaction.py` | `sample.dbo.transaction_db` + `transaction_excel.xlsx` + `transaction_csv.csv` | `FactTransaction` | TRUNCATE + INSERT |
+| `Load_DimBranch` | `load_dim_branch.py` | `sample.dbo.branch` | `DimBranch` | full reload (staged, transactional DELETE + INSERT) |
+| `Load_DimAccount` | `load_dim_account.py` | `sample.dbo.account` | `DimAccount` | full reload (staged, transactional DELETE + INSERT) |
+| `Load_DimCustomer` | `load_dim_customer.py` | `sample.dbo.customer` ⟕ `city` ⟕ `state` | `DimCustomer` | full reload (staged, transactional DELETE + INSERT) |
+| `Load_FactTransaction` | `load_fact_transaction.py` | `sample.dbo.transaction_db` + `transaction_excel.xlsx` + `transaction_csv.csv` | `FactTransaction` | full reload (staged, transactional DELETE + INSERT) |
 
 `run_all.py` runs them in the README order: DimBranch → DimAccount → DimCustomer → FactTransaction.
 
@@ -36,13 +36,18 @@ pyspark_jobs/
 ## Behaviour
 
 - **Writes never recreate tables.** Spark's JDBC `overwrite` normally drops and
-  recreates the table (losing PKs/FKs and the `MONEY`/`DATETIME` types). Here
-  `FactTransaction` uses `overwrite` with `truncate=true`, and the dimensions use
-  `DELETE FROM` + append because SQL Server refuses `TRUNCATE` on tables referenced
-  by a foreign key. `run_all.py` clears `FactTransaction` first so the dimension
+  recreates the table (losing PKs/FKs and the `MONEY`/`DATETIME` types). Here a
+  full reload writes the rows to `<table>__staging`, then runs `DELETE FROM` +
+  `INSERT ... SELECT` in one SQL Server transaction and drops the staging table, so
+  a failed load (e.g. a value too long for a `VARCHAR` column) rolls back and keeps
+  the previous rows. `DELETE` rather than `TRUNCATE` because SQL Server refuses
+  `TRUNCATE` on tables referenced by a foreign key. The login needs `CREATE TABLE`
+  on the target schema for the staging table.
+- **FK-safe ordering.** `run_all.py` clears `FactTransaction` first so the dimension
   reloads don't hit `FK_FactTransaction_*`; the fact load repopulates it at the end.
-  Running `load_dim_branch.py` / `load_dim_account.py` on their own while
-  `FactTransaction` has rows fails with an explanatory error.
+  A `--jobs` subset that reloads `dim_branch`/`dim_account` without
+  `fact_transaction` is refused while `FactTransaction` has rows, and so is running
+  `load_dim_branch.py` / `load_dim_account.py` on their own.
 - **DimCustomer**: customer is joined to city and state with left joins (Talend
   tMap lookups), so a customer with an unknown city keeps NULL `CityName`/`StateName`.
   `CustomerName`, `Address`, `CityName`, `StateName` and `Gender` are uppercased.
@@ -82,7 +87,7 @@ pyspark_jobs/
 |---|---|---|
 | `MSSQL_HOST` / `MSSQL_PORT` | `localhost` / `1433` | SQL Server for both databases |
 | `MSSQL_USER` / `MSSQL_PASSWORD` | `sa` / – | Credentials for both databases |
-| `MSSQL_ENCRYPT` / `MSSQL_TRUST_SERVER_CERTIFICATE` | `true` / `true` | JDBC TLS settings |
+| `MSSQL_ENCRYPT` / `MSSQL_TRUST_SERVER_CERTIFICATE` | `true` / `false` | JDBC TLS settings. The server certificate is verified by default; set `MSSQL_TRUST_SERVER_CERTIFICATE=true` only for a local/dev SQL Server with a self-signed certificate |
 | `MSSQL_JDBC_PROPERTIES` | – | Extra `;key=value` JDBC URL properties (e.g. `integratedSecurity=true`) |
 | `SOURCE_DB_*` / `TARGET_DB_*` | fall back to `MSSQL_*` | Per-database overrides: `HOST`, `PORT`, `USER`, `PASSWORD`, `ENCRYPT`, `TRUST_SERVER_CERTIFICATE`, `JDBC_PROPERTIES` |
 | `SOURCE_DB_DATABASE` / `TARGET_DB_DATABASE` | `sample` / `DWH` | Database names |
@@ -106,6 +111,7 @@ From the repository root:
 ```bash
 pip install -r pyspark_jobs/requirements.txt
 export MSSQL_HOST=localhost MSSQL_USER=sa MSSQL_PASSWORD=...   # your SQL Server login
+export MSSQL_TRUST_SERVER_CERTIFICATE=true                     # local dev server with a self-signed cert only
 
 # Package the modules for executors (needed on a cluster; harmless locally)
 zip -r pyspark_jobs.zip pyspark_jobs -x '*/tests/*' '*__pycache__*'

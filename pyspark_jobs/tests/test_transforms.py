@@ -89,6 +89,15 @@ def test_fact_dedup_prefers_sql_then_excel_then_csv(spark):
     assert out[3].amount == Decimal(300)
 
 
+def test_fact_dedup_keeps_first_row_within_source(spark):
+    ts = dt.datetime(2024, 1, 18, 9)
+    csv = _tx(spark, [(14, 1, ts, 100, "Deposit", 1), (14, 1, ts, 200, "Deposit", 1), (15, 1, ts, 5, "Deposit", 1)])
+    empty = _tx(spark, [])
+    for _ in range(3):
+        out = {r.transaction_id: r.amount for r in load_fact_transaction.unite_and_dedup(empty, empty, csv).collect()}
+        assert out == {14: Decimal(100), 15: Decimal(5)}
+
+
 def test_fact_fk_filter(spark):
     ts = dt.datetime(2024, 1, 18, 9)
     tx = load_fact_transaction.unite_and_dedup(
@@ -164,3 +173,19 @@ def test_balance_per_customer(spark):
         ["SHELLY JUWITA", "checking", Decimal(500), Decimal(500) + 50 * -1 + 70],
         ["SHELLY JUWITA", "saving", Decimal(1000), Decimal(1070)],
     ]
+
+
+def test_balance_per_customer_deposit_is_case_insensitive(spark):
+    customer = spark.createDataFrame([(1, "SHELLY JUWITA")], ["CustomerID", "CustomerName"])
+    account = spark.createDataFrame(
+        [(1, 1, "saving", Decimal(100), "Active")], ["AccountID", "CustomerID", "AccountType", "Balance", "Status"]
+    )
+    fact = spark.createDataFrame(
+        [
+            (1, 1, dt.datetime(2024, 1, 1), Decimal(20), "deposit", 1),
+            (2, 1, dt.datetime(2024, 1, 2), Decimal(5), " DEPOSIT", 1),
+        ],
+        _fact(spark).schema,
+    )
+    rows = [tuple(r) for r in balance_per_customer(fact, customer, account, "SHELLY").collect()]
+    assert rows == [("SHELLY JUWITA", "saving", Decimal(100), Decimal(125))]

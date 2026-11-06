@@ -26,7 +26,7 @@ from pyspark_jobs import (
     load_fact_transaction,
 )
 from pyspark_jobs.common.config import load_config
-from pyspark_jobs.common.io import execute_jdbc_statement
+from pyspark_jobs.common.io import execute_jdbc_statement, read_jdbc_query
 from pyspark_jobs.common.spark_session import get_spark
 
 log = logging.getLogger("pyspark_jobs.run_all")
@@ -63,12 +63,26 @@ def main(argv: list[str] | None = None) -> int:
     spark = get_spark("banking-etl-warehouse-run-all")
 
     # DimAccount/DimBranch are referenced by FactTransaction's FKs, so a full
-    # dimension reload has to clear the fact rows first. The fact load
-    # replaces them at the end of the run.
-    if config.dim_jdbc_mode == "delete_insert" and FK_DIMENSIONS & set(selected):
+    # dimension reload has to clear the fact rows first. That is only safe when
+    # the fact load is part of this run and replaces them at the end.
+    reload_fk_dims = sorted(FK_DIMENSIONS & set(selected))
+    if config.dim_jdbc_mode == "delete_insert" and reload_fk_dims:
         fact = config.target_table(load_fact_transaction.TARGET_TABLE)
-        deleted = execute_jdbc_statement(spark, config.target, f"DELETE FROM {fact}")
-        log.info("Cleared %s rows from %s before reloading FK dimensions", deleted, fact)
+        if "fact_transaction" not in selected:
+            existing = read_jdbc_query(spark, config.target, f"SELECT COUNT(*) AS n FROM {fact}").first()["n"]
+            if existing:
+                log.error(
+                    "Reloading %s would delete the %s rows in %s, and fact_transaction is not selected "
+                    "to reload them. Add fact_transaction to --jobs.",
+                    reload_fk_dims,
+                    existing,
+                    fact,
+                )
+                spark.stop()
+                return 2
+        else:
+            deleted = execute_jdbc_statement(spark, config.target, f"DELETE FROM {fact}")
+            log.info("Cleared %s rows from %s before reloading FK dimensions", deleted, fact)
 
     for key, (name, run) in JOBS.items():
         if key not in selected:

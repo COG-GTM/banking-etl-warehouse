@@ -25,6 +25,11 @@ def read_jdbc_query(spark: SparkSession, jdbc: JdbcConfig, query: str) -> DataFr
 
 def execute_jdbc_statement(spark: SparkSession, jdbc: JdbcConfig, sql: str) -> int:
     """Run a DDL/DML statement on the target through the JVM JDBC driver."""
+    return execute_jdbc_transaction(spark, jdbc, [sql])[0]
+
+
+def execute_jdbc_transaction(spark: SparkSession, jdbc: JdbcConfig, statements: list[str]) -> list[int]:
+    """Run ``statements`` in one transaction; roll back all of them if any fails."""
     jvm = spark.sparkContext._jvm
     # Jars added via --jars/--packages live in Spark's class loader, not the
     # system one DriverManager uses, so load and call the driver directly.
@@ -36,9 +41,15 @@ def execute_jdbc_statement(spark: SparkSession, jdbc: JdbcConfig, sql: str) -> i
             props.setProperty(key, value)
     conn = driver.connect(jdbc.url, props)
     try:
+        conn.setAutoCommit(False)
         stmt = conn.createStatement()
         try:
-            return stmt.executeUpdate(sql)
+            counts = [stmt.executeUpdate(sql) for sql in statements]
+            conn.commit()
+            return counts
+        except Exception:
+            conn.rollback()
+            raise
         finally:
             stmt.close()
     finally:
@@ -54,44 +65,47 @@ def write_jdbc(
 ) -> None:
     """Write ``df`` into an existing DWH table without touching its DDL.
 
-    * ``overwrite``     – Spark ``overwrite`` with ``truncate=true``: the table
-      (PKs, FKs, column types) is kept and only its rows are replaced. SQL
-      Server refuses ``TRUNCATE`` on tables referenced by a foreign key, so
-      use this for ``FactTransaction`` (the Talend job's TRUNCATE + INSERT).
-    * ``delete_insert`` – ``DELETE FROM`` followed by an append. Full reload
-      for FK-referenced dimensions (``DimAccount``, ``DimBranch``).
-    * ``append``        – insert only (Talend ``CREATE_IF_NOT_EXISTS`` + ``INSERT``
+    * ``overwrite`` / ``delete_insert`` – full reload (the Talend job's
+      TRUNCATE/DELETE + INSERT). Rows are first written to a ``<table>__staging``
+      table, then ``DELETE FROM`` + ``INSERT ... SELECT`` run in one SQL Server
+      transaction, so a failed load leaves the previous rows in place. ``DELETE``
+      rather than ``TRUNCATE`` because SQL Server refuses ``TRUNCATE`` on tables
+      referenced by a foreign key (``DimAccount``, ``DimBranch``). The table's
+      PKs, FKs and column types are never touched.
+    * ``append`` – insert only (Talend ``CREATE_IF_NOT_EXISTS`` + ``INSERT``
       on an empty table).
     """
     if mode not in WRITE_MODES:
         raise ValueError(f"Unsupported write mode {mode!r}; expected one of {WRITE_MODES}")
 
-    if mode == "delete_insert":
-        try:
-            deleted = execute_jdbc_statement(spark, jdbc, f"DELETE FROM {table}")
-        except Exception as exc:
-            if "REFERENCE constraint" in str(exc):
-                raise RuntimeError(
-                    f"Cannot reload {table}: FactTransaction rows still reference it. "
-                    "Run pyspark_jobs/run_all.py (clears FactTransaction first) or empty "
-                    "FactTransaction before reloading this dimension."
-                ) from None
-            raise
-        log.info("Deleted %s existing rows from %s", deleted, table)
-        spark_mode = "append"
-    else:
-        spark_mode = mode
+    if mode == "append":
+        _jdbc_writer(df, jdbc, table).mode("append").save()
+        return
 
-    writer = (
-        df.write.format("jdbc")
-        .option("url", jdbc.url)
-        .option("dbtable", table)
-        .options(**jdbc.properties)
-        .mode(spark_mode)
-    )
-    if spark_mode == "overwrite":
-        writer = writer.option("truncate", "true")
-    writer.save()
+    staging = f"{table}__staging"
+    columns = ", ".join(f"[{c}]" for c in df.columns)
+    _jdbc_writer(df, jdbc, staging).mode("overwrite").save()
+    try:
+        deleted, inserted = execute_jdbc_transaction(
+            spark,
+            jdbc,
+            [f"DELETE FROM {table}", f"INSERT INTO {table} ({columns}) SELECT {columns} FROM {staging}"],
+        )
+    except Exception as exc:
+        if "REFERENCE constraint" in str(exc):
+            raise RuntimeError(
+                f"Cannot reload {table}: FactTransaction rows still reference it. "
+                "Run pyspark_jobs/run_all.py (clears FactTransaction first) or empty "
+                "FactTransaction before reloading this dimension."
+            ) from None
+        raise
+    finally:
+        execute_jdbc_statement(spark, jdbc, f"DROP TABLE IF EXISTS {staging}")
+    log.info("Replaced %s rows in %s with %s rows", deleted, table, inserted)
+
+
+def _jdbc_writer(df: DataFrame, jdbc: JdbcConfig, table: str):
+    return df.write.format("jdbc").option("url", jdbc.url).option("dbtable", table).options(**jdbc.properties)
 
 
 def read_csv(
