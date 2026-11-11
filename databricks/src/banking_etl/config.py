@@ -117,20 +117,20 @@ class EtlConfig:
         known = {f.name for f in fields(cls)}
         return cls().with_overrides(**{k: v for k, v in values.items() if k in known})
 
-    @staticmethod
-    def _env_values(environ: Mapping[str, str] | None = None) -> dict[str, str | None]:
+    @classmethod
+    def _env_values(cls, environ: Mapping[str, str] | None = None) -> dict[str, str | None]:
         environ = os.environ if environ is None else environ
-        return {f.name: environ.get(ENV_PREFIX + f.name.upper()) for f in fields(EtlConfig)}
+        return {f.name: environ.get(ENV_PREFIX + f.name.upper()) for f in fields(cls)}
 
     @classmethod
     def from_env(cls, environ: Mapping[str, str] | None = None) -> "EtlConfig":
         """Read ``BANKING_ETL_CATALOG``, ``BANKING_ETL_SCHEMA_PREFIX``, ... ."""
         return cls.from_mapping(cls._env_values(environ))
 
-    @staticmethod
-    def add_arguments(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+    @classmethod
+    def add_arguments(cls, parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
         """Add ``--catalog``, ``--schema-prefix``, ``--bronze-schema``... to a parser."""
-        for f in fields(EtlConfig):
+        for f in fields(cls):
             parser.add_argument(
                 "--" + f.name.replace("_", "-"),
                 dest=f.name,
