@@ -120,7 +120,38 @@ def apply_ddl(
     ``include_constraints=False`` skips the informational PK/FK constraints,
     which only Unity Catalog supports (open-source Delta cannot parse them).
     """
-    statements = render_statements(catalog, schema, include_schema, include_constraints)
+    statements = render_statements(
+        catalog, schema, include_schema, include_constraints=False
+    )
     for statement in statements:
         spark.sql(statement)
+    if include_constraints:
+        existing = existing_constraints(spark, catalog, schema)
+        for statement in render_file(CONSTRAINTS_FILE, catalog, schema):
+            if constraint_key(statement) not in existing:
+                spark.sql(statement)
+                statements.append(statement)
     return statements
+
+
+_ADD_CONSTRAINT = re.compile(
+    r"ALTER\s+TABLE\s+\S+\.`?(\w+)`?\s+ADD\s+CONSTRAINT\s+(\w+)", re.IGNORECASE
+)
+
+
+def constraint_key(statement: str) -> tuple[str, str]:
+    """Return ``(table, constraint)`` for an ``ALTER TABLE ... ADD CONSTRAINT`` statement."""
+    match = _ADD_CONSTRAINT.search(statement)
+    if not match:
+        raise ValueError(f"Not an ADD CONSTRAINT statement: {statement!r}")
+    return match.group(1).lower(), match.group(2).lower()
+
+
+def existing_constraints(spark, catalog: str, schema: str) -> set[tuple[str, str]]:
+    """``(table, constraint)`` pairs already declared on tables in ``catalog.schema``."""
+    rows = spark.sql(
+        f"SELECT table_name, constraint_name "
+        f"FROM {quote_identifier(catalog)}.information_schema.table_constraints "
+        f"WHERE lower(table_schema) = '{schema.lower()}'"
+    ).collect()
+    return {(row[0].lower(), row[1].lower()) for row in rows}

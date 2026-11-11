@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from banking_etl.delta_ddl import (
     GOLD_TABLES,
     apply_ddl,
+    constraint_key,
     delta_type_for,
     render_file,
     render_statements,
@@ -191,25 +192,66 @@ def test_foreign_keys_match_source():
     assert actual == expected
 
 
-def test_constraints_are_rerunnable():
+def test_constraints_never_drop_existing_keys():
     stmts = _constraint_statements()
-    drops = [s for s in stmts if " DROP " in s]
-    first_add = next(i for i, s in enumerate(stmts) if " ADD " in s)
-    assert all(stmts.index(d) < first_add for d in drops)
-    assert all("IF EXISTS" in d for d in drops)
-    fk_names = {
-        re.search(r"ADD CONSTRAINT (\w+) FOREIGN", s).group(1)
-        for s in stmts
-        if "FOREIGN" in s
+    assert stmts and all(" ADD CONSTRAINT " in s for s in stmts)
+    assert not any(re.search(r"\b(DROP|CASCADE)\b", s) for s in stmts)
+    assert {constraint_key(s) for s in stmts} == {
+        ("dim_account", "pk_dim_account"),
+        ("dim_branch", "pk_dim_branch"),
+        ("dim_customer", "pk_dim_customer"),
+        ("fact_transaction", "pk_fact_transaction"),
+        ("fact_transaction", "fk_fact_transaction_dim_account"),
+        ("fact_transaction", "fk_fact_transaction_dim_branch"),
     }
-    assert fk_names == {
-        d.split("IF EXISTS ")[1] for d in drops if "DROP CONSTRAINT" in d
+
+
+class _FakeSpark:
+    """Records SQL and answers the information_schema constraint lookup."""
+
+    def __init__(self, existing):
+        self.existing, self.executed = existing, []
+
+    def sql(self, statement):
+        if "information_schema.table_constraints" in statement:
+            self.lookup = statement
+            rows = self.existing
+            return type("Df", (), {"collect": lambda _self: rows})()
+        self.executed.append(statement)
+        return None
+
+
+def test_apply_ddl_adds_all_constraints_on_first_run():
+    spark = _FakeSpark(existing=[])
+    executed = apply_ddl(spark, catalog="c", schema="s")
+    assert executed == spark.executed == render_statements("c", "s")
+    assert "`c`.information_schema.table_constraints" in spark.lookup
+    assert "lower(table_schema) = 's'" in spark.lookup
+
+
+def test_apply_ddl_rerun_skips_existing_constraints_without_dropping():
+    existing = [
+        ("dim_account", "pk_dim_account"),
+        ("DIM_BRANCH", "PK_DIM_BRANCH"),
+        ("fact_transaction", "fk_fact_transaction_dim_account"),
+        ("other_table", "fk_other_table_dim_account"),
+    ]
+    spark = _FakeSpark(existing=existing)
+    apply_ddl(spark, catalog="c", schema="s")
+    added = {constraint_key(s) for s in spark.executed if "ADD CONSTRAINT" in s}
+    assert added == {
+        ("dim_customer", "pk_dim_customer"),
+        ("fact_transaction", "pk_fact_transaction"),
+        ("fact_transaction", "fk_fact_transaction_dim_branch"),
     }
-    assert {
-        re.search(r"`s`\.(\w+) DROP PRIMARY", d).group(1)
-        for d in drops
-        if "PRIMARY" in d
-    } == set(GOLD_TABLES)
+    assert not any("DROP" in s for s in spark.executed)
+
+
+def test_apply_ddl_without_constraints_skips_lookup():
+    spark = _FakeSpark(existing=[])
+    apply_ddl(spark, catalog="c", schema="s", include_constraints=False)
+    assert not hasattr(spark, "lookup")
+    assert not any("CONSTRAINT" in s for s in spark.executed)
 
 
 # --------------------------------------------------------------------------- local Delta
