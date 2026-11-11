@@ -1,0 +1,27 @@
+resources:
+  jobs:
+    delta_ddl:
+      name: banking_etl_delta_ddl
+      description: >-
+        Create the Unity Catalog gold star schema (dim_account, dim_branch, dim_customer,
+        fact_transaction) as Delta tables with informational PK/FK constraints, translated
+        from sql_scripts/01_create_tables.sql. Idempotent; safe to re-run.
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema
+          default: gold
+      tasks:
+        - task_key: apply_gold_ddl
+          environment_key: default
+          spark_python_task:
+            python_file: ../src/banking_etl/delta_ddl/runner.py
+            parameters:
+              - --catalog
+              - "{{job.parameters.catalog}}"
+              - --schema
+              - "{{job.parameters.schema}}"
+      environments:
+        - environment_key: default
+          spec:
+            client: "2"
