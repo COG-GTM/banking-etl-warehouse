@@ -117,13 +117,15 @@ class EtlConfig:
         known = {f.name for f in fields(cls)}
         return cls().with_overrides(**{k: v for k, v in values.items() if k in known})
 
+    @staticmethod
+    def _env_values(environ: Mapping[str, str] | None = None) -> dict[str, str | None]:
+        environ = os.environ if environ is None else environ
+        return {f.name: environ.get(ENV_PREFIX + f.name.upper()) for f in fields(EtlConfig)}
+
     @classmethod
     def from_env(cls, environ: Mapping[str, str] | None = None) -> "EtlConfig":
         """Read ``BANKING_ETL_CATALOG``, ``BANKING_ETL_SCHEMA_PREFIX``, ... ."""
-        environ = os.environ if environ is None else environ
-        return cls.from_mapping(
-            {f.name: environ.get(ENV_PREFIX + f.name.upper()) for f in fields(cls)}
-        )
+        return cls.from_mapping(cls._env_values(environ))
 
     @staticmethod
     def add_arguments(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
@@ -142,8 +144,11 @@ class EtlConfig:
         cls, namespace: argparse.Namespace, environ: Mapping[str, str] | None = None
     ) -> "EtlConfig":
         """CLI args win over environment variables, which win over defaults."""
-        base = cls.from_env(environ)
-        return base.with_overrides(**{f.name: getattr(namespace, f.name, None) for f in fields(cls)})
+        values = cls._env_values(environ)
+        for f in fields(cls):
+            if getattr(namespace, f.name, None) is not None:
+                values[f.name] = getattr(namespace, f.name)
+        return cls.from_mapping(values)
 
     @classmethod
     def from_args(

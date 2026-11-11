@@ -73,6 +73,13 @@ def test_cli_args_override_env():
     assert cfg.schema("gold") == "env_gold"
 
 
+def test_cli_override_wins_over_invalid_env_value():
+    env = {"BANKING_ETL_CATALOG": "bad-name"}
+    assert EtlConfig.from_args(["--catalog", "good_cat"], environ=env).catalog == "good_cat"
+    with pytest.raises(ValueError):
+        EtlConfig.from_args([], environ=env)
+
+
 def test_add_arguments_reusable_by_other_entry_points():
     parser = EtlConfig.add_arguments(argparse.ArgumentParser())
     parser.add_argument("--source-file")
