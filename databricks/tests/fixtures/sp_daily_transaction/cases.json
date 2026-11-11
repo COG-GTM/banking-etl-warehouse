@@ -1,0 +1,18 @@
+[
+  {"name": "full_range", "start_date": "2023-01-01", "end_date": "2024-12-31"},
+  {"name": "inclusive_bounds_with_midnight_and_end_of_day", "start_date": "2024-01-21", "end_date": "2024-01-25"},
+  {"name": "single_day_start_equals_end", "start_date": "2024-01-22", "end_date": "2024-01-22"},
+  {"name": "start_bound_excludes_previous_day_23_59_59_997", "start_date": "2024-01-21", "end_date": "2024-01-21"},
+  {"name": "end_bound_excludes_next_day_midnight", "start_date": "2024-01-25", "end_date": "2024-01-25"},
+  {"name": "year_boundary", "start_date": "2023-12-31", "end_date": "2024-01-01"},
+  {"name": "null_amounts_sum_skips_nulls", "start_date": "2024-01-23", "end_date": "2024-01-23"},
+  {"name": "all_null_amounts_day", "start_date": "2024-01-24", "end_date": "2024-01-24"},
+  {"name": "range_with_gap_day", "start_date": "2024-01-26", "end_date": "2024-01-28"},
+  {"name": "leap_day", "start_date": "2024-02-29", "end_date": "2024-02-29"},
+  {"name": "empty_gap_day", "start_date": "2024-01-27", "end_date": "2024-01-27"},
+  {"name": "empty_before_all_data", "start_date": "2020-01-01", "end_date": "2020-12-31"},
+  {"name": "empty_after_all_data", "start_date": "2025-01-01", "end_date": "2025-12-31"},
+  {"name": "empty_reversed_range", "start_date": "2024-01-25", "end_date": "2024-01-21"},
+  {"name": "empty_null_start", "start_date": null, "end_date": "2024-12-31"},
+  {"name": "empty_null_end", "start_date": "2023-01-01", "end_date": null}
+]

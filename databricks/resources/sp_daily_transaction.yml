@@ -1,0 +1,33 @@
+# Port of the SQL Server stored procedure sp_DailyTransaction
+# (sql_scripts/02_create_procedures.sql). Creates/refreshes the Unity Catalog table function
+# <catalog>.gold.sp_daily_transaction and SQL procedure <catalog>.gold.sp_daily_transaction_proc,
+# runs both plus the PySpark implementation for [start_date, end_date] (inclusive) and fails on
+# any mismatch. Ad-hoc SQL usage after the first run:
+#   SELECT * FROM banking_dwh.gold.sp_daily_transaction(DATE'2024-01-21', DATE'2024-01-25');
+#   CALL banking_dwh.gold.sp_daily_transaction_proc(DATE'2024-01-21', DATE'2024-01-25');
+resources:
+  jobs:
+    sp_daily_transaction:
+      name: sp_daily_transaction
+      description: >-
+        Daily transaction count and total amount from gold.fact_transaction between
+        start_date and end_date (inclusive); port of SQL Server sp_DailyTransaction.
+      max_concurrent_runs: 1
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: gold_schema
+          default: gold
+        - name: start_date
+          default: "{{job.start_time.iso_date}}"
+        - name: end_date
+          default: "{{job.start_time.iso_date}}"
+        - name: create_function
+          default: "true"
+        - name: create_procedure
+          default: "true"
+      tasks:
+        - task_key: sp_daily_transaction
+          notebook_task:
+            notebook_path: ../src/notebooks/sp_daily_transaction.py
+            source: WORKSPACE

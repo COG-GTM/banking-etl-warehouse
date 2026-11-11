@@ -1,0 +1,151 @@
+{
+  "generated_by": "Microsoft SQL Server 2022 (RTM-CU27-GDR) (KB5129300) - 16.0.4315.2 (X64)",
+  "cases": {
+    "full_range": [
+      {
+        "date": "2023-12-31",
+        "total_transactions": 1,
+        "total_amount": "250000.0000"
+      },
+      {
+        "date": "2024-01-20",
+        "total_transactions": 1,
+        "total_amount": "120000.5000"
+      },
+      {
+        "date": "2024-01-21",
+        "total_transactions": 3,
+        "total_amount": "2050000.0000"
+      },
+      {
+        "date": "2024-01-22",
+        "total_transactions": 10,
+        "total_amount": "5180000.0000"
+      },
+      {
+        "date": "2024-01-23",
+        "total_transactions": 3,
+        "total_amount": "73750.2499"
+      },
+      {
+        "date": "2024-01-24",
+        "total_transactions": 1,
+        "total_amount": null
+      },
+      {
+        "date": "2024-01-25",
+        "total_transactions": 2,
+        "total_amount": "100000.0000"
+      },
+      {
+        "date": "2024-01-26",
+        "total_transactions": 1,
+        "total_amount": "333333.3333"
+      },
+      {
+        "date": "2024-01-28",
+        "total_transactions": 1,
+        "total_amount": "10.0000"
+      },
+      {
+        "date": "2024-02-29",
+        "total_transactions": 2,
+        "total_amount": "4243.4200"
+      }
+    ],
+    "inclusive_bounds_with_midnight_and_end_of_day": [
+      {
+        "date": "2024-01-21",
+        "total_transactions": 3,
+        "total_amount": "2050000.0000"
+      },
+      {
+        "date": "2024-01-22",
+        "total_transactions": 10,
+        "total_amount": "5180000.0000"
+      },
+      {
+        "date": "2024-01-23",
+        "total_transactions": 3,
+        "total_amount": "73750.2499"
+      },
+      {
+        "date": "2024-01-24",
+        "total_transactions": 1,
+        "total_amount": null
+      },
+      {
+        "date": "2024-01-25",
+        "total_transactions": 2,
+        "total_amount": "100000.0000"
+      }
+    ],
+    "single_day_start_equals_end": [
+      {
+        "date": "2024-01-22",
+        "total_transactions": 10,
+        "total_amount": "5180000.0000"
+      }
+    ],
+    "start_bound_excludes_previous_day_23_59_59_997": [
+      {
+        "date": "2024-01-21",
+        "total_transactions": 3,
+        "total_amount": "2050000.0000"
+      }
+    ],
+    "end_bound_excludes_next_day_midnight": [
+      {
+        "date": "2024-01-25",
+        "total_transactions": 2,
+        "total_amount": "100000.0000"
+      }
+    ],
+    "year_boundary": [
+      {
+        "date": "2023-12-31",
+        "total_transactions": 1,
+        "total_amount": "250000.0000"
+      }
+    ],
+    "null_amounts_sum_skips_nulls": [
+      {
+        "date": "2024-01-23",
+        "total_transactions": 3,
+        "total_amount": "73750.2499"
+      }
+    ],
+    "all_null_amounts_day": [
+      {
+        "date": "2024-01-24",
+        "total_transactions": 1,
+        "total_amount": null
+      }
+    ],
+    "range_with_gap_day": [
+      {
+        "date": "2024-01-26",
+        "total_transactions": 1,
+        "total_amount": "333333.3333"
+      },
+      {
+        "date": "2024-01-28",
+        "total_transactions": 1,
+        "total_amount": "10.0000"
+      }
+    ],
+    "leap_day": [
+      {
+        "date": "2024-02-29",
+        "total_transactions": 2,
+        "total_amount": "4243.4200"
+      }
+    ],
+    "empty_gap_day": [],
+    "empty_before_all_data": [],
+    "empty_after_all_data": [],
+    "empty_reversed_range": [],
+    "empty_null_start": [],
+    "empty_null_end": []
+  }
+}
