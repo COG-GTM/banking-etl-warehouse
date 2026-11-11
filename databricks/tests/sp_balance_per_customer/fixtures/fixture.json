@@ -1,0 +1,528 @@
+{
+  "description": "Known fixture for sp_BalancePerCustomer. Loaded into SQL Server (repo DDL + procedure) by generate_expected.py and into Spark by the tests. Money values are strings to keep exact DECIMAL(19,4) precision.",
+  "dim_branch": [
+    {
+      "branch_id": 1,
+      "branch_name": "KCP Jakarta",
+      "branch_location": "Jakarta"
+    }
+  ],
+  "dim_customer": [
+    {
+      "customer_id": 1,
+      "customer_name": "Shelly Juwita",
+      "address": "Jl. Mawar 1",
+      "city_name": "Jakarta",
+      "state_name": "DKI Jakarta",
+      "age": 30,
+      "gender": "Female",
+      "email": "shelly@example.com"
+    },
+    {
+      "customer_id": 2,
+      "customer_name": "SHELLY Anggraini",
+      "address": "Jl. Melati 2",
+      "city_name": "Bandung",
+      "state_name": "Jawa Barat",
+      "age": 41,
+      "gender": "Female",
+      "email": "anggraini@example.com"
+    },
+    {
+      "customer_id": 3,
+      "customer_name": "Budi Santoso",
+      "address": "Jl. Kenanga 3",
+      "city_name": "Surabaya",
+      "state_name": "Jawa Timur",
+      "age": 52,
+      "gender": "Male",
+      "email": "budi.s@example.com"
+    },
+    {
+      "customer_id": 4,
+      "customer_name": "budi rahardjo",
+      "address": "Jl. Anggrek 4",
+      "city_name": "Medan",
+      "state_name": "Sumatera Utara",
+      "age": 27,
+      "gender": "Male",
+      "email": "budi.r@example.com"
+    },
+    {
+      "customer_id": 5,
+      "customer_name": "Dewi_Lestari",
+      "address": "Jl. Dahlia 5",
+      "city_name": "Bogor",
+      "state_name": "Jawa Barat",
+      "age": 35,
+      "gender": "Female",
+      "email": "dewi@example.com"
+    },
+    {
+      "customer_id": 6,
+      "customer_name": "Andi [Admin] Wijaya",
+      "address": "Jl. Tulip 6",
+      "city_name": "Depok",
+      "state_name": "Jawa Barat",
+      "age": 44,
+      "gender": "Male",
+      "email": "andi@example.com"
+    },
+    {
+      "customer_id": 7,
+      "customer_name": "Rina 50% Putri",
+      "address": "Jl. Lily 7",
+      "city_name": "Bekasi",
+      "state_name": "Jawa Barat",
+      "age": 29,
+      "gender": "Female",
+      "email": "rina@example.com"
+    },
+    {
+      "customer_id": 8,
+      "customer_name": null,
+      "address": "Jl. Teratai 8",
+      "city_name": "Malang",
+      "state_name": "Jawa Timur",
+      "age": 60,
+      "gender": "Male",
+      "email": "unknown@example.com"
+    },
+    {
+      "customer_id": 9,
+      "customer_name": "Joko Widodo",
+      "address": "Jl. Cempaka 9",
+      "city_name": "Solo",
+      "state_name": "Jawa Tengah",
+      "age": 63,
+      "gender": "Male",
+      "email": "joko@example.com"
+    },
+    {
+      "customer_id": 10,
+      "customer_name": "Siti Café",
+      "address": "Jl. Kamboja 10",
+      "city_name": "Yogyakarta",
+      "state_name": "DI Yogyakarta",
+      "age": 38,
+      "gender": "Female",
+      "email": "siti@example.com"
+    },
+    {
+      "customer_id": 11,
+      "customer_name": "Back\\Slash Tan",
+      "address": "Jl. Seroja 11",
+      "city_name": "Semarang",
+      "state_name": "Jawa Tengah",
+      "age": 47,
+      "gender": "Male",
+      "email": "tan@example.com"
+    }
+  ],
+  "dim_account": [
+    {
+      "account_id": 101,
+      "customer_id": 1,
+      "account_type": "Savings",
+      "balance": "1000.0000",
+      "date_opened": "2020-01-15",
+      "status": "active"
+    },
+    {
+      "account_id": 102,
+      "customer_id": 1,
+      "account_type": "Checking",
+      "balance": "500.0000",
+      "date_opened": "2021-03-01",
+      "status": "Active"
+    },
+    {
+      "account_id": 103,
+      "customer_id": 1,
+      "account_type": "Deposito",
+      "balance": "200.0000",
+      "date_opened": "2019-07-07",
+      "status": "inactive"
+    },
+    {
+      "account_id": 104,
+      "customer_id": 2,
+      "account_type": "Checking",
+      "balance": "300.0000",
+      "date_opened": "2022-02-02",
+      "status": "ACTIVE "
+    },
+    {
+      "account_id": 105,
+      "customer_id": 2,
+      "account_type": "Savings",
+      "balance": "400.0000",
+      "date_opened": "2022-02-03",
+      "status": " active"
+    },
+    {
+      "account_id": 106,
+      "customer_id": 3,
+      "account_type": "Savings",
+      "balance": "1500.0000",
+      "date_opened": "2018-05-20",
+      "status": "active"
+    },
+    {
+      "account_id": 107,
+      "customer_id": 4,
+      "account_type": "Checking",
+      "balance": "0.0000",
+      "date_opened": "2023-08-08",
+      "status": "active"
+    },
+    {
+      "account_id": 108,
+      "customer_id": 5,
+      "account_type": "Savings",
+      "balance": "250.5000",
+      "date_opened": "2020-10-10",
+      "status": "active"
+    },
+    {
+      "account_id": 109,
+      "customer_id": 6,
+      "account_type": "Savings",
+      "balance": "75.2500",
+      "date_opened": "2021-11-11",
+      "status": "active"
+    },
+    {
+      "account_id": 110,
+      "customer_id": 7,
+      "account_type": "Checking",
+      "balance": "60.0000",
+      "date_opened": "2021-12-12",
+      "status": "active"
+    },
+    {
+      "account_id": 111,
+      "customer_id": 8,
+      "account_type": "Savings",
+      "balance": "999.0000",
+      "date_opened": "2017-01-01",
+      "status": "active"
+    },
+    {
+      "account_id": 112,
+      "customer_id": 10,
+      "account_type": "Savings",
+      "balance": "820.0000",
+      "date_opened": "2016-06-06",
+      "status": "active"
+    },
+    {
+      "account_id": 113,
+      "customer_id": 11,
+      "account_type": "Checking",
+      "balance": "33.3300",
+      "date_opened": "2015-05-05",
+      "status": "active"
+    },
+    {
+      "account_id": 114,
+      "customer_id": null,
+      "account_type": "Savings",
+      "balance": "10.0000",
+      "date_opened": "2015-04-04",
+      "status": "active"
+    },
+    {
+      "account_id": 115,
+      "customer_id": 3,
+      "account_type": "Checking",
+      "balance": "90.0000",
+      "date_opened": "2018-05-21",
+      "status": null
+    },
+    {
+      "account_id": 116,
+      "customer_id": 2,
+      "account_type": "Deposito",
+      "balance": null,
+      "date_opened": "2022-02-04",
+      "status": "active"
+    },
+    {
+      "account_id": 117,
+      "customer_id": 3,
+      "account_type": "Checking",
+      "balance": "100.0000",
+      "date_opened": "2018-05-22",
+      "status": "closed"
+    }
+  ],
+  "fact_transaction": [
+    {
+      "transaction_id": 1,
+      "account_id": 101,
+      "transaction_date": "2024-01-01 09:00:00",
+      "amount": "200.0000",
+      "transaction_type": "Deposit",
+      "branch_id": 1
+    },
+    {
+      "transaction_id": 2,
+      "account_id": 101,
+      "transaction_date": "2024-01-02 10:00:00",
+      "amount": "50.2500",
+      "transaction_type": "Withdrawal",
+      "branch_id": 1
+    },
+    {
+      "transaction_id": 3,
+      "account_id": 101,
+      "transaction_date": "2024-01-03 11:00:00",
+      "amount": "0.3333",
+      "transaction_type": "Transfer",
+      "branch_id": 1
+    },
+    {
+      "transaction_id": 4,
+      "account_id": 104,
+      "transaction_date": "2024-01-04 12:00:00",
+      "amount": "25.0000",
+      "transaction_type": "deposit",
+      "branch_id": 1
+    },
+    {
+      "transaction_id": 5,
+      "account_id": 104,
+      "transaction_date": "2024-01-05 13:00:00",
+      "amount": "5.0000",
+      "transaction_type": "DEPOSIT  ",
+      "branch_id": 1
+    },
+    {
+      "transaction_id": 6,
+      "account_id": 104,
+      "transaction_date": "2024-01-06 14:00:00",
+      "amount": "7.5000",
+      "transaction_type": " Deposit",
+      "branch_id": 1
+    },
+    {
+      "transaction_id": 7,
+      "account_id": 105,
+      "transaction_date": "2024-01-07 15:00:00",
+      "amount": "100.0000",
+      "transaction_type": "Deposit",
+      "branch_id": 1
+    },
+    {
+      "transaction_id": 8,
+      "account_id": 106,
+      "transaction_date": "2024-01-08 16:00:00",
+      "amount": "1000.0000",
+      "transaction_type": "Withdrawal",
+      "branch_id": 1
+    },
+    {
+      "transaction_id": 9,
+      "account_id": 106,
+      "transaction_date": "2024-01-09 17:00:00",
+      "amount": "300.0000",
+      "transaction_type": null,
+      "branch_id": 1
+    },
+    {
+      "transaction_id": 10,
+      "account_id": 106,
+      "transaction_date": "2024-01-10 18:00:00",
+      "amount": null,
+      "transaction_type": "Deposit",
+      "branch_id": 1
+    },
+    {
+      "transaction_id": 11,
+      "account_id": 107,
+      "transaction_date": "2024-01-11 19:00:00",
+      "amount": null,
+      "transaction_type": "Withdrawal",
+      "branch_id": 1
+    },
+    {
+      "transaction_id": 12,
+      "account_id": 108,
+      "transaction_date": "2024-01-12 20:00:00",
+      "amount": "1000.0000",
+      "transaction_type": "Withdrawal",
+      "branch_id": 1
+    },
+    {
+      "transaction_id": 13,
+      "account_id": 109,
+      "transaction_date": "2024-01-13 21:00:00",
+      "amount": "24.7500",
+      "transaction_type": "Deposit",
+      "branch_id": 1
+    },
+    {
+      "transaction_id": 14,
+      "account_id": 111,
+      "transaction_date": "2024-01-14 22:00:00",
+      "amount": "1.0000",
+      "transaction_type": "Deposit",
+      "branch_id": 1
+    },
+    {
+      "transaction_id": 15,
+      "account_id": 112,
+      "transaction_date": "2024-01-15 08:00:00",
+      "amount": "20.0000",
+      "transaction_type": "Payment",
+      "branch_id": 1
+    },
+    {
+      "transaction_id": 16,
+      "account_id": 114,
+      "transaction_date": "2024-01-16 08:30:00",
+      "amount": "5.0000",
+      "transaction_type": "Deposit",
+      "branch_id": 1
+    },
+    {
+      "transaction_id": 17,
+      "account_id": 116,
+      "transaction_date": "2024-01-17 09:30:00",
+      "amount": "50.0000",
+      "transaction_type": "Deposit",
+      "branch_id": 1
+    },
+    {
+      "transaction_id": 18,
+      "account_id": 115,
+      "transaction_date": "2024-01-18 10:30:00",
+      "amount": "10.0000",
+      "transaction_type": "Deposit",
+      "branch_id": 1
+    },
+    {
+      "transaction_id": 19,
+      "account_id": 113,
+      "transaction_date": "2024-01-19 11:30:00",
+      "amount": "3.3300",
+      "transaction_type": "Withdrawal",
+      "branch_id": null
+    }
+  ],
+  "searches": [
+    {
+      "id": "substring_lower",
+      "customer_name": "shelly"
+    },
+    {
+      "id": "full_name_upper",
+      "customer_name": "SHELLY JUWITA"
+    },
+    {
+      "id": "mixed_case_two_customers",
+      "customer_name": "bUdI"
+    },
+    {
+      "id": "no_transactions_only",
+      "customer_name": "andi"
+    },
+    {
+      "id": "empty_string_matches_all_named",
+      "customer_name": ""
+    },
+    {
+      "id": "null_matches_nothing",
+      "customer_name": null
+    },
+    {
+      "id": "no_match",
+      "customer_name": "zzz"
+    },
+    {
+      "id": "customer_without_accounts",
+      "customer_name": "joko"
+    },
+    {
+      "id": "underscore_is_wildcard",
+      "customer_name": "i_L"
+    },
+    {
+      "id": "single_underscore_any_char",
+      "customer_name": "_"
+    },
+    {
+      "id": "bracket_literal_underscore",
+      "customer_name": "[_]"
+    },
+    {
+      "id": "bracket_class",
+      "customer_name": "[A]dmin"
+    },
+    {
+      "id": "bracket_literal_open_bracket",
+      "customer_name": "[[]admin]"
+    },
+    {
+      "id": "bracket_range_ci",
+      "customer_name": "Sh[D-F]lly"
+    },
+    {
+      "id": "bracket_negated",
+      "customer_name": "Budi [^s]"
+    },
+    {
+      "id": "bracket_reversed_range_empty",
+      "customer_name": "Bud[z-a]"
+    },
+    {
+      "id": "bracket_negated_empty_any_char",
+      "customer_name": "Bud[^]"
+    },
+    {
+      "id": "bracket_empty_never_matches",
+      "customer_name": "Budi[]"
+    },
+    {
+      "id": "unterminated_bracket_never_matches",
+      "customer_name": "Andi ["
+    },
+    {
+      "id": "percent_is_wildcard",
+      "customer_name": "50%"
+    },
+    {
+      "id": "bracket_literal_percent",
+      "customer_name": "[%]"
+    },
+    {
+      "id": "backslash_is_literal",
+      "customer_name": "back\\slash"
+    },
+    {
+      "id": "regex_metachars_literal",
+      "customer_name": "Rina 50% P.tri"
+    },
+    {
+      "id": "accent_case_insensitive",
+      "customer_name": "CAFÉ"
+    },
+    {
+      "id": "accent_sensitive",
+      "customer_name": "cafe"
+    },
+    {
+      "id": "trailing_space_in_pattern_significant",
+      "customer_name": "Juwita "
+    },
+    {
+      "id": "inner_space",
+      "customer_name": "y j"
+    },
+    {
+      "id": "truncated_to_varchar_100",
+      "customer_name": "budi%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%NO MATCH AFTER CHAR 100"
+    }
+  ]
+}

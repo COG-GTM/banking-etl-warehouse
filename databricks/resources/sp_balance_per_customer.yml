@@ -1,0 +1,26 @@
+# Port of the SQL Server stored procedure sp_BalancePerCustomer
+# (sql_scripts/02_create_procedures.sql). The notebook (re)creates the Unity Catalog SQL
+# table function <catalog>.<gold_schema>.sp_balance_per_customer and runs it for
+# customer_name, cross-checked against the PySpark implementation.
+resources:
+  jobs:
+    sp_balance_per_customer:
+      name: sp_balance_per_customer
+      description: >-
+        Registers <catalog>.<gold_schema>.sp_balance_per_customer(p_customer_name), the
+        Databricks port of sp_BalancePerCustomer, and returns the current balance of every
+        active account of customers whose name matches the parameter.
+      max_concurrent_runs: 1
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: gold_schema
+          default: gold
+        - name: customer_name
+          default: ""
+      tasks:
+        - task_key: sp_balance_per_customer
+          notebook_task:
+            notebook_path: ../notebooks/sp_balance_per_customer.py
+      tags:
+        source_procedure: sp_BalancePerCustomer

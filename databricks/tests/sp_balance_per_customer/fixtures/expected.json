@@ -1,0 +1,438 @@
+{
+  "generated_by": "databricks/tests/sp_balance_per_customer/generate_expected.py",
+  "sql_server_version": "Microsoft SQL Server 2022 (RTM-CU27-GDR) (KB5129300) - 16.0.4315.2 (X64)",
+  "database_collation": "SQL_Latin1_General_CP1_CI_AS",
+  "results": {
+    "substring_lower": {
+      "customer_name": "shelly",
+      "rows": [
+        {
+          "customer_name": "SHELLY Anggraini",
+          "account_type": "Checking",
+          "initial_balance": "300.0000",
+          "current_balance": "322.5000"
+        },
+        {
+          "customer_name": "Shelly Juwita",
+          "account_type": "Checking",
+          "initial_balance": "500.0000",
+          "current_balance": "500.0000"
+        },
+        {
+          "customer_name": "SHELLY Anggraini",
+          "account_type": "Deposito",
+          "initial_balance": null,
+          "current_balance": null
+        },
+        {
+          "customer_name": "Shelly Juwita",
+          "account_type": "Savings",
+          "initial_balance": "1000.0000",
+          "current_balance": "1149.4167"
+        }
+      ]
+    },
+    "full_name_upper": {
+      "customer_name": "SHELLY JUWITA",
+      "rows": [
+        {
+          "customer_name": "Shelly Juwita",
+          "account_type": "Checking",
+          "initial_balance": "500.0000",
+          "current_balance": "500.0000"
+        },
+        {
+          "customer_name": "Shelly Juwita",
+          "account_type": "Savings",
+          "initial_balance": "1000.0000",
+          "current_balance": "1149.4167"
+        }
+      ]
+    },
+    "mixed_case_two_customers": {
+      "customer_name": "bUdI",
+      "rows": [
+        {
+          "customer_name": "budi rahardjo",
+          "account_type": "Checking",
+          "initial_balance": "0.0000",
+          "current_balance": "0.0000"
+        },
+        {
+          "customer_name": "Budi Santoso",
+          "account_type": "Savings",
+          "initial_balance": "1500.0000",
+          "current_balance": "200.0000"
+        }
+      ]
+    },
+    "no_transactions_only": {
+      "customer_name": "andi",
+      "rows": [
+        {
+          "customer_name": "Andi [Admin] Wijaya",
+          "account_type": "Savings",
+          "initial_balance": "75.2500",
+          "current_balance": "100.0000"
+        }
+      ]
+    },
+    "empty_string_matches_all_named": {
+      "customer_name": "",
+      "rows": [
+        {
+          "customer_name": "budi rahardjo",
+          "account_type": "Checking",
+          "initial_balance": "0.0000",
+          "current_balance": "0.0000"
+        },
+        {
+          "customer_name": "Back\\Slash Tan",
+          "account_type": "Checking",
+          "initial_balance": "33.3300",
+          "current_balance": "30.0000"
+        },
+        {
+          "customer_name": "SHELLY Anggraini",
+          "account_type": "Checking",
+          "initial_balance": "300.0000",
+          "current_balance": "322.5000"
+        },
+        {
+          "customer_name": "Shelly Juwita",
+          "account_type": "Checking",
+          "initial_balance": "500.0000",
+          "current_balance": "500.0000"
+        },
+        {
+          "customer_name": "Rina 50% Putri",
+          "account_type": "Checking",
+          "initial_balance": "60.0000",
+          "current_balance": "60.0000"
+        },
+        {
+          "customer_name": "SHELLY Anggraini",
+          "account_type": "Deposito",
+          "initial_balance": null,
+          "current_balance": null
+        },
+        {
+          "customer_name": "Dewi_Lestari",
+          "account_type": "Savings",
+          "initial_balance": "250.5000",
+          "current_balance": "-749.5000"
+        },
+        {
+          "customer_name": "Andi [Admin] Wijaya",
+          "account_type": "Savings",
+          "initial_balance": "75.2500",
+          "current_balance": "100.0000"
+        },
+        {
+          "customer_name": "Shelly Juwita",
+          "account_type": "Savings",
+          "initial_balance": "1000.0000",
+          "current_balance": "1149.4167"
+        },
+        {
+          "customer_name": "Budi Santoso",
+          "account_type": "Savings",
+          "initial_balance": "1500.0000",
+          "current_balance": "200.0000"
+        },
+        {
+          "customer_name": "Siti Café",
+          "account_type": "Savings",
+          "initial_balance": "820.0000",
+          "current_balance": "800.0000"
+        }
+      ]
+    },
+    "null_matches_nothing": {
+      "customer_name": null,
+      "rows": []
+    },
+    "no_match": {
+      "customer_name": "zzz",
+      "rows": []
+    },
+    "customer_without_accounts": {
+      "customer_name": "joko",
+      "rows": []
+    },
+    "underscore_is_wildcard": {
+      "customer_name": "i_L",
+      "rows": [
+        {
+          "customer_name": "Dewi_Lestari",
+          "account_type": "Savings",
+          "initial_balance": "250.5000",
+          "current_balance": "-749.5000"
+        }
+      ]
+    },
+    "single_underscore_any_char": {
+      "customer_name": "_",
+      "rows": [
+        {
+          "customer_name": "budi rahardjo",
+          "account_type": "Checking",
+          "initial_balance": "0.0000",
+          "current_balance": "0.0000"
+        },
+        {
+          "customer_name": "Back\\Slash Tan",
+          "account_type": "Checking",
+          "initial_balance": "33.3300",
+          "current_balance": "30.0000"
+        },
+        {
+          "customer_name": "SHELLY Anggraini",
+          "account_type": "Checking",
+          "initial_balance": "300.0000",
+          "current_balance": "322.5000"
+        },
+        {
+          "customer_name": "Shelly Juwita",
+          "account_type": "Checking",
+          "initial_balance": "500.0000",
+          "current_balance": "500.0000"
+        },
+        {
+          "customer_name": "Rina 50% Putri",
+          "account_type": "Checking",
+          "initial_balance": "60.0000",
+          "current_balance": "60.0000"
+        },
+        {
+          "customer_name": "SHELLY Anggraini",
+          "account_type": "Deposito",
+          "initial_balance": null,
+          "current_balance": null
+        },
+        {
+          "customer_name": "Dewi_Lestari",
+          "account_type": "Savings",
+          "initial_balance": "250.5000",
+          "current_balance": "-749.5000"
+        },
+        {
+          "customer_name": "Andi [Admin] Wijaya",
+          "account_type": "Savings",
+          "initial_balance": "75.2500",
+          "current_balance": "100.0000"
+        },
+        {
+          "customer_name": "Shelly Juwita",
+          "account_type": "Savings",
+          "initial_balance": "1000.0000",
+          "current_balance": "1149.4167"
+        },
+        {
+          "customer_name": "Budi Santoso",
+          "account_type": "Savings",
+          "initial_balance": "1500.0000",
+          "current_balance": "200.0000"
+        },
+        {
+          "customer_name": "Siti Café",
+          "account_type": "Savings",
+          "initial_balance": "820.0000",
+          "current_balance": "800.0000"
+        }
+      ]
+    },
+    "bracket_literal_underscore": {
+      "customer_name": "[_]",
+      "rows": [
+        {
+          "customer_name": "Dewi_Lestari",
+          "account_type": "Savings",
+          "initial_balance": "250.5000",
+          "current_balance": "-749.5000"
+        }
+      ]
+    },
+    "bracket_class": {
+      "customer_name": "[A]dmin",
+      "rows": [
+        {
+          "customer_name": "Andi [Admin] Wijaya",
+          "account_type": "Savings",
+          "initial_balance": "75.2500",
+          "current_balance": "100.0000"
+        }
+      ]
+    },
+    "bracket_literal_open_bracket": {
+      "customer_name": "[[]admin]",
+      "rows": [
+        {
+          "customer_name": "Andi [Admin] Wijaya",
+          "account_type": "Savings",
+          "initial_balance": "75.2500",
+          "current_balance": "100.0000"
+        }
+      ]
+    },
+    "bracket_range_ci": {
+      "customer_name": "Sh[D-F]lly",
+      "rows": [
+        {
+          "customer_name": "SHELLY Anggraini",
+          "account_type": "Checking",
+          "initial_balance": "300.0000",
+          "current_balance": "322.5000"
+        },
+        {
+          "customer_name": "Shelly Juwita",
+          "account_type": "Checking",
+          "initial_balance": "500.0000",
+          "current_balance": "500.0000"
+        },
+        {
+          "customer_name": "SHELLY Anggraini",
+          "account_type": "Deposito",
+          "initial_balance": null,
+          "current_balance": null
+        },
+        {
+          "customer_name": "Shelly Juwita",
+          "account_type": "Savings",
+          "initial_balance": "1000.0000",
+          "current_balance": "1149.4167"
+        }
+      ]
+    },
+    "bracket_negated": {
+      "customer_name": "Budi [^s]",
+      "rows": [
+        {
+          "customer_name": "budi rahardjo",
+          "account_type": "Checking",
+          "initial_balance": "0.0000",
+          "current_balance": "0.0000"
+        }
+      ]
+    },
+    "bracket_reversed_range_empty": {
+      "customer_name": "Bud[z-a]",
+      "rows": []
+    },
+    "bracket_negated_empty_any_char": {
+      "customer_name": "Bud[^]",
+      "rows": [
+        {
+          "customer_name": "budi rahardjo",
+          "account_type": "Checking",
+          "initial_balance": "0.0000",
+          "current_balance": "0.0000"
+        },
+        {
+          "customer_name": "Budi Santoso",
+          "account_type": "Savings",
+          "initial_balance": "1500.0000",
+          "current_balance": "200.0000"
+        }
+      ]
+    },
+    "bracket_empty_never_matches": {
+      "customer_name": "Budi[]",
+      "rows": []
+    },
+    "unterminated_bracket_never_matches": {
+      "customer_name": "Andi [",
+      "rows": []
+    },
+    "percent_is_wildcard": {
+      "customer_name": "50%",
+      "rows": [
+        {
+          "customer_name": "Rina 50% Putri",
+          "account_type": "Checking",
+          "initial_balance": "60.0000",
+          "current_balance": "60.0000"
+        }
+      ]
+    },
+    "bracket_literal_percent": {
+      "customer_name": "[%]",
+      "rows": [
+        {
+          "customer_name": "Rina 50% Putri",
+          "account_type": "Checking",
+          "initial_balance": "60.0000",
+          "current_balance": "60.0000"
+        }
+      ]
+    },
+    "backslash_is_literal": {
+      "customer_name": "back\\slash",
+      "rows": [
+        {
+          "customer_name": "Back\\Slash Tan",
+          "account_type": "Checking",
+          "initial_balance": "33.3300",
+          "current_balance": "30.0000"
+        }
+      ]
+    },
+    "regex_metachars_literal": {
+      "customer_name": "Rina 50% P.tri",
+      "rows": []
+    },
+    "accent_case_insensitive": {
+      "customer_name": "CAFÉ",
+      "rows": [
+        {
+          "customer_name": "Siti Café",
+          "account_type": "Savings",
+          "initial_balance": "820.0000",
+          "current_balance": "800.0000"
+        }
+      ]
+    },
+    "accent_sensitive": {
+      "customer_name": "cafe",
+      "rows": []
+    },
+    "trailing_space_in_pattern_significant": {
+      "customer_name": "Juwita ",
+      "rows": []
+    },
+    "inner_space": {
+      "customer_name": "y j",
+      "rows": [
+        {
+          "customer_name": "Shelly Juwita",
+          "account_type": "Checking",
+          "initial_balance": "500.0000",
+          "current_balance": "500.0000"
+        },
+        {
+          "customer_name": "Shelly Juwita",
+          "account_type": "Savings",
+          "initial_balance": "1000.0000",
+          "current_balance": "1149.4167"
+        }
+      ]
+    },
+    "truncated_to_varchar_100": {
+      "customer_name": "budi%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%NO MATCH AFTER CHAR 100",
+      "rows": [
+        {
+          "customer_name": "budi rahardjo",
+          "account_type": "Checking",
+          "initial_balance": "0.0000",
+          "current_balance": "0.0000"
+        },
+        {
+          "customer_name": "Budi Santoso",
+          "account_type": "Savings",
+          "initial_balance": "1500.0000",
+          "current_balance": "200.0000"
+        }
+      ]
+    }
+  }
+}
