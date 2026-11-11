@@ -1,0 +1,47 @@
+# Bronze ingestion: sample.bak tables + transaction CSV / Excel drops.
+# Files are expected under the landing volume (see databricks/scripts/stage_landing_files.sh):
+#   /Volumes/<catalog>/bronze/landing/{transaction_csv,transaction_excel,sample_db/<table>}/
+resources:
+  jobs:
+    bronze_ingestion:
+      name: "[${bundle.target}] banking_etl bronze ingestion"
+      max_concurrent_runs: 1
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: bronze_schema
+          default: bronze
+        - name: sample_db_mode
+          # files | jdbc | federation
+          default: files
+        - name: landing_root
+          default: ""
+        - name: checkpoint_root
+          default: ""
+        - name: jdbc_secret_scope
+          default: banking_sample_db
+        - name: foreign_catalog
+          default: sample_sqlserver
+        - name: create_foreign_catalog
+          default: "false"
+        - name: use_auto_loader
+          default: "true"
+      tasks:
+        - task_key: bronze_sample_db
+          notebook_task:
+            notebook_path: ../src/notebooks/bronze_ingestion.py
+            base_parameters:
+              sources: sample_db
+              run_id: "{{job.run_id}}"
+        - task_key: bronze_transaction_csv
+          notebook_task:
+            notebook_path: ../src/notebooks/bronze_ingestion.py
+            base_parameters:
+              sources: transaction_csv
+              run_id: "{{job.run_id}}"
+        - task_key: bronze_transaction_excel
+          notebook_task:
+            notebook_path: ../src/notebooks/bronze_ingestion.py
+            base_parameters:
+              sources: transaction_excel
+              run_id: "{{job.run_id}}"
