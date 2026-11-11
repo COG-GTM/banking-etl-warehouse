@@ -57,7 +57,7 @@ jobs:
       - uses: databricks/setup-cli@main
       - name: Validate bundle (dev, prod)
         run: |
-          if [ -z "$DATABRICKS_HOST" ] || [ -z "$DATABRICKS_CLIENT_ID" ]; then
+          if [ -z "$DATABRICKS_HOST" ] || [ -z "$DATABRICKS_CLIENT_ID" ] || [ -z "$DATABRICKS_CLIENT_SECRET" ]; then
             echo "::notice::Databricks secrets not configured; skipping bundle validate"
             exit 0
           fi
