@@ -1,0 +1,24 @@
+# Port of the Talend job Load_DimBranch: bronze.branch -> gold.dim_branch (MERGE on branch_id).
+resources:
+  jobs:
+    load_dim_branch:
+      name: load_dim_branch
+      max_concurrent_runs: 1
+      tasks:
+        - task_key: load_dim_branch
+          spark_python_task:
+            python_file: ../src/banking_etl/load_dim_branch.py
+            parameters:
+              - --catalog
+              - ${var.catalog}
+              - --bronze-schema
+              - bronze
+              - --gold-schema
+              - gold
+              - --update-existing
+              - "false"
+          environment_key: default
+      environments:
+        - environment_key: default
+          spec:
+            client: "2"
