@@ -1,0 +1,40 @@
+# Migrated from Talend job Load_DimAccount (talend_jobs/Load_DimAccount.zip):
+# <catalog>.bronze.account -> <catalog>.gold.dim_account, MERGE on account_id.
+resources:
+  jobs:
+    load_dim_account:
+      name: load_dim_account
+      description: >-
+        Port of the Talend job Load_DimAccount. Reads bronze.account and MERGEs it
+        into gold.dim_account on account_id (idempotent, never deletes).
+      tags:
+        source_talend_job: Load_DimAccount
+        layer: gold
+      max_concurrent_runs: 1
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: bronze_schema
+          default: bronze
+        - name: gold_schema
+          default: gold
+        - name: load_mode
+          default: upsert
+      tasks:
+        - task_key: load_dim_account
+          environment_key: default
+          spark_python_task:
+            python_file: ../src/banking_etl/load_dim_account.py
+            parameters:
+              - --catalog
+              - "{{job.parameters.catalog}}"
+              - --bronze-schema
+              - "{{job.parameters.bronze_schema}}"
+              - --gold-schema
+              - "{{job.parameters.gold_schema}}"
+              - --load-mode
+              - "{{job.parameters.load_mode}}"
+      environments:
+        - environment_key: default
+          spec:
+            client: "2"
