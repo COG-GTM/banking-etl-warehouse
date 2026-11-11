@@ -1,0 +1,34 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "banking_etl"
+version = "0.1.0"
+description = "Banking ETL warehouse on Databricks: Unity Catalog medallion (bronze/silver/gold) star schema"
+readme = "README.md"
+requires-python = ">=3.10"
+# pyspark / delta are provided by the Databricks runtime; install the `dev` extra locally.
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pyspark==4.0.1",
+    "delta-spark==4.0.0",
+    "pytest>=8",
+    "pyyaml>=6",
+    "openpyxl>=3.1",
+]
+
+[project.scripts]
+# python_wheel_task entry points (see resources/*.yml)
+uc_setup = "banking_etl.uc_setup:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/banking_etl"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra"
+markers = ["spark: needs a local SparkSession (Java 17 + delta-spark)"]

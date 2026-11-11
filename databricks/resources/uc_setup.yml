@@ -1,0 +1,23 @@
+# Creates the catalog, bronze/silver/gold schemas and the landing volume (idempotent).
+# Run once per environment before any ingestion job:  databricks bundle run uc_setup -t <target>
+resources:
+  jobs:
+    uc_setup:
+      name: banking_etl_uc_setup
+      max_concurrent_runs: 1
+      tasks:
+        - task_key: uc_setup
+          environment_key: default
+          python_wheel_task:
+            package_name: banking_etl
+            entry_point: uc_setup
+            parameters:
+              - --catalog=${var.catalog}
+              - --schema-prefix=${var.schema_prefix}
+              - --create-catalog=${var.create_catalog}
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "2"
+            dependencies:
+              - ../dist/*.whl
