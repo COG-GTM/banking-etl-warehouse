@@ -1,6 +1,7 @@
 -- =================================================================
 -- SCRIPT UNTUK MEMBUAT INDEKS PADA DATA WAREHOUSE (DWH)
 -- Deskripsi: Aman dijalankan ulang, baik pada DWH baru maupun DWH yang sudah ada.
+-- Catatan: pembuatan indeks mengunci FactTransaction; jalankan saat Load_FactTransaction tidak berjalan.
 -- =================================================================
 
 USE DWH;
