@@ -76,6 +76,7 @@ To replicate this solution, follow these steps:
 3.  **Build the Data Warehouse:**
     - In the `sql_scripts` folder of this repository, you will find `create_tables.sql`.
     - Open this script in SSMS and execute it to create the `DWH` database and all dimension and fact tables.
+    - Then execute `03_create_indexes.sql` to add the `FactTransaction` date index used by `sp_DailyTransaction`. It is safe to rerun, so an existing `DWH` can apply it directly.
 
 4.  **Configure and Run the Talend Jobs:**
     - Open Talend Studio and import the project/jobs from this repository.
