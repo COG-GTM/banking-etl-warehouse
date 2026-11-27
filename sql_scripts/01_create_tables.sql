@@ -77,4 +77,12 @@ CREATE TABLE FactTransaction (
 PRINT 'Table FactTransaction created successfully.';
 GO
 
+-- Indeks agar sp_DailyTransaction mencari rentang tanggal tanpa memindai seluruh tabel fakta
+PRINT 'Creating index IX_FactTransaction_TransactionDate...';
+CREATE NONCLUSTERED INDEX IX_FactTransaction_TransactionDate
+    ON FactTransaction (TransactionDate)
+    INCLUDE (Amount);
+PRINT 'Index IX_FactTransaction_TransactionDate created successfully.';
+GO
+
 PRINT 'All tables for DWH have been created.';
