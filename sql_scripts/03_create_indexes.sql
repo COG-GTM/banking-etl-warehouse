@@ -10,7 +10,7 @@ GO
 IF NOT EXISTS (
     SELECT 1 FROM sys.indexes
     WHERE name = 'IX_FactTransaction_TransactionDate'
-      AND object_id = OBJECT_ID('dbo.FactTransaction')
+      AND object_id = OBJECT_ID('FactTransaction')
 )
 BEGIN
     PRINT 'Creating index IX_FactTransaction_TransactionDate...';
